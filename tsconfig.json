@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@wasm/rhwp.js": ["./vendor/rhwp-core/rhwp.d.ts"],
+      "canvaskit-wasm": ["./node_modules/canvaskit-wasm"],
+      "canvaskit-wasm/*": ["./node_modules/canvaskit-wasm/*"],
+      "@upstream/*": ["./third_party/rhwp/rhwp-studio/src/*"],
+      "@/*": ["./src/hop-host/*", "./third_party/rhwp/rhwp-studio/src/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}
