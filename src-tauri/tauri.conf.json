@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "HOP-Claw",
+  "version": "0.1.0",
+  "identifier": "com.hopclaw.desktop",
+  "build": {
+    "beforeDevCommand": "npm.cmd run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm.cmd run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "HOP-Claw — 로컬 AI 한글(HWP/HWPX) 협업 스튜디오",
+        "width": 1440,
+        "height": 920,
+        "minWidth": 1024,
+        "minHeight": 700
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "copyright": "Copyright (C) 2026 HOP-Claw Contributors. Licensed under GNU GPL v3.0.",
+    "licenseFile": "../LICENSE",
+    "resources": [
+      "../resources/claw-hwp/**/*",
+      "../LICENSE"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["hwp", "hwpx"],
+        "name": "Hangul Word Processor Document",
+        "role": "Editor"
+      }
+    ]
+  }
+}

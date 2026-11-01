@@ -1,0 +1,114 @@
+use std::fs;
+use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Manager};
+use uuid::Uuid;
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct OpenedDocSession {
+    pub original_path: String,
+    pub staging_path: String,
+    pub file_name: String,
+    pub is_hwpx: bool,
+    pub bytes: Vec<u8>,
+}
+
+/// 1) 네이티브 파일 열기 다이얼로그 (.hwp, .hwpx, .xlsx, .pdf, .png 등)
+#[tauri::command]
+pub async fn pick_local_file(extensions: Vec<String>) -> Result<Option<String>, String> {
+    let ext_refs: Vec<&str> = extensions.iter().map(|s| s.as_str()).collect();
+    let mut dialog = rfd::AsyncFileDialog::new();
+    if !ext_refs.is_empty() {
+        dialog = dialog.add_filter("Supported Files", &ext_refs);
+    }
+    let file = dialog.pick_file().await;
+    Ok(file.map(|f| f.path().to_string_lossy().to_string()))
+}
+
+/// 2) HWP/HWPX 문서 열기 + Shadow Staging 파일 생성 + 매직 바이트(PK) 기반 포맷 판별
+#[tauri::command]
+pub async fn open_document_session(app: AppHandle, file_path: String) -> Result<OpenedDocSession, String> {
+    let src_path = PathBuf::from(&file_path);
+    let bytes = fs::read(&src_path).map_err(|e| format!("파일 읽기 실패: {}", e))?;
+
+    // 첫 2바이트가 'PK' (0x50, 0x4B)이면 확장자와 무관하게 HWPX로 판별
+    let is_hwpx = bytes.len() >= 2 && bytes[0] == 0x50 && bytes[1] == 0x4B;
+    let ext = if is_hwpx { "hwpx" } else { "hwp" };
+
+    let staging_dir = app.path().app_cache_dir().map_err(|e| e.to_string())?.join("hop-staging");
+    fs::create_dir_all(&staging_dir).map_err(|e| e.to_string())?;
+
+    let staging_file_name = format!("staging_{}.{}", Uuid::new_v4(), ext);
+    let staging_path = staging_dir.join(staging_file_name);
+    fs::write(&staging_path, &bytes).map_err(|e| format!("스테이징 파일 생성 실패: {}", e))?;
+
+    let file_name = src_path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| format!("untitled.{}", ext));
+
+    Ok(OpenedDocSession {
+        original_path: file_path,
+        staging_path: staging_path.to_string_lossy().to_string(),
+        file_name,
+        is_hwpx,
+        bytes,
+    })
+}
+
+/// 3) 빈 화면에서 신규 문서 세션 시작
+#[tauri::command]
+pub async fn create_blank_session(app: AppHandle, is_hwpx: bool) -> Result<OpenedDocSession, String> {
+    let ext = if is_hwpx { "hwpx" } else { "hwp" };
+    let staging_dir = app.path().app_cache_dir().map_err(|e| e.to_string())?.join("hop-staging");
+    fs::create_dir_all(&staging_dir).map_err(|e| e.to_string())?;
+    let staging_path = staging_dir.join(format!("new_{}.{}", Uuid::new_v4(), ext));
+
+    Ok(OpenedDocSession {
+        original_path: String::new(),
+        staging_path: staging_path.to_string_lossy().to_string(),
+        file_name: format!("새 문서.{}", ext),
+        is_hwpx,
+        bytes: Vec::new(),
+    })
+}
+
+#[tauri::command]
+pub async fn read_file_bytes(file_path: String) -> Result<Vec<u8>, String> {
+    fs::read(&file_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn write_file_bytes(file_path: String, bytes: Vec<u8>) -> Result<(), String> {
+    fs::write(&file_path, bytes).map_err(|e| e.to_string())
+}
+
+/// 4) 스테이징 파일을 원본 경로(또는 다른 이름으로 저장 다이얼로그)에 커밋
+#[tauri::command]
+pub async fn commit_staging_to_original(staging_path: String, original_path: String) -> Result<String, String> {
+    let target = if original_path.trim().is_empty() {
+        let picked = rfd::AsyncFileDialog::new()
+            .add_filter("HWP/HWPX Document", &["hwp", "hwpx"])
+            .save_file()
+            .await;
+        match picked {
+            Some(f) => f.path().to_string_lossy().to_string(),
+            None => return Err("저장이 취소되었습니다.".to_string()),
+        }
+    } else {
+        original_path
+    };
+    fs::copy(&staging_path, &target).map_err(|e| format!("원본 저장 실패: {}", e))?;
+    Ok(target)
+}
+
+/// 5) OS 파일 연결(.hwp/.hwpx 더블클릭) 등으로 실행 시 전달된 시작 파일 경로 조회
+#[tauri::command]
+pub fn get_startup_file() -> Option<String> {
+    std::env::args()
+        .skip(1)
+        .find(|arg| {
+            let lower = arg.to_lowercase();
+            (lower.ends_with(".hwp") || lower.ends_with(".hwpx")) && PathBuf::from(arg).exists()
+        })
+}
