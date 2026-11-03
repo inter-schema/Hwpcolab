@@ -8,6 +8,7 @@ import { createHopOverrides } from "./hop-overrides";
 import { isValidHwpxPackage } from "./src/hop-host/core/hwpx-package";
 import { copyFileAtomically } from "./src/hop-host/core/atomic-file";
 import { handleFontAssetRequest } from "./src/hop-host/core/font-asset-middleware";
+import { ActiveHttpRequests } from "./src/hop-host/core/active-http-requests";
 
 const rootDir = __dirname;
 const hopSrc = resolve(rootDir, "src/hop-host");
@@ -82,7 +83,7 @@ function runClawStdin(scriptName: string, stdinJson: string): Promise<{ ok: bool
   });
 }
 
-const activeHttpRequests = new Map<string, AbortController>();
+const activeHttpRequests = new ActiveHttpRequests();
 
 function localClawBridgePlugin(): Plugin {
   return {
@@ -220,7 +221,7 @@ function localClawBridgePlugin(): Plugin {
                 const reqId = reqObj.request_id || reqObj.requestId;
                 const controller = new AbortController();
                 if (reqId) {
-                  activeHttpRequests.set(reqId, controller);
+                  activeHttpRequests.register(reqId, controller);
                 }
                 const timeoutMs = reqObj.timeout_ms || reqObj.timeoutMs || 180000;
                 const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -250,7 +251,7 @@ function localClawBridgePlugin(): Plugin {
                   throw fetchErr;
                 } finally {
                   if (reqId) {
-                    activeHttpRequests.delete(reqId);
+                    activeHttpRequests.cleanup(reqId, controller);
                   }
                 }
                 break;
@@ -258,13 +259,7 @@ function localClawBridgePlugin(): Plugin {
 
               case "cancel_llm_request": {
                 const reqId = args.request_id || args.requestId;
-                if (reqId && activeHttpRequests.has(reqId)) {
-                  activeHttpRequests.get(reqId)!.abort();
-                  activeHttpRequests.delete(reqId);
-                  result = true;
-                } else {
-                  result = false;
-                }
+                result = reqId ? activeHttpRequests.cancel(reqId) : false;
                 break;
               }
 
