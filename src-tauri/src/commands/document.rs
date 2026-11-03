@@ -3,6 +3,12 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
+
+/// Recognize the ZIP local-file-header signature (not an EOCD or arbitrary PK prefix).
+fn has_zip_local_file_header(bytes: &[u8]) -> bool {
+    bytes.starts_with(b"PK\\\\x03\\\\x04")
+}
+
 use crate::hwpx_package::is_valid_hwpx_package;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -32,7 +38,7 @@ pub async fn open_document_session(app: AppHandle, file_path: String) -> Result<
     let src_path = PathBuf::from(&file_path);
     let bytes = fs::read(&src_path).map_err(|e| format!("파일 읽기 실패: {}", e))?;
 
-    let has_zip_signature = bytes.starts_with(b"PK\\x03\\x04");
+    let has_zip_signature = has_zip_local_file_header(&bytes);
     let requested_hwpx = src_path
         .extension()
         .and_then(|extension| extension.to_str())
@@ -242,4 +248,11 @@ mod tests {
         assert_eq!(std::fs::read(target.join("keep.txt")).unwrap(), b"keep");
         assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 2);
     }
+    #[test]
+    fn recognizes_the_binary_zip_local_file_header_signature() {
+        assert!(has_zip_local_file_header(&[0x50, 0x4b, 0x03, 0x04]));
+        assert!(!has_zip_local_file_header(&[0x50, 0x4b]));
+        assert!(!has_zip_local_file_header(&[0x50, 0x4b, 0x05, 0x06]));
+    }
+
 }
