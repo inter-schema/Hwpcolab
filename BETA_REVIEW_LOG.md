@@ -147,3 +147,14 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - Added separate production and development CSPs. Production allows local/custom-protocol assets, Tauri IPC, app-bundled workers/fonts/images and WASM execution, but no remote network origins or general eval. Development adds only the Vite localhost origin and HMR websocket.
 - Added configuration contract tests for non-null CSP, IPC, the required Tauri custom protocol, WASM support, no general `unsafe-eval`, object-src none, and dev-only localhost/HMR.
 - Tauri v2 documentation notes that CSP is only enabled when configured and that its injected asset CSP modifications append hashes/nonces to bundled code. Runtime smoke testing in packaged WebView remains desirable after CI.
+
+
+### 2026-11-04 — LLM proxy resource and redirect hardening
+- Added HTTP/HTTPS endpoint validation and rejected URL userinfo. Loopback and private custom endpoints remain available for local Ollama and user-selected gateways.
+- Clamped request timeouts to 1 second–10 minutes (default 180 seconds).
+- Bounded serialized request bodies to 20 MiB and streamed response chunks with a 32 MiB cap; an oversized Content-Length is rejected before body consumption.
+- Disabled automatic HTTP redirects so provider authorization headers cannot be carried to a redirect destination.
+- Kept cancellation active across both request send and response-body reading.
+- Added unit/integration coverage for URL scheme/userinfo, request and response limits, timeout normalization, and cross-host redirect suppression.
+- Fix commit: `8ada00e6caccfa90b75e62e6af07c5bc0c7beebe`; additional redirect/large-response tests commit: `97039a9ab947c3041580d360e64b2dd11722fe67`.
+- Current Windows Rust CI validation is pending; these resource hardening behaviors are not marked verified yet.
