@@ -25,6 +25,7 @@ export function assertAttachmentFileSize(fileSize: number): void {
 export interface ZipExpansionLimits {
   maxEntryBytes: number;
   maxTotalBytes: number;
+  maxEntries?: number;
   includeFile?: (name: string) => boolean;
 }
 
@@ -37,10 +38,17 @@ export function assertZipExpansionWithinLimits(
   limits: ZipExpansionLimits,
 ): void {
   let expandedTotal = 0;
+  let entryCount = 0;
   let failure: string | null = null;
+  const maxEntries = limits.maxEntries ?? 10_000;
 
   unzipSync(fileBytes, {
     filter(file) {
+      entryCount += 1;
+      if (entryCount > maxEntries) {
+        failure = 'ZIP 항목 수가 허용 한도(' + maxEntries + ')를 초과했습니다.';
+        return false;
+      }
       if (limits.includeFile && !limits.includeFile(file.name)) return false;
 
       const expandedSize = file.originalSize;
