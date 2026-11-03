@@ -7,7 +7,7 @@ use crate::hwpx_package::is_valid_hwpx_package;
 
 /// Recognize the ZIP local-file-header signature (not an EOCD or arbitrary PK prefix).
 fn has_zip_local_file_header(bytes: &[u8]) -> bool {
-    bytes.starts_with(b"PK\\x03\\x04")
+    bytes.starts_with(&[0x50, 0x4b, 0x03, 0x04])
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -31,7 +31,7 @@ pub async fn pick_local_file(extensions: Vec<String>) -> Result<Option<String>, 
     Ok(file.map(|f| f.path().to_string_lossy().to_string()))
 }
 
-/// 2) HWP/HWPX 문서 열기 + Shadow Staging 파일 생성 + 매직 바이트(PK) 기반 포맷 판별
+/// 2) HWP/HWPX 문서 열기 + Shadow Staging 파일 생성 + ZIP 로컬 파일 헤더 시그니처 기반 포맷 판별
 #[tauri::command]
 pub async fn open_document_session(app: AppHandle, file_path: String) -> Result<OpenedDocSession, String> {
     let src_path = PathBuf::from(&file_path);
