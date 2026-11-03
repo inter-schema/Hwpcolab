@@ -11,6 +11,62 @@ export interface ParsedAttachment {
   structuredData?: any;
 }
 
+export interface ZipExpansionLimits {
+  maxEntryBytes: number;
+  maxTotalBytes: number;
+  includeFile?: (name: string) => boolean;
+}
+
+/**
+ * Preflights ZIP central-directory size metadata without inflating entries.
+ * fflate's filter callback can reject entries before decompression starts.
+ */
+export function assertZipExpansionWithinLimits(
+  fileBytes: Uint8Array,
+  limits: ZipExpansionLimits,
+): void {
+  let expandedTotal = 0;
+  let failure: string | null = null;
+
+  unzipSync(fileBytes, {
+    filter(file) {
+      if (limits.includeFile && !limits.includeFile(file.name)) return false;
+
+      const expandedSize = file.originalSize;
+      if (
+        typeof expandedSize !== 'number'
+        || !Number.isSafeInteger(expandedSize)
+        || expandedSize < 0
+      ) {
+        failure = 'ZIP 항목의 압축 해제 크기가 올바르지 않습니다: ' + file.name;
+        return false;
+      }
+
+      if (expandedSize > limits.maxEntryBytes) {
+        failure = 'ZIP 항목의 압축 해제 크기가 허용 한도('
+          + limits.maxEntryBytes + ' bytes)를 초과했습니다: ' + file.name;
+        return false;
+      }
+
+      expandedTotal += expandedSize;
+      if (expandedTotal > limits.maxTotalBytes) {
+        failure = 'ZIP 전체 압축 해제 크기가 허용 한도('
+          + limits.maxTotalBytes + ' bytes)를 초과했습니다.';
+        return false;
+      }
+      // This pass only inspects metadata. The actual parser performs a
+      // separate extraction with its own per-format allow-list.
+      return false;
+    },
+  });
+
+  if (failure) throw new Error(failure);
+}
+
+const MAX_DOCX_DOCUMENT_XML_BYTES = 16 * 1024 * 1024;
+const MAX_XLSX_ENTRY_BYTES = 32 * 1024 * 1024;
+const MAX_XLSX_TOTAL_BYTES = 128 * 1024 * 1024;
+
 const WORDPROCESSINGML_NAMESPACE = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const DOCX_BLOCK_CONTAINERS = new Set(['sdt', 'sdtContent', 'customXml', 'ins', 'moveTo', 'smartTag']);
 
@@ -96,7 +152,14 @@ function renderWordBlocks(container: Element): string[] {
 }
 
 function parseDocxBytesToMarkdown(fileBytes: Uint8Array): string {
-  const unzipped = unzipSync(fileBytes);
+  assertZipExpansionWithinLimits(fileBytes, {
+    maxEntryBytes: MAX_DOCX_DOCUMENT_XML_BYTES,
+    maxTotalBytes: MAX_DOCX_DOCUMENT_XML_BYTES,
+    includeFile: (name) => name === 'word/document.xml',
+  });
+  const unzipped = unzipSync(fileBytes, {
+    filter: (file) => file.name === 'word/document.xml',
+  });
   const docXmlBytes = unzipped['word/document.xml'];
   if (!docXmlBytes) {
     throw new Error('word/document.xml을 찾을 수 없습니다.');
@@ -149,6 +212,12 @@ export async function parseLocalAttachment(filePath: string, fileBytes: Uint8Arr
   // 2. Excel (.xlsx, .xls, .csv) -> 시트별 마크다운 표 + 2D 배열 추출
   if (["xlsx", "xls", "csv"].includes(ext)) {
     try {
+      if (ext === "xlsx") {
+        assertZipExpansionWithinLimits(fileBytes, {
+          maxEntryBytes: MAX_XLSX_ENTRY_BYTES,
+          maxTotalBytes: MAX_XLSX_TOTAL_BYTES,
+        });
+      }
       const wb = XLSX.read(fileBytes, { type: "array" });
       const mdParts: string[] = [];
       const sheetsData: Record<string, any[][]> = {};
