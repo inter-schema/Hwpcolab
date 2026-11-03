@@ -56,7 +56,7 @@ export class PrivacySessionMasker {
       // Korean bank account numbers: require an explicit account label to
       // avoid masking student IDs, document numbers and unrelated digit groups.
       result = result.replace(
-        /((?:계좌(?:번호)?|통장(?:번호)?|bank\s*account(?:\s*(?:number|no\.?))?)\s*[:：#]?\s*)(\d{10,16}|\d{2,4}(?:[- ]\d{2,4}){2,3})(?!\d)/gi,
+        /((?:계좌(?:번호)?|통장(?:번호)?|bank\s*account(?:\s*(?:number|no\.?))?)\s*[:：#]?\s*)(\d{10,16}|\d{2,8}(?:[- ]\d{2,8}){1,3})(?!\d)/gi,
         (match, label: string, account: string) => {
           const digitCount = account.replace(/\D/g, '').length;
           if (digitCount < 10 || digitCount > 16) return match;
