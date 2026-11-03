@@ -21,3 +21,7 @@ tokio = { version = "1", features = ["process", "io-util", "fs", "sync", "macros
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 rfd = "0.15"
 uuid = { version = "1", features = ["v4"] }
+fontdb = "0.23.0"
+
+[dev-dependencies]
+tempfile = "3"
