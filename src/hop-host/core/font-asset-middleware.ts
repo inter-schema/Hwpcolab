@@ -16,11 +16,12 @@ export function handleFontAssetRequest(
   fontsDirectory: string,
   requestUrl: string | undefined,
   response: FontAssetResponse,
-  next: () => void,
+  _next: () => void,
 ): void {
   const candidate = resolveFontAssetPath(fontsDirectory, requestUrl ?? '/');
   if (!candidate) {
-    next();
+    response.statusCode = 404;
+    response.end('Not Found');
     return;
   }
   response.setHeader('Content-Type', 'font/woff2');
