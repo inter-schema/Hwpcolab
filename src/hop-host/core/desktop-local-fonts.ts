@@ -28,7 +28,6 @@ const loadedFontFaces = new Map<string, DesktopFontFaceState>();
 const fontBinaryCache = new Map<string, Promise<Uint8Array>>();
 
 export function isDesktopTauriRuntime(): boolean {
-  return false;
   return typeof window !== 'undefined'
     && ('__TAURI_INTERNALS__' in window || window.location?.protocol === 'tauri:');
 }
