@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { strToU8, zipSync } from 'fflate';
 import * as XLSX from 'xlsx';
-import { parseLocalAttachment } from './multiFileParser';
+import { assertZipExpansionWithinLimits, parseLocalAttachment } from './multiFileParser';
 
 const WORD_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 
@@ -110,6 +110,40 @@ describe('DOCX WordprocessingML extraction', () => {
     expect(parsed.kind).toBe('excel');
     expect(parsed.markdownSummary.trim().length).toBeGreaterThan(0);
     expect(Object.keys(parsed.structuredData ?? {}).length).toBeGreaterThan(0);
+  });
+
+  it('rejects a ZIP entry whose declared expanded size exceeds the per-entry limit', () => {
+    const archive = zipSync({ 'word/document.xml': strToU8('x'.repeat(2048)) });
+
+    expect(() => assertZipExpansionWithinLimits(archive, {
+      maxEntryBytes: 1024,
+      maxTotalBytes: 4096,
+    })).toThrow(/압축 해제 크기/);
+  });
+
+  it('rejects ZIP archives whose combined expanded size exceeds the total limit', () => {
+    const archive = zipSync({
+      'one.xml': strToU8('a'.repeat(900)),
+      'two.xml': strToU8('b'.repeat(900)),
+    });
+
+    expect(() => assertZipExpansionWithinLimits(archive, {
+      maxEntryBytes: 1024,
+      maxTotalBytes: 1500,
+    })).toThrow(/압축 해제 크기/);
+  });
+
+  it('can preflight only the DOCX document XML and ignore large embedded media', () => {
+    const archive = zipSync({
+      'word/document.xml': strToU8('<w:document/>'),
+      'word/media/large-image.bin': strToU8('x'.repeat(4096)),
+    });
+
+    expect(() => assertZipExpansionWithinLimits(archive, {
+      maxEntryBytes: 128,
+      maxTotalBytes: 128,
+      includeFile: (name) => name === 'word/document.xml',
+    })).not.toThrow();
   });
 
 });
