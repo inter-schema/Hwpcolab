@@ -104,3 +104,9 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - Windows Rust test job also completed successfully with the native font catalog, command registration, `fontdb 0.23.0`, and canonical allow-list unit tests.
 - The later HWPX test-only run (41716475651) confirmed the intended TypeScript RED: 23 test files passed, 163 tests passed, and the new HWPX suite could not import the not-yet-implemented package validator.
 - This is an expected RED checkpoint; no HWPX production path has been changed yet.
+
+
+### 2026-11-04 — Atomic save RED tests
+- Added Node tests for complete replacement, missing staging source, replacement failure, and temporary-file cleanup.
+- Added matching Rust tests for successful overwrite, missing source preservation, and replacement failure preserving an existing directory.
+- These tests intentionally reference the not-yet-implemented atomic copy helper and will be evaluated after the implementation is committed; do not treat this checkpoint as green.
