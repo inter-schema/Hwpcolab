@@ -1,8 +1,10 @@
 pub mod commands;
+pub mod font_catalog;
 pub mod state;
 
 use commands::claw_bridge::*;
 use commands::document::*;
+use commands::fonts::*;
 use commands::llm_proxy::*;
 use commands::attachment::*;
 
@@ -11,6 +13,8 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             pick_local_file,
+            list_local_fonts,
+            read_local_font,
             open_document_session,
             create_blank_session,
             read_file_bytes,
