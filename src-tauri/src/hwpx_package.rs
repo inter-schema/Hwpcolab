@@ -83,6 +83,36 @@ mod tests {
         writer.finish().unwrap().into_inner()
     }
 
+
+    fn mark_entry_encrypted(mut bytes: Vec<u8>, target: &str) -> Vec<u8> {
+        let eocd = bytes
+            .windows(4)
+            .rposition(|window| window == b"PK\\x05\\x06")
+            .expect("EOCD signature");
+        let entry_count = u16::from_le_bytes(bytes[eocd + 10..eocd + 12].try_into().unwrap());
+        let mut cursor = u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
+
+        for _ in 0..entry_count {
+            assert_eq!(&bytes[cursor..cursor + 4], b"PK\\x01\\x02");
+            let name_length = u16::from_le_bytes(bytes[cursor + 28..cursor + 30].try_into().unwrap()) as usize;
+            let extra_length = u16::from_le_bytes(bytes[cursor + 30..cursor + 32].try_into().unwrap()) as usize;
+            let comment_length = u16::from_le_bytes(bytes[cursor + 32..cursor + 34].try_into().unwrap()) as usize;
+            let name = &bytes[cursor + 46..cursor + 46 + name_length];
+
+            if name == target.as_bytes() {
+                let central_flags = u16::from_le_bytes(bytes[cursor + 8..cursor + 10].try_into().unwrap());
+                bytes[cursor + 8..cursor + 10].copy_from_slice(&(central_flags | 0x0001).to_le_bytes());
+                let local_offset = u32::from_le_bytes(bytes[cursor + 42..cursor + 46].try_into().unwrap()) as usize;
+                let local_flags = u16::from_le_bytes(bytes[local_offset + 6..local_offset + 8].try_into().unwrap());
+                bytes[local_offset + 6..local_offset + 8].copy_from_slice(&(local_flags | 0x0001).to_le_bytes());
+                return bytes;
+            }
+
+            cursor += 46 + name_length + extra_length + comment_length;
+        }
+        panic!("ZIP entry not found: {target}");
+    }
+
     fn valid_entries() -> Vec<(&'static str, &'static str, CompressionMethod)> {
         vec![
             ("mimetype", HWPX_MIME_TYPE, CompressionMethod::Stored),
@@ -164,6 +194,13 @@ mod tests {
                 path.display()
             );
         }
+    }
+
+    #[test]
+    fn rejects_encrypted_document_parts() {
+        let bytes = build_archive(&valid_entries());
+        let encrypted = mark_entry_encrypted(bytes, "Contents/section0.xml");
+        assert!(!is_valid_hwpx_package(&encrypted));
     }
 
 }
