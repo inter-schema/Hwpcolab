@@ -23,6 +23,4 @@ rfd = "0.15"
 uuid = { version = "1", features = ["v4"] }
 fontdb = "0.23.0"
 zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
-
-[dev-dependencies]
 tempfile = "3"
