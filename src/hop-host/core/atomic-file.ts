@@ -1,5 +1,5 @@
 import {
-  COPYFILE_EXCL,
+  constants,
   closeSync,
   copyFileSync,
   existsSync,
@@ -26,7 +26,7 @@ export function copyFileAtomically(sourcePath: string, targetPath: string): void
   let fileDescriptor: number | undefined;
 
   try {
-    copyFileSync(sourcePath, temporaryPath, COPYFILE_EXCL);
+    copyFileSync(sourcePath, temporaryPath, constants.COPYFILE_EXCL);
     fileDescriptor = openSync(temporaryPath, 'r+');
     fsyncSync(fileDescriptor);
     closeSync(fileDescriptor);
