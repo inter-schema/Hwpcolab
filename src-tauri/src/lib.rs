@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod font_catalog;
+pub mod hwpx_package;
 pub mod state;
 
 use commands::claw_bridge::*;
