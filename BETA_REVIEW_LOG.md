@@ -140,3 +140,10 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - Tokio `net` feature was added for the local TCP fixture.
 - RED execution was requested in Actions run `41719841955`; GitHub reported both jobs queued for an extended period, so the exact failing output was not captured before implementing the fix. This is recorded as a TDD verification gap, not as a confirmed RED observation.
 - Fix commit: `171893a89987b9ef41d116403e36ac3ee28a3d03`. A fresh Windows Rust CI run is required to validate both integration tests and compilation.
+
+
+### 2026-11-04 — Tauri WebView CSP hardening
+- Found `src-tauri/tauri.conf.json` explicitly set `app.security.csp: null`, which disables Tauri's Content Security Policy protection.
+- Added separate production and development CSPs. Production allows local/custom-protocol assets, Tauri IPC, app-bundled workers/fonts/images and WASM execution, but no remote network origins or general eval. Development adds only the Vite localhost origin and HMR websocket.
+- Added configuration contract tests for non-null CSP, IPC, the required Tauri custom protocol, WASM support, no general `unsafe-eval`, object-src none, and dev-only localhost/HMR.
+- Tauri v2 documentation notes that CSP is only enabled when configured and that its injected asset CSP modifications append hashes/nonces to bundled code. Runtime smoke testing in packaged WebView remains desirable after CI.
