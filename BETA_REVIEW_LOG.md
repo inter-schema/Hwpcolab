@@ -88,3 +88,12 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - This is a test-harness scope defect, not evidence that the runtime regression test is red. Add an explicit first-party test include boundary (`src/**/*.test.ts`) before accepting the runtime RED result.
 - npm lock artifact uploaded by this run: artifact ID `13270301874` (`beta-npm-lock`).
 - Windows Rust job was still running at the time of this log update.
+
+
+### 2026-11-04 — CI RED confirmed
+- First PR run exposed test discovery collecting upstream E2E suites. The Vitest config was narrowed to `src/**/*.test.ts`.
+- Second run: frontend `npm install` succeeded; Vitest executed 23 first-party test files: **147 passed, 9 failed**.
+- The two new `isDesktopTauriRuntime` cases (Tauri v2 marker and `tauri:` protocol) failed with `expected false to be true`, directly reproducing the unconditional early return.
+- Six existing local-font behavior tests failed downstream for the same runtime-dispatch cause.
+- One unrelated existing test suite failed at import time because `src/hop-host/command/replace-upstream-commands.test.ts` referenced `../../index.html` (resolving under `src/`) instead of the repository-root `index.html`. Corrected the test import path by one directory level.
+- These findings are now isolated; the production runtime fix removes only the unconditional early return.
