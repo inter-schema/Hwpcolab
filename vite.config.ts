@@ -6,6 +6,7 @@ import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { createHopOverrides } from "./hop-overrides";
 import { isValidHwpxPackage } from "./src/hop-host/core/hwpx-package";
+import { copyFileAtomically } from "./src/hop-host/core/atomic-file";
 
 const rootDir = __dirname;
 const hopSrc = resolve(rootDir, "src/hop-host");
@@ -172,7 +173,7 @@ function localClawBridgePlugin(): Plugin {
                 const stg = resolveLocalPath(args.stagingPath || args.staging_path);
                 const orig = args.originalPath || args.original_path;
                 const target = orig && orig.trim() ? resolveLocalPath(orig) : resolve(stagingDir, `saved_${basename(stg)}`);
-                copyFileSync(stg, target);
+                copyFileAtomically(stg, target);
                 result = target;
                 break;
               }
