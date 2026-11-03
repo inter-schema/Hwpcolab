@@ -147,4 +147,23 @@ mod tests {
         ]);
         assert!(!is_valid_hwpx_package(&missing_section));
     }
+    #[test]
+    fn accepts_repository_hwpx_samples() {
+        let samples_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../samples");
+        for sample in [
+            "(날짜)(교시)(과목명)교수.학습과정안(이름).hwpx",
+            "demo_official_report.hwpx",
+        ] {
+            let path = samples_dir.join(sample);
+            let bytes = std::fs::read(&path)
+                .unwrap_or_else(|error| panic!("could not read {}: {}", path.display(), error));
+            assert!(
+                is_valid_hwpx_package(&bytes),
+                "repository HWPX sample was rejected: {}",
+                path.display()
+            );
+        }
+    }
+
 }
