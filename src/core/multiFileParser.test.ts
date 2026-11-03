@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { describe, expect, it } from 'vitest';
 import { strToU8, zipSync } from 'fflate';
+import * as XLSX from 'xlsx';
 import { parseLocalAttachment } from './multiFileParser';
 
 const WORD_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
@@ -66,4 +67,24 @@ describe('DOCX WordprocessingML extraction', () => {
 
     expect(parsed.markdownSummary).toMatch(/^\[DOCX 파싱 실패:/);
   });
+  it('keeps XLSX workbook import behavior with the maintained SheetJS release', async () => {
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ['Name', 'Score'],
+      ['Student A', 95],
+    ]);
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Scores');
+    const bytes = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+
+    const parsed = await parseLocalAttachment('scores.xlsx', new Uint8Array(bytes));
+
+    expect(parsed.kind).toBe('excel');
+    expect(parsed.markdownSummary).toBe(
+      '### [시트: Scores]\n| Name | Score |\n| --- | --- |\n| Student A | 95 |',
+    );
+    expect(parsed.structuredData).toEqual({
+      Scores: [['Name', 'Score'], ['Student A', 95]],
+    });
+  });
+
 });
