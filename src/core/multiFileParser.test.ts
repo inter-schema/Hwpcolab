@@ -156,4 +156,18 @@ describe('DOCX WordprocessingML extraction', () => {
     })).not.toThrow();
   });
 
+  it('rejects ZIP archives with excessive entry counts before decompression', () => {
+    const archive = zipSync({
+      'one.txt': strToU8('1'),
+      'two.txt': strToU8('2'),
+      'three.txt': strToU8('3'),
+    });
+
+    expect(() => assertZipExpansionWithinLimits(archive, {
+      maxEntryBytes: 10,
+      maxTotalBytes: 100,
+      maxEntries: 2,
+    })).toThrow(/항목 수/);
+  });
+
 });
