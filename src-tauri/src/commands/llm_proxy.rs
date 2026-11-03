@@ -1,11 +1,37 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
-pub fn get_cancel_map() -> &'static Arc<Mutex<HashMap<String, tokio::sync::oneshot::Sender<()>>>> {
-    static CANCEL_MAP: OnceLock<Arc<Mutex<HashMap<String, tokio::sync::oneshot::Sender<()>>>>> = OnceLock::new();
+pub struct CancelEntry {
+    token: u64,
+    sender: tokio::sync::oneshot::Sender<()>,
+}
+
+static NEXT_CANCEL_TOKEN: AtomicU64 = AtomicU64::new(1);
+
+pub fn get_cancel_map() -> &'static Arc<Mutex<HashMap<String, CancelEntry>>> {
+    static CANCEL_MAP: OnceLock<Arc<Mutex<HashMap<String, CancelEntry>>>> = OnceLock::new();
     CANCEL_MAP.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
+}
+
+fn cleanup_cancel_registration(request_id: &str, token: u64) {
+    if let Ok(mut lock) = get_cancel_map().lock() {
+        if lock.get(request_id).is_some_and(|entry| entry.token == token) {
+            lock.remove(request_id);
+        }
+    }
+}
+
+struct CancelCleanup(Option<(String, u64)>);
+
+impl Drop for CancelCleanup {
+    fn drop(&mut self) {
+        if let Some((request_id, token)) = self.0.as_ref() {
+            cleanup_cancel_registration(request_id, *token);
+        }
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -27,8 +53,8 @@ pub struct LlmProxyResponse {
 pub async fn cancel_llm_request(request_id: String) -> Result<bool, String> {
     let map = get_cancel_map();
     let mut lock = map.lock().map_err(|e| e.to_string())?;
-    if let Some(tx) = lock.remove(&request_id) {
-        let _ = tx.send(());
+    if let Some(entry) = lock.remove(&request_id) {
+        let _ = entry.sender.send(());
         Ok(true)
     } else {
         Ok(false)
@@ -134,17 +160,20 @@ pub async fn call_llm_http(req: LlmProxyRequest) -> Result<LlmProxyResponse, Str
     let builder = builder.body(request_body);
 
     let request_id = req.request_id.clone();
+    let mut cancel_token = None;
     let cancel_rx = if let Some(ref request_id) = request_id {
         use std::collections::hash_map::Entry;
 
         let (sender, receiver) = tokio::sync::oneshot::channel::<()>();
+        let token = NEXT_CANCEL_TOKEN.fetch_add(1, Ordering::Relaxed);
         let mut lock = get_cancel_map()
             .lock()
             .map_err(|error| format!("LLM 취소 상태 잠금 실패: {}", error))?;
 
         match lock.entry(request_id.clone()) {
             Entry::Vacant(entry) => {
-                entry.insert(sender);
+                entry.insert(CancelEntry { token, sender });
+                cancel_token = Some(token);
                 Some(receiver)
             }
             Entry::Occupied(_) => {
@@ -155,17 +184,7 @@ pub async fn call_llm_http(req: LlmProxyRequest) -> Result<LlmProxyResponse, Str
         None
     };
 
-    struct CancelCleanup(Option<String>);
-    impl Drop for CancelCleanup {
-        fn drop(&mut self) {
-            if let Some(ref request_id) = self.0 {
-                if let Ok(mut lock) = get_cancel_map().lock() {
-                    lock.remove(request_id);
-                }
-            }
-        }
-    }
-    let _cleanup = CancelCleanup(request_id);
+    let _cleanup = CancelCleanup(request_id.zip(cancel_token));
 
     let request_future = async {
         let response = builder
