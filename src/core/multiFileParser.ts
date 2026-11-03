@@ -11,30 +11,112 @@ export interface ParsedAttachment {
   structuredData?: any;
 }
 
-function parseDocxBytesToMarkdown(fileBytes: Uint8Array): string {
-  const unzipped = unzipSync(fileBytes);
-  const docXmlBytes = unzipped["word/document.xml"];
-  if (!docXmlBytes) {
-    throw new Error("word/document.xml을 찾을 수 없습니다.");
-  }
-  const xml = strFromU8(docXmlBytes);
-  const paragraphs: string[] = [];
-  const pMatches = xml.match(/<w:p[\s>][\s\S]*?<\/w:p>/g) || [];
-  for (const pXml of pMatches) {
-    const tMatches = pXml.match(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g) || [];
-    const line = tMatches
-      .map((t) => t.replace(/<[^>]+>/g, ""))
-      .join("")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .trim();
-    if (line) {
-      paragraphs.push(line);
+const WORDPROCESSINGML_NAMESPACE = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const DOCX_BLOCK_CONTAINERS = new Set(['sdt', 'sdtContent', 'customXml', 'ins', 'moveTo', 'smartTag']);
+
+function isWordElement(element: Element, localName: string): boolean {
+  return element.namespaceURI === WORDPROCESSINGML_NAMESPACE && element.localName === localName;
+}
+
+function directWordChildren(parent: Element, localName: string): Element[] {
+  return Array.from(parent.children).filter((child) => isWordElement(child, localName));
+}
+
+function extractWordParagraphText(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) return node.nodeValue ?? '';
+  if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+  const element = node as Element;
+  if (element.namespaceURI === WORDPROCESSINGML_NAMESPACE) {
+    switch (element.localName) {
+      case 't':
+        return element.textContent ?? '';
+      case 'tab':
+        return '\t';
+      case 'br':
+      case 'cr':
+        return '\n';
+      case 'noBreakHyphen':
+        return '\u2011';
+      case 'softHyphen':
+        return '\u00ad';
+      case 'del':
+      case 'delText':
+      case 'instrText':
+      case 'pPr':
+      case 'rPr':
+        return '';
     }
   }
-  return paragraphs.join("\n");
+
+  let text = '';
+  for (const child of Array.from(element.childNodes)) {
+    text += extractWordParagraphText(child);
+  }
+  return text;
+}
+
+function renderWordTable(table: Element): string {
+  const rows = directWordChildren(table, 'tr').map((row) =>
+    directWordChildren(row, 'tc').map((cell) => renderWordBlocks(cell).join('<br>')),
+  );
+  if (rows.length === 0) return '';
+
+  const columnCount = Math.max(...rows.map((row) => row.length));
+  if (columnCount === 0) return '';
+
+  const normalizeRow = (row: string[]) =>
+    Array.from({ length: columnCount }, (_, index) =>
+      (row[index] ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>'),
+    );
+  const renderRow = (row: string[]) => '| ' + normalizeRow(row).join(' | ') + ' |';
+  const header = renderRow(rows[0]);
+  const divider = '| ' + Array.from({ length: columnCount }, () => '---').join(' | ') + ' |';
+  return [header, divider, ...rows.slice(1).map(renderRow)].join('\n');
+}
+
+function renderWordBlocks(container: Element): string[] {
+  const blocks: string[] = [];
+  for (const child of Array.from(container.children)) {
+    if (isWordElement(child, 'p')) {
+      const paragraph = extractWordParagraphText(child);
+      if (paragraph.length > 0) blocks.push(paragraph);
+    } else if (isWordElement(child, 'tbl')) {
+      const table = renderWordTable(child);
+      if (table) blocks.push(table);
+    } else if (
+      child.namespaceURI === WORDPROCESSINGML_NAMESPACE
+      && DOCX_BLOCK_CONTAINERS.has(child.localName)
+    ) {
+      blocks.push(...renderWordBlocks(child));
+    }
+  }
+  return blocks;
+}
+
+function parseDocxBytesToMarkdown(fileBytes: Uint8Array): string {
+  const unzipped = unzipSync(fileBytes);
+  const docXmlBytes = unzipped['word/document.xml'];
+  if (!docXmlBytes) {
+    throw new Error('word/document.xml을 찾을 수 없습니다.');
+  }
+
+  if (typeof DOMParser === 'undefined') {
+    throw new Error('DOCX XML 파서를 사용할 수 없는 환경입니다.');
+  }
+
+  const xml = strFromU8(docXmlBytes);
+  const document = new DOMParser().parseFromString(xml, 'application/xml');
+  if (document.getElementsByTagName('parsererror').length > 0) {
+    throw new Error('word/document.xml의 XML 형식이 올바르지 않습니다.');
+  }
+
+  const body = document.getElementsByTagNameNS(WORDPROCESSINGML_NAMESPACE, 'body').item(0);
+  if (!body) {
+    throw new Error('word/document.xml에서 WordprocessingML 본문을 찾을 수 없습니다.');
+  }
+
+  return renderWordBlocks(body).join('\n\n');
 }
 
 export async function parseLocalAttachment(filePath: string, fileBytes: Uint8Array): Promise<ParsedAttachment> {
