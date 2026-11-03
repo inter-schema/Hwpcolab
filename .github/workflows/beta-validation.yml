@@ -11,41 +11,75 @@ permissions:
   contents: read
 
 jobs:
-  frontend:
-    name: Frontend tests and build
+  sync-lockfiles:
+    name: Sync dependency lockfiles
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'codex/beta-hardening-2026-11-04' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install frontend dependencies
+      - name: Generate npm lockfile without running package scripts
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Generate Cargo lockfile
+        run: cargo generate-lockfile --manifest-path src-tauri/Cargo.toml
+      - name: Commit lockfiles when changed
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json src-tauri/Cargo.lock
+          if git diff --cached --quiet; then
+            echo "Dependency lockfiles are already up to date."
+            exit 0
+          fi
+          git commit -m "build: sync dependency lockfiles"
+          git push origin "HEAD:refs/heads/${{ github.event.pull_request.head.ref }}"
+
+  frontend:
+    name: Frontend tests and build
+    needs: sync-lockfiles
+    if: ${{ always() && needs.sync-lockfiles.result != 'failure' && needs.sync-lockfiles.result != 'cancelled' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install frontend dependencies from lockfile
+        if: ${{ needs.sync-lockfiles.result == 'success' || github.event_name == 'push' }}
+        run: npm ci --no-audit --no-fund
+      - name: Install frontend dependencies for fork pull requests
+        if: ${{ needs.sync-lockfiles.result == 'skipped' && github.event_name != 'push' }}
         run: npm install --no-audit --no-fund
       - name: Run unit tests
         run: npm test
       - name: Build frontend
         run: npm run build
-      - name: Upload generated npm lock
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: beta-npm-lock
-          path: package-lock.json
-          if-no-files-found: warn
 
   rust-windows:
     name: Windows Rust tests
+    needs: sync-lockfiles
+    if: ${{ always() && needs.sync-lockfiles.result != 'failure' && needs.sync-lockfiles.result != 'cancelled' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref || github.sha }}
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@stable
-      - name: Run Rust tests
+      - name: Run Rust tests with committed lockfile
+        if: ${{ needs.sync-lockfiles.result == 'success' || github.event_name == 'push' }}
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+      - name: Run Rust tests for fork pull requests
+        if: ${{ needs.sync-lockfiles.result == 'skipped' && github.event_name != 'push' }}
         run: cargo test --manifest-path src-tauri/Cargo.toml
-      - name: Upload generated Cargo lock
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: beta-cargo-lock
-          path: src-tauri/Cargo.lock
-          if-no-files-found: warn
