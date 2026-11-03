@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { strToU8, zipSync } from 'fflate';
 import * as XLSX from 'xlsx';
-import { assertZipExpansionWithinLimits, parseLocalAttachment } from './multiFileParser';
+import { assertAttachmentFileSize, assertZipExpansionWithinLimits, MAX_ATTACHMENT_FILE_BYTES, parseLocalAttachment } from './multiFileParser';
 
 const WORD_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 
@@ -15,6 +15,16 @@ function makeDocx(documentXml: string): Uint8Array {
     'word/document.xml': strToU8(documentXml),
   });
 }
+
+
+  it('accepts attachment files up to the configured input-size limit', () => {
+    expect(() => assertAttachmentFileSize(MAX_ATTACHMENT_FILE_BYTES)).not.toThrow();
+  });
+
+  it('rejects attachment files above the configured input-size limit before reading them', () => {
+    expect(() => assertAttachmentFileSize(MAX_ATTACHMENT_FILE_BYTES + 1))
+      .toThrow(/128 MiB/);
+  });
 
 describe('DOCX WordprocessingML extraction', () => {
   it('supports alternate namespace prefixes and decodes XML entities', async () => {
