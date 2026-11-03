@@ -15,8 +15,11 @@ function makeDocx(documentXml: string): Uint8Array {
 describe('DOCX WordprocessingML extraction', () => {
   it('supports alternate namespace prefixes and decodes XML entities', async () => {
     const xml = '<x:document xmlns:x="' + WORD_NS + '">' +
-      '<x:body><x:p><x:r><x:t>A &amp; B &lt; C</x:t></x:r></x:p></x:body>' +
-      '</x:document>';
+      '<x:body>\n' +
+        '<x:p>\n' +
+          '<x:r><x:t>A &amp; B &lt; C</x:t></x:r>\n' +
+        '</x:p>\n' +
+      '</x:body></x:document>';
 
     const parsed = await parseLocalAttachment('alternate-prefix.docx', makeDocx(xml));
 
