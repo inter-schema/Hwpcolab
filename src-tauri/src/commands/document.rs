@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
+use crate::hwpx_package::is_valid_hwpx_package;
 
 /// Recognize the ZIP local-file-header signature (not an EOCD or arbitrary PK prefix).
 fn has_zip_local_file_header(bytes: &[u8]) -> bool {
