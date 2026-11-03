@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import studioHtml from '../../index.html?raw';
+import studioHtml from '../../../index.html?raw';
 import type { CommandDef } from '@/upstream/commands';
 import {
   insertCommands,
