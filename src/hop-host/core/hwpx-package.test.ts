@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { strToU8, zipSync, type Zippable } from 'fflate';
 import { isValidHwpxPackage } from './hwpx-package';
 
@@ -58,4 +61,17 @@ describe('HWPX package validation', () => {
     delete missingSection['Contents/section0.xml'];
     expect(isValidHwpxPackage(zipSync(missingSection))).toBe(false);
   });
+  it('accepts the repository HWPX samples, not only generated fixtures', () => {
+    const testDirectory = dirname(fileURLToPath(import.meta.url));
+    const samples = [
+      '(날짜)(교시)(과목명)교수.학습과정안(이름).hwpx',
+      'demo_official_report.hwpx',
+    ];
+
+    for (const sample of samples) {
+      const bytes = new Uint8Array(readFileSync(resolve(testDirectory, '../../../samples', sample)));
+      expect(isValidHwpxPackage(bytes), sample).toBe(true);
+    }
+  });
+
 });
