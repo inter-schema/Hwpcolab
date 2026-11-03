@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
+use crate::hwpx_package::is_valid_hwpx_package;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct OpenedDocSession {
@@ -31,8 +32,23 @@ pub async fn open_document_session(app: AppHandle, file_path: String) -> Result<
     let src_path = PathBuf::from(&file_path);
     let bytes = fs::read(&src_path).map_err(|e| format!("파일 읽기 실패: {}", e))?;
 
-    // 첫 2바이트가 'PK' (0x50, 0x4B)이면 확장자와 무관하게 HWPX로 판별
-    let is_hwpx = bytes.len() >= 2 && bytes[0] == 0x50 && bytes[1] == 0x4B;
+    let has_zip_signature = bytes.starts_with(b"PK\\x03\\x04");
+    let requested_hwpx = src_path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(|extension| extension.eq_ignore_ascii_case("hwpx"))
+        .unwrap_or(false);
+    let is_hwpx = if has_zip_signature {
+        if !is_valid_hwpx_package(&bytes) {
+            return Err("유효한 HWPX(OWPML) 패키지가 아닙니다. 일반 ZIP 또는 손상된 문서는 열 수 없습니다.".to_string());
+        }
+        true
+    } else {
+        if requested_hwpx {
+            return Err("HWPX 파일의 ZIP/OWPML 패키지 구조가 손상되었거나 올바르지 않습니다.".to_string());
+        }
+        false
+    };
     let ext = if is_hwpx { "hwpx" } else { "hwp" };
 
     let staging_dir = app.path().app_cache_dir().map_err(|e| e.to_string())?.join("hop-staging");
