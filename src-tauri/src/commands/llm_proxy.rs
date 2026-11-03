@@ -115,6 +115,41 @@ mod tests {
     use tokio::net::TcpListener;
     use uuid::Uuid;
 
+
+    #[test]
+    fn endpoint_validation_allows_http_and_https_but_rejects_other_schemes_and_userinfo() {
+        assert!(parse_llm_endpoint("https://api.example.test/v1/chat").is_ok());
+        assert!(parse_llm_endpoint("http://127.0.0.1:11434/v1/chat").is_ok());
+        assert!(parse_llm_endpoint("file:///etc/passwd").is_err());
+        assert!(parse_llm_endpoint("ftp://example.test/model").is_err());
+        assert!(parse_llm_endpoint("https://user:secret@example.test/v1/chat").is_err());
+    }
+
+    #[test]
+    fn request_body_size_is_bounded_before_network_dispatch() {
+        let under_limit = serde_json::json!({"prompt": "x".repeat(MAX_REQUEST_BODY_BYTES - 100)});
+        let bytes = serialize_bounded_request_body(&under_limit).unwrap();
+        assert!(bytes.len() <= MAX_REQUEST_BODY_BYTES);
+
+        let over_limit = serde_json::json!({"prompt": "x".repeat(MAX_REQUEST_BODY_BYTES + 1)});
+        assert!(serialize_bounded_request_body(&over_limit).is_err());
+    }
+
+    #[test]
+    fn response_content_length_is_rejected_above_the_memory_limit() {
+        assert!(validate_response_content_length(Some(MAX_RESPONSE_BODY_BYTES as u64)).is_ok());
+        assert!(validate_response_content_length(Some(MAX_RESPONSE_BODY_BYTES as u64 + 1)).is_err());
+        assert!(validate_response_content_length(None).is_ok());
+    }
+
+    #[test]
+    fn user_timeout_is_clamped_to_the_supported_range() {
+        assert_eq!(normalize_timeout_ms(None), DEFAULT_TIMEOUT_MS);
+        assert_eq!(normalize_timeout_ms(Some(1)), MIN_TIMEOUT_MS);
+        assert_eq!(normalize_timeout_ms(Some(u64::MAX)), MAX_TIMEOUT_MS);
+        assert_eq!(normalize_timeout_ms(Some(30_000)), 30_000);
+    }
+
     fn request(url: String, request_id: Option<String>) -> LlmProxyRequest {
         LlmProxyRequest {
             url,
