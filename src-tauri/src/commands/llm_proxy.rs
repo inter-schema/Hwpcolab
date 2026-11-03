@@ -50,35 +50,54 @@ pub async fn call_llm_http(req: LlmProxyRequest) -> Result<LlmProxyResponse, Str
     }
 
     let request_id = req.request_id.clone();
-    let (tx, rx) = tokio::sync::oneshot::channel::<()>();
+    let cancel_rx = if let Some(ref request_id) = request_id {
+        use std::collections::hash_map::Entry;
 
-    if let Some(ref rid) = request_id {
-        let map = get_cancel_map();
-        if let Ok(mut lock) = map.lock() {
-            lock.insert(rid.clone(), tx);
+        let (tx, rx) = tokio::sync::oneshot::channel::<()>();
+        let mut lock = get_cancel_map()
+            .lock()
+            .map_err(|error| format!("LLM 취소 상태 잠금 실패: {}", error))?;
+
+        match lock.entry(request_id.clone()) {
+            Entry::Vacant(entry) => {
+                entry.insert(tx);
+                Some(rx)
+            }
+            Entry::Occupied(_) => {
+                return Err("동일 request_id가 이미 실행 중입니다.".to_string());
+            }
         }
-    }
+    } else {
+        // Calls without a request ID are intentionally non-cancellable.
+        // Do not create a oneshot receiver whose sender would be dropped.
+        None
+    };
 
     struct CancelCleanup(Option<String>);
     impl Drop for CancelCleanup {
         fn drop(&mut self) {
-            if let Some(ref rid) = self.0 {
+            if let Some(ref request_id) = self.0 {
                 if let Ok(mut lock) = get_cancel_map().lock() {
-                    lock.remove(rid);
+                    lock.remove(request_id);
                 }
             }
         }
     }
-    let _cleanup = CancelCleanup(request_id.clone());
+    let _cleanup = CancelCleanup(request_id);
 
-    let resp_res = tokio::select! {
-        res = builder.json(&req.body_json).send() => {
-            res.map_err(|e| format!("LLM 네트워크 요청 실패: {}", e))?
+    let response = match cancel_rx {
+        Some(cancel_rx) => {
+            tokio::select! {
+                result = builder.json(&req.body_json).send() => result,
+                _ = cancel_rx => {
+                    return Err("LLM 요청이 사용자에 의해 취소되었습니다.".to_string());
+                }
+            }
         }
-        _ = rx => {
-            return Err("LLM 요청이 사용자에 의해 취소되었습니다.".to_string());
-        }
+        None => builder.json(&req.body_json).send().await,
     };
+    let resp_res = response
+        .map_err(|error| format!("LLM 네트워크 요청 실패: {}", error))?;
 
     let status = resp_res.status().as_u16();
     let text = resp_res.text().await.map_err(|e| e.to_string())?;
