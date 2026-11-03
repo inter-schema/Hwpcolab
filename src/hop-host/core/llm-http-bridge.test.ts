@@ -24,7 +24,7 @@ describe('Vite LLM HTTP bridge limits', () => {
 
   it('clamps request timeouts to the native bridge range', () => {
     expect(normalizeLlmTimeoutMs()).toBe(DEFAULT_LLM_TIMEOUT_MS);
-    expect(normalizeLlmTimeoutMs(0)).toBe(MIN_TIMEOUT_MS);
+    expect(normalizeLlmTimeoutMs(0)).toBe(MIN_LLM_TIMEOUT_MS);
     expect(normalizeLlmTimeoutMs(Number.MAX_SAFE_INTEGER)).toBe(MAX_LLM_TIMEOUT_MS);
     expect(normalizeLlmTimeoutMs(30_000)).toBe(30_000);
   });
