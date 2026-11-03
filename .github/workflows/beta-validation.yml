@@ -5,7 +5,7 @@ on:
     branches: [Beta]
     types: [opened, synchronize, reopened, edited]
   push:
-    branches: [Beta, "codex/**"]
+    branches: [Beta]
 
 concurrency:
   group: beta-validation-${{ github.event.pull_request.number || github.ref }}
