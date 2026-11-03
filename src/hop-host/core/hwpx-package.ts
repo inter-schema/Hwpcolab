@@ -30,8 +30,9 @@ function findEndOfCentralDirectory(view: DataView, bytesLength: number): number 
  * Validates the OWPML package envelope without decompressing arbitrary ZIP
  * entries. It checks the first local/central entry, stored mimetype payload,
  * single-disk classic ZIP directory bounds, and essential document parts.
- * ZIP64, encrypted entries, data descriptors and malformed archives fail
- * closed rather than being guessed as HWPX.
+ * ZIP64, encrypted entries and malformed archives fail closed. Data descriptors
+ * remain valid for ordinary entries; the mimetype entry must still be stored
+ * with complete metadata in its first local header.
  */
 export function isValidHwpxPackage(bytes: Uint8Array): boolean {
   try {
@@ -92,8 +93,7 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
       if (
         recordEnd > centralDirectoryOffset + centralDirectorySize
         || startDisk !== 0
-        || (flags & 0x0001) !== 0
-        || (flags & 0x0008) !== 0
+        || (flags & 0x0041) !== 0
         || compressedSize === 0xffffffff
         || uncompressedSize === 0xffffffff
         || localHeaderOffset === 0xffffffff
@@ -149,7 +149,7 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
 
     if (
       localDataEnd > bytes.byteLength
-      || (localFlags & 0x0009) !== 0
+      || (localFlags & 0x0049) !== 0
       || localFlags !== firstCentralEntry.flags
       || localMethod !== 0
       || localMethod !== firstCentralEntry.method
