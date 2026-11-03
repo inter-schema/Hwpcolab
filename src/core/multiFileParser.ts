@@ -194,7 +194,11 @@ function parseDocxBytesToMarkdown(fileBytes: Uint8Array): string {
     throw new Error('word/document.xml의 XML 형식이 올바르지 않습니다.');
   }
 
-  const body = document.getElementsByTagNameNS(WORDPROCESSINGML_NAMESPACE, 'body').item(0);
+  // happy-dom's XML getElementsByTagNameNS implementation differs from
+  // browser DOMs for prefixed XML. Traverse all elements and match namespaceURI
+  // + localName explicitly; this remains prefix-independent.
+  const body = Array.from(document.getElementsByTagName('*'))
+    .find((element) => isWordElement(element, 'body')) ?? null;
   if (!body) {
     throw new Error('word/document.xml에서 WordprocessingML 본문을 찾을 수 없습니다.');
   }
