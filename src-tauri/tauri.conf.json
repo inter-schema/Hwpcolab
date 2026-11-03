@@ -20,7 +20,32 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": "'self' customprotocol: asset:",
+        "script-src": "'self' 'wasm-unsafe-eval'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' asset: http://asset.localhost data: blob:",
+        "font-src": "'self' asset: http://asset.localhost data:",
+        "connect-src": "'self' ipc: http://ipc.localhost",
+        "worker-src": "'self' blob:",
+        "media-src": "'self' blob:",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'self'"
+      },
+      "devCsp": {
+        "default-src": "'self' customprotocol: asset:",
+        "script-src": "'self' 'wasm-unsafe-eval'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' asset: http://asset.localhost data: blob:",
+        "font-src": "'self' asset: http://asset.localhost data:",
+        "connect-src": "'self' ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1420",
+        "worker-src": "'self' blob:",
+        "media-src": "'self' blob:",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'self'"
+      }
     }
   },
   "bundle": {
@@ -34,7 +59,10 @@
     ],
     "fileAssociations": [
       {
-        "ext": ["hwp", "hwpx"],
+        "ext": [
+          "hwp",
+          "hwpx"
+        ],
         "name": "Hangul Word Processor Document",
         "role": "Editor"
       }
