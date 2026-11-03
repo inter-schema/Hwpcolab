@@ -2,6 +2,9 @@ export class ActiveHttpRequests {
   private readonly controllers = new Map<string, AbortController>();
 
   register(requestId: string, controller: AbortController): void {
+    if (this.controllers.has(requestId)) {
+      throw new Error(`Request ID "${requestId}" is already active.`);
+    }
     this.controllers.set(requestId, controller);
   }
 
@@ -13,7 +16,9 @@ export class ActiveHttpRequests {
     return true;
   }
 
-  cleanup(requestId: string, _controller: AbortController): void {
-    this.controllers.delete(requestId);
+  cleanup(requestId: string, controller: AbortController): void {
+    if (this.controllers.get(requestId) === controller) {
+      this.controllers.delete(requestId);
+    }
   }
 }
