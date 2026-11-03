@@ -53,6 +53,16 @@ export class PrivacySessionMasker {
       result = result.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, (match) =>
         this.registerToken("PII_EMAIL", match)
       );
+      // Korean bank account numbers: require an explicit account label to
+      // avoid masking student IDs, document numbers and unrelated digit groups.
+      result = result.replace(
+        /((?:계좌(?:번호)?|통장(?:번호)?|bank\s*account(?:\s*(?:number|no\.?))?)\s*[:：#]?\s*)(\d{10,16}|\d{2,4}(?:[- ]\d{2,4}){2,3})(?!\d)/gi,
+        (match, label: string, account: string) => {
+          const digitCount = account.replace(/\D/g, '').length;
+          if (digitCount < 10 || digitCount > 16) return match;
+          return label + this.registerToken("PII_ACCOUNT", account);
+        }
+      );
     }
 
     return result;
