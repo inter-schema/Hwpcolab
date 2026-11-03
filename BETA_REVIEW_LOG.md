@@ -121,3 +121,10 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - Latest code before current verification: PR branch head `deb94d5a3e28a4aa720a665b6c27b24409b6a016` (font path security changes).
 - Earlier current-branch run `41717504483` was for a pre-implementation commit and failed only because `atomic-file.ts` was not yet present at that checkpoint: 169 existing tests passed. This is not evidence about the current head.
 - A fresh current-head run is being queued after the latest PR update. Do not claim DOCX, HWPX or atomic-save test success until that run completes.
+
+
+### 2026-11-04 — SheetJS security audit
+- The manifest previously resolved registry `xlsx@0.18.5`, which is affected by SheetJS ReDoS CVE-2024-22363 (all CE releases through 0.20.1) and is distributed from a stale npm registry endpoint.
+- SheetJS's own advisory identifies 0.20.2+ as the ReDoS fix, and its official installation documentation recommends the CDN NodeJS tarball. The official CDN currently lists 0.20.3 as the recommended release.
+- Updated `package.json` to the official `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz` tarball and added a workbook-import compatibility fixture that asserts both Markdown and structured sheet data.
+- Lockfile regeneration and full CI validation remain pending; do not consider this dependency upgrade verified until the current-head install, tests and build pass.
