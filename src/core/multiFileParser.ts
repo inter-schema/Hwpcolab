@@ -23,7 +23,8 @@ function directWordChildren(parent: Element, localName: string): Element[] {
 }
 
 function extractWordParagraphText(node: Node): string {
-  if (node.nodeType === Node.TEXT_NODE) return node.nodeValue ?? '';
+  // Word text is stored in w:t elements. Raw XML indentation between
+  // elements is formatting whitespace and must not leak into document text.
   if (node.nodeType !== Node.ELEMENT_NODE) return '';
 
   const element = node as Element;
