@@ -99,68 +99,6 @@ pub async fn write_file_bytes(file_path: String, bytes: Vec<u8>) -> Result<(), S
     fs::write(&file_path, bytes).map_err(|e| e.to_string())
 }
 
-/// 4) 스테이징 파일을 원본 경로(또는 다른 이름으로 저장 다이얼로그)에 커밋
-#[tauri::command]
-pub async fn commit_staging_to_original(staging_path: String, original_path: String) -> Result<String, String> {
-    let target = if original_path.trim().is_empty() {
-        let picked = rfd::AsyncFileDialog::new()
-            .add_filter("HWP/HWPX Document", &["hwp", "hwpx"])
-            .save_file()
-            .await;
-        match picked {
-            Some(f) => f.path().to_string_lossy().to_string(),
-            None => return Err("저장이 취소되었습니다.".to_string()),
-        }
-    } else {
-        original_path
-    };
-    fs::copy(&staging_path, &target).map_err(|e| format!("원본 저장 실패: {}", e))?;
-    Ok(target)
-}
-
-fn commit_staged_file_atomically(staging_path: &std::path::Path, target_path: &std::path::Path) -> Result<(), String> {
-    use std::io::{Read, Write};
-    use tempfile::NamedTempFile;
-
-    let parent = target_path
-        .parent()
-        .filter(|path| !path.as_os_str().is_empty())
-        .unwrap_or_else(|| std::path::Path::new("."));
-    if !parent.is_dir() {
-        return Err(format!("저장 경로의 상위 디렉터리가 유효하지 않습니다: {}", parent.display()));
-    }
-
-    let source_metadata = fs::metadata(staging_path)
-        .map_err(|error| format!("스테이징 파일을 읽을 수 없습니다: {} ({})", staging_path.display(), error))?;
-    if !source_metadata.is_file() {
-        return Err(format!("스테이징 경로가 일반 파일이 아닙니다: {}", staging_path.display()));
-    }
-
-    let mut source = fs::File::open(staging_path)
-        .map_err(|error| format!("스테이징 파일을 열 수 없습니다: {} ({})", staging_path.display(), error))?;
-    let mut temporary = NamedTempFile::new_in(parent)
-        .map_err(|error| format!("저장 임시 파일을 만들 수 없습니다: {} ({})", parent.display(), error))?;
-
-    std::io::copy(&mut source, temporary.as_file_mut())
-        .map_err(|error| format!("저장 임시 파일 기록 실패: {}", error))?;
-    temporary.as_file_mut().flush()
-        .map_err(|error| format!("저장 임시 파일 flush 실패: {}", error))?;
-    fs::set_permissions(temporary.path(), source_metadata.permissions())
-        .map_err(|error| format!("저장 임시 파일 권한 설정 실패: {}", error))?;
-    temporary.as_file().sync_all()
-        .map_err(|error| format!("저장 임시 파일 동기화 실패: {}", error))?;
-
-    temporary.persist(target_path)
-        .map_err(|error| format!("원본 저장 실패: {}", error.error))?;
-
-    // Directory sync is best-effort because opening/syncing directories is
-    // not uniformly supported on Windows filesystems.
-    if let Ok(directory) = fs::File::open(parent) {
-        let _ = directory.sync_all();
-    }
-    Ok(())
-}
-
 #[tauri::command]
 pub async fn commit_staging_to_original(staging_path: String, original_path: String) -> Result<String, String> {
     let target = if original_path.trim().is_empty() {
