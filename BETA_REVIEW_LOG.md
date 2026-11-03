@@ -1,58 +1,81 @@
 # Beta Branch Review Log
 
-> Working notes for the ongoing Hwpcolab Beta audit. This file is intentionally kept on Beta only; do not modify main as part of this work.
+> Living engineering ledger for the Hwpcolab Beta hardening effort. The integration target is `Beta` only. Never modify `main` or another release branch.
 
-## Scope and baseline
+## 1. Verified baseline and boundaries
 
 - Repository: `inter-schema/Hwpcolab`
-- Target branch: `Beta`
-- Baseline HEAD checked after the ChatGPT Codex Connector installation: `0c23baaf63a49e75fd176a8b18d182acfa91546e`
-- The current Beta branch is unprotected according to the GitHub branch API response.
-- The GitHub App installation is scoped to this one repository, not all repositories.
+- Integration target: `Beta`
+- Fresh baseline: `e46f7230074cab63362f41d46cc1d1153085f745` (`docs(beta): add ongoing review log`, 2026-11-03)
+- Implementation branch: `codex/beta-hardening-2026-11-04`, created directly from the verified Beta baseline.
+- The linked GitHub installation has push permission for this repository.
+- All implementation commits remain on the isolated branch until tests, CI and review are satisfactory. The final integration destination is Beta only.
+- User explicitly authorized broad code and work-file additions on Beta and separately instructed that COS must not be used. Work is therefore performed through GitHub APIs and GitHub Actions only; no COS tools are used.
 
-## Findings from the earlier read-only pass
+## 2. Goals
 
-These findings must be revalidated against the current Beta files before changing code.
+1. Restore native Tauri local-font enumeration and safely scoped font-byte reads.
+2. Reject arbitrary ZIP files as HWPX and protect document saves from interrupted writes.
+3. Replace regex-based DOCX XML extraction with namespace-aware parsing that preserves WordprocessingML structure.
+4. Close Vite font asset path traversal, sibling-prefix and symlink escape cases.
+5. Make frontend and Rust tests repeatable in CI, then reconcile generated lockfiles.
+6. Compare current HOP/RHWP upstream changes and port only independently justified fixes.
 
-1. **Desktop local-font detection**
-   - File: `src/hop-host/core/desktop-local-fonts.ts`
-   - Earlier inspection found an unconditional early `return false` in `isDesktopTauriRuntime()`, preventing the Tauri-native local-font path from being reached.
-   - The frontend appears to call `list_local_fonts` and `read_local_font`, while the Tauri command registration and native catalog implementation were not present in the inspected `src-tauri` files.
-   - Revalidate current command wiring and compare with HOP's `fontdb`-based implementation before porting anything.
+Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale upstream rebase, no indiscriminate system-font bundling, and no claims of platform validation without an executed CI result.
 
-2. **Save durability**
-   - File: `src-tauri/src/commands/document.rs`
-   - Earlier inspection found staging output copied to the destination with `fs::copy`.
-   - Evaluate temp-file write, flush/sync, verification, atomic replacement, and rollback/recovery behavior, including Windows replacement semantics.
+## 3. Findings revalidated at e46f723
 
-3. **HWPX identification**
-   - Earlier inspection found ZIP `PK` magic used as the HWPX discriminator.
-   - Validate package members, `mimetype`, and required HWPX structure so arbitrary ZIP files are not misidentified.
+### F1. Desktop native fonts are disabled and commands are missing
+- `src/hop-host/core/desktop-local-fonts.ts`: `isDesktopTauriRuntime()` returns false before its real Tauri marker/protocol check.
+- Frontend calls `list_local_fonts` and `read_local_font`.
+- `src-tauri/src/lib.rs`, `src-tauri/src/commands/mod.rs`, and `src-tauri/Cargo.toml` have no corresponding native catalog module or command registrations.
+- HOP v0.4.5 contains a fontdb-based catalog reference. Adapt it carefully, including canonical path allow-listing; upstream path checks are not accepted without local review.
 
-4. **DOCX XML parsing**
-   - File: `src/core/multiFileParser.ts`
-   - Earlier inspection found regex-based XML extraction.
-   - Test namespaces, entities, tabs, line breaks, and tables; prefer a real XML parser where the current implementation is lossy.
+### F2. Document save overwrites the target directly
+- `src-tauri/src/commands/document.rs`: `commit_staging_to_original` uses `fs::copy` to the final target.
+- `vite.config.ts`: development bridge uses `copyFileSync` to the final target.
+- Both paths need same-directory staging, complete write/sync, atomic replacement semantics, cleanup and preservation tests.
 
-5. **Font development-server path validation**
-   - File: `vite.config.ts`
-   - Earlier inspection found a string-prefix path containment check using `startsWith(fontsDir)`.
-   - Replace with canonical/relative path containment and traversal regression tests if the issue remains.
+### F3. ZIP magic is treated as HWPX
+- Native and Vite development paths classify any `PK` prefix as HWPX.
+- Require a valid OWPML package signature and essential parts; reject generic ZIP archives and malformed packages.
 
-6. **Test harness**
-   - Earlier inspection found Vitest tests under `src/hop-host/core`, but no corresponding root dependency/scripts in the inspected package files.
-   - Verify current package scripts and CI before adding or changing test infrastructure.
+### F4. DOCX extraction is regex-based
+- `src/core/multiFileParser.ts` extracts `w:p` and `w:t` by fixed prefix and loses tabs, breaks, tables and whitespace semantics.
+- Use an XML parser/DOM with namespace URI semantics and fixture-driven tests.
 
-7. **Dependency maintenance**
-   - Review Vite, PDF.js, SheetJS, React, and other dependencies against current upstream releases and security advisories.
-   - Do not perform blind bulk upgrades. Require build, tests, and document round-trip checks.
+### F5. Vite font route uses unsafe string-prefix containment
+- `vite.config.ts` uses `candidate.startsWith(fontsDir)`, which does not enforce path-component boundaries or prevent symlink escapes.
+- Handle malformed URL encoding without an unhandled middleware exception; canonicalize both root and candidate.
 
-## Work protocol
+### F6. The existing test suite cannot be run from the remote manifest
+- Vitest test files exist under `src/hop-host/core`, but remote `package.json` has no Vitest dependency or `test` script.
+- `package-lock.json` already resolves Vite 6.4.5 while the manifest still declares `^6.0.3`; align the manifest to the patched Vite 6.4.5 floor and regenerate the lock through CI.
 
-- Re-read each affected file from the current `Beta` head before editing.
-- Make small, isolated changes with regression tests.
-- Run the narrow tests first, then the full available test/build checks.
-- Inspect the resulting diff and verify HWP/HWPX-related paths for compatibility.
-- Keep all commits on `Beta`; do not change `main`.
-- Update this log with each completed fix, test command, result, and remaining risk.
-- Do not claim a fix is complete until the relevant tests have passed.
+## 4. Implementation order
+
+1. Add Vitest/happy-dom test execution and CI; prove the native runtime regression test fails for the expected reason.
+2. Restore native font runtime detection and implement Tauri font catalog/commands with canonical path checks.
+3. Add HWPX structural validation and durable save replacement in both native and Vite development paths.
+4. Replace DOCX regex extraction and add real ZIP/XML fixtures.
+5. Harden Vite font asset middleware with canonical path containment.
+6. Compare upstream and dependencies, run the complete validation matrix, review and merge the clean PR into Beta.
+
+## 5. Verification protocol
+
+- Every behavior change starts with a test written before production code.
+- A RED test must fail for the intended reason, not a syntax/import error.
+- A GREEN test must pass, followed by the full relevant suite and build.
+- Rust behavior is verified on Windows CI; frontend tests/build are verified on Ubuntu CI.
+- Generated `package-lock.json` and `src-tauri/Cargo.lock` are captured from the first CI setup run, committed, and then subsequent CI uses locked installs/builds.
+- Record exact branch/commit IDs, GitHub Actions runs, job conclusions and remaining risks below.
+- Do not claim completion until the final PR head has green checks and its diff has been inspected.
+
+## 6. Work history
+
+### 2026-11-04 — Baseline revalidation
+- Confirmed Beta HEAD: `e46f7230074cab63362f41d46cc1d1153085f745`.
+- Created `codex/beta-hardening-2026-11-04` from Beta.
+- Confirmed repository push permission.
+- Re-read current font runtime, Tauri registration, save, DOCX and Vite font middleware source.
+- No production code has been changed at this checkpoint.
