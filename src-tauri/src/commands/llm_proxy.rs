@@ -87,3 +87,81 @@ pub async fn call_llm_http(req: LlmProxyRequest) -> Result<LlmProxyResponse, Str
 
     Ok(LlmProxyResponse { status, body })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::io::AsyncReadExt;
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpListener;
+    use uuid::Uuid;
+
+    fn request(url: String, request_id: Option<String>) -> LlmProxyRequest {
+        LlmProxyRequest {
+            url,
+            headers: HashMap::new(),
+            body_json: serde_json::json!({"model": "test", "messages": []}),
+            timeout_ms: Some(5_000),
+            request_id,
+        }
+    }
+
+    #[tokio::test]
+    async fn request_without_request_id_is_not_cancelled_immediately() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request_bytes = [0_u8; 2048];
+            let _ = stream.read(&mut request_bytes).await.unwrap();
+            stream
+                .write_all(
+                    b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 11\r\nConnection: close\r\n\r\n{\"ok\":true}",
+                )
+                .await
+                .unwrap();
+        });
+
+        let response = call_llm_http(request(format!("http://{address}/chat"), None)).await;
+
+        assert!(response.is_ok(), "request without an ID should run: {response:?}");
+        assert_eq!(response.unwrap().status, 200);
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn duplicate_request_ids_do_not_replace_or_cancel_the_original_request() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let request_id = format!("duplicate-test-{}", Uuid::new_v4());
+        let (accepted_tx, accepted_rx) = tokio::sync::oneshot::channel();
+
+        let server = tokio::spawn(async move {
+            let (_stream, _) = listener.accept().await.unwrap();
+            let _ = accepted_tx.send(());
+            tokio::time::sleep(Duration::from_secs(5)).await;
+        });
+
+        let first_id = request_id.clone();
+        let first = tokio::spawn(async move {
+            call_llm_http(request(format!("http://{address}/first"), Some(first_id))).await
+        });
+        accepted_rx.await.unwrap();
+
+        let duplicate = call_llm_http(request(
+            format!("http://{address}/second"),
+            Some(request_id.clone()),
+        ))
+        .await;
+
+        assert!(duplicate.is_err(), "a duplicate in-flight request ID must be rejected");
+        assert!(
+            duplicate.unwrap_err().contains("이미 실행 중"),
+            "duplicate ID should produce an explicit conflict error"
+        );
+        assert!(cancel_llm_request(request_id).await.unwrap());
+        assert!(first.await.unwrap().is_err());
+
+        server.abort();
+    }
+}
