@@ -158,3 +158,12 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - Added unit/integration coverage for URL scheme/userinfo, request and response limits, timeout normalization, and cross-host redirect suppression.
 - Fix commit: `8ada00e6caccfa90b75e62e6af07c5bc0c7beebe`; additional redirect/large-response tests commit: `97039a9ab947c3041580d360e64b2dd11722fe67`.
 - Current Windows Rust CI validation is pending; these resource hardening behaviors are not marked verified yet.
+
+
+### 2026-11-04 — Attachment ZIP-bomb and file-size hardening
+- Added a preflight helper using fflate's ZIP filter callback. It inspects central-directory expanded sizes without inflating entries, enforces per-entry/total expansion limits, and supports a path allow-list.
+- DOCX parsing now preflights only `word/document.xml` (max 16 MiB) and extracts only that entry; it no longer inflates unrelated embedded media.
+- XLSX parsing preflights all ZIP entries (max 32 MiB per entry / 128 MiB total) before SheetJS parses the workbook.
+- Added regression tests for per-entry expansion overflow, total expansion overflow, and ignoring unneeded large DOCX media entries.
+- Added a 128 MiB raw attachment size limit at three boundaries: browser picker/drop before `arrayBuffer()`, parser entry point, and native Tauri metadata check before `fs::read`. UI now surfaces the size-limit error instead of leaving an unhandled promise rejection.
+- Remaining caveat: XLS legacy OLE containers do not use ZIP, so the ZIP expansion preflight applies to DOCX/XLSX only. The raw 128 MiB input limit applies to every attachment type.
