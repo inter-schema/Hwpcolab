@@ -20,8 +20,11 @@ pub fn is_valid_hwpx_package(bytes: &[u8]) -> bool {
             return false;
         };
         if entry.name() != "mimetype"
+            || entry.name_raw() != b"mimetype"
+            || entry.header_start() != 0
             || entry.compression() != zip::CompressionMethod::Stored
             || entry.encrypted()
+            || entry.size() != HWPX_MIME_TYPE.len() as u64
         {
             return false;
         }
