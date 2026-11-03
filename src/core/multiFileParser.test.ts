@@ -1,5 +1,8 @@
 /** @vitest-environment happy-dom */
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { strToU8, zipSync } from 'fflate';
 import * as XLSX from 'xlsx';
 import { parseLocalAttachment } from './multiFileParser';
@@ -85,6 +88,28 @@ describe('DOCX WordprocessingML extraction', () => {
     expect(parsed.structuredData).toEqual({
       Scores: [['Name', 'Score'], ['Student A', 95]],
     });
+  });
+
+  it('parses the repository DOCX sample without a wrapped error', async () => {
+    const testDirectory = dirname(fileURLToPath(import.meta.url));
+    const bytes = new Uint8Array(readFileSync(resolve(testDirectory, '../../samples/수학_약안.docx')));
+
+    const parsed = await parseLocalAttachment('수학_약안.docx', bytes);
+
+    expect(parsed.kind).toBe('docx');
+    expect(parsed.markdownSummary).not.toMatch(/^\[DOCX 파싱 실패:/);
+    expect(parsed.markdownSummary.trim().length).toBeGreaterThan(0);
+  });
+
+  it('parses the repository XLSX sample using the official SheetJS package', async () => {
+    const testDirectory = dirname(fileURLToPath(import.meta.url));
+    const bytes = new Uint8Array(readFileSync(resolve(testDirectory, '../../samples/demo_budget_ref.xlsx')));
+
+    const parsed = await parseLocalAttachment('demo_budget_ref.xlsx', bytes);
+
+    expect(parsed.kind).toBe('excel');
+    expect(parsed.markdownSummary.trim().length).toBeGreaterThan(0);
+    expect(Object.keys(parsed.structuredData ?? {}).length).toBeGreaterThan(0);
   });
 
 });
