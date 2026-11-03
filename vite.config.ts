@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { spawn, execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -7,6 +7,7 @@ import react from "@vitejs/plugin-react";
 import { createHopOverrides } from "./hop-overrides";
 import { isValidHwpxPackage } from "./src/hop-host/core/hwpx-package";
 import { copyFileAtomically } from "./src/hop-host/core/atomic-file";
+import { resolveFontAssetPath } from "./src/hop-host/core/font-asset-path";
 
 const rootDir = __dirname;
 const hopSrc = resolve(rootDir, "src/hop-host");
@@ -36,9 +37,8 @@ function hopFontAssets(): Plugin {
     name: "hop-font-assets",
     configureServer(server) {
       server.middlewares.use("/fonts", (req, res, next) => {
-        const requestPath = decodeURIComponent((req.url ?? "/").split("?")[0]).replace(/^\/+/, "");
-        const candidate = resolve(fontsDir, requestPath);
-        if (!candidate.startsWith(fontsDir) || !existsSync(candidate) || !statSync(candidate).isFile()) {
+        const candidate = resolveFontAssetPath(fontsDir, req.url ?? "/");
+        if (!candidate) {
           next();
           return;
         }
