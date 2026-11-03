@@ -361,4 +361,52 @@ mod tests {
 
         server.abort();
     }
+
+    #[tokio::test]
+    async fn stale_cancel_cleanup_does_not_remove_a_reused_request_id() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let request_id = format!("reused-test-{}", Uuid::new_v4());
+        let (first_accepted_tx, first_accepted_rx) = tokio::sync::oneshot::channel();
+
+        let server = tokio::spawn(async move {
+            let (_first_stream, _) = listener.accept().await.unwrap();
+            let _ = first_accepted_tx.send(());
+            let (_second_stream, _) = listener.accept().await.unwrap();
+            tokio::time::sleep(Duration::from_secs(5)).await;
+        });
+
+        let first_id = request_id.clone();
+        let first = tokio::spawn(async move {
+            call_llm_http(request(format!("http://{address}/first"), Some(first_id))).await
+        });
+        first_accepted_rx.await.unwrap();
+
+        assert!(cancel_llm_request(request_id.clone()).await.unwrap());
+
+        // Poll the replacement request through registration and into its pending
+        // network future without yielding to the cancelled request's cleanup.
+        let mut second = Box::pin(call_llm_http(
+            request(format!("http://{address}/second"), Some(request_id.clone())),
+        ));
+        std::future::poll_fn(|cx| match second.as_mut().poll(cx) {
+            std::task::Poll::Pending => std::task::Poll::Ready(()),
+            std::task::Poll::Ready(result) => {
+                panic!("replacement request completed unexpectedly: {result:?}")
+            }
+        })
+        .await;
+
+        tokio::task::yield_now().await;
+        let second_cancelled = cancel_llm_request(request_id).await.unwrap();
+        server.abort();
+
+        assert!(
+            second_cancelled,
+            "cleanup from the first request must not remove the replacement registration"
+        );
+        assert!(second.await.is_err());
+        assert!(first.await.unwrap().is_err());
+    }
+
 }
