@@ -97,3 +97,10 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - Six existing local-font behavior tests failed downstream for the same runtime-dispatch cause.
 - One unrelated existing test suite failed at import time because `src/hop-host/command/replace-upstream-commands.test.ts` referenced `../../index.html` (resolving under `src/`) instead of the repository-root `index.html`. Corrected the test import path by one directory level.
 - These findings are now isolated; the production runtime fix removes only the unconditional early return.
+
+
+### 2026-11-04 — Native font catalog validation
+- The first font catalog CI run (41716034285) completed frontend tests and build successfully.
+- Windows Rust test job also completed successfully with the native font catalog, command registration, `fontdb 0.23.0`, and canonical allow-list unit tests.
+- The later HWPX test-only run (41716475651) confirmed the intended TypeScript RED: 23 test files passed, 163 tests passed, and the new HWPX suite could not import the not-yet-implemented package validator.
+- This is an expected RED checkpoint; no HWPX production path has been changed yet.
