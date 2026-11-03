@@ -11,6 +11,17 @@ export interface ParsedAttachment {
   structuredData?: any;
 }
 
+export const MAX_ATTACHMENT_FILE_BYTES = 128 * 1024 * 1024;
+
+export function assertAttachmentFileSize(fileSize: number): void {
+  if (!Number.isSafeInteger(fileSize) || fileSize < 0) {
+    throw new Error('첨부 파일 크기 정보가 올바르지 않습니다.');
+  }
+  if (fileSize > MAX_ATTACHMENT_FILE_BYTES) {
+    throw new Error('첨부 파일은 128 MiB 이하만 처리할 수 있습니다.');
+  }
+}
+
 export interface ZipExpansionLimits {
   maxEntryBytes: number;
   maxTotalBytes: number;
@@ -184,6 +195,7 @@ function parseDocxBytesToMarkdown(fileBytes: Uint8Array): string {
 }
 
 export async function parseLocalAttachment(filePath: string, fileBytes: Uint8Array): Promise<ParsedAttachment> {
+  assertAttachmentFileSize(fileBytes.byteLength);
   const ext = filePath.split(".").pop()?.toLowerCase() || "";
   const fileName = filePath.split(/[\\/]/).pop() || filePath;
 
