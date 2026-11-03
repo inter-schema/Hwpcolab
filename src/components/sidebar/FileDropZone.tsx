@@ -98,6 +98,8 @@ export const FileDropZone: React.FC = () => {
               const parsed = await parseLocalAttachment(file.name, bytes);
               addAttachment(parsed);
             }
+          } catch (error: any) {
+            alert(`파일 첨부 오류: ${error?.message || error}`);
           } finally {
             setLoading(false);
             e.target.value = "";
