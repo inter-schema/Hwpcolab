@@ -127,4 +127,45 @@ pub fn get_startup_file() -> Option<String> {
             let lower = arg.to_lowercase();
             (lower.ends_with(".hwp") || lower.ends_with(".hwpx")) && PathBuf::from(arg).exists()
         })
+    #[test]
+    fn commit_staged_file_atomically_replaces_an_existing_target() {
+        let dir = tempfile::tempdir().unwrap();
+        let staging = dir.path().join("staging.hwp");
+        let target = dir.path().join("document.hwp");
+        std::fs::write(&staging, b"complete-new-document").unwrap();
+        std::fs::write(&target, b"old-document").unwrap();
+
+        commit_staged_file_atomically(&staging, &target).unwrap();
+
+        assert_eq!(std::fs::read(&target).unwrap(), b"complete-new-document");
+    }
+
+    #[test]
+    fn commit_staged_file_atomically_preserves_target_when_staging_is_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        let staging = dir.path().join("missing.hwp");
+        let target = dir.path().join("document.hwp");
+        std::fs::write(&target, b"preserve-this-document").unwrap();
+
+        assert!(commit_staged_file_atomically(&staging, &target).is_err());
+
+        assert_eq!(std::fs::read(&target).unwrap(), b"preserve-this-document");
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+    }
+
+    #[test]
+    fn commit_staged_file_atomically_preserves_existing_directory_on_replace_failure() {
+        let dir = tempfile::tempdir().unwrap();
+        let staging = dir.path().join("staging.hwp");
+        let target = dir.path().join("document.hwp");
+        std::fs::create_dir(&target).unwrap();
+        std::fs::write(target.join("keep.txt"), b"keep").unwrap();
+        std::fs::write(&staging, b"new-content").unwrap();
+
+        assert!(commit_staged_file_atomically(&staging, &target).is_err());
+
+        assert_eq!(std::fs::read(target.join("keep.txt")).unwrap(), b"keep");
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 2);
+    }
+
 }
