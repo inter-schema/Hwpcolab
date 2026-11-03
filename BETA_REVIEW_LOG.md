@@ -128,3 +128,15 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - SheetJS's own advisory identifies 0.20.2+ as the ReDoS fix, and its official installation documentation recommends the CDN NodeJS tarball. The official CDN currently lists 0.20.3 as the recommended release.
 - Updated `package.json` to the official `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz` tarball and added a workbook-import compatibility fixture that asserts both Markdown and structured sheet data.
 - Lockfile regeneration and full CI validation remain pending; do not consider this dependency upgrade verified until the current-head install, tests and build pass.
+
+
+### 2026-11-04 — LLM proxy cancellation correctness
+- Traced the frontend call sites: the OpenAI-compatible provider passes `request_id`, while `claudeProvider.ts` invokes the same Tauri command without one. The previous Rust implementation created a oneshot receiver unconditionally but only stored its sender when an ID existed; the sender was immediately dropped for Claude/no-ID calls, causing the select to resolve as cancelled before sending.
+- Found a second race: inserting duplicate request IDs into the HashMap replaced the original sender. Cleanup from either request could also remove the other request's cancellation entry.
+- Added localhost HTTP integration tests for both cases before changing the implementation:
+  - A no-ID request must reach a local server and receive HTTP 200.
+  - A duplicate in-flight ID must be rejected with an explicit conflict message; the first request must remain cancellable.
+- Fixed registration to create the oneshot channel only when an ID exists, use HashMap::Entry to reject duplicate active IDs, surface lock poisoning as an error, and avoid stale cleanup removing another active request.
+- Tokio `net` feature was added for the local TCP fixture.
+- RED execution was requested in Actions run `41719841955`; GitHub reported both jobs queued for an extended period, so the exact failing output was not captured before implementing the fix. This is recorded as a TDD verification gap, not as a confirmed RED observation.
+- Fix commit: `171893a89987b9ef41d116403e36ac3ee28a3d03`. A fresh Windows Rust CI run is required to validate both integration tests and compilation.
