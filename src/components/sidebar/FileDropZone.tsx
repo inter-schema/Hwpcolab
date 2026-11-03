@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useDocStore } from "../../store/useDocStore";
-import { parseLocalAttachment } from "../../core/multiFileParser";
+import { assertAttachmentFileSize, parseLocalAttachment } from "../../core/multiFileParser";
 import { runtimeInvoke as invoke, isTauriEnv } from "../../core/runtimeInvoke";
 import { Paperclip, Check, X, Loader2, Plus } from "lucide-react";
 
@@ -61,6 +61,7 @@ export const FileDropZone: React.FC = () => {
         setLoading(true);
         try {
           for (const file of droppedFiles) {
+            assertAttachmentFileSize(file.size);
             const nativePath = (file as any).path as string | undefined;
             if (nativePath && ["hwp", "hwpx"].includes(nativePath.split(".").pop()?.toLowerCase() || "")) {
               await processFileByPath(nativePath);
@@ -92,6 +93,7 @@ export const FileDropZone: React.FC = () => {
           setLoading(true);
           try {
             for (const file of files) {
+              assertAttachmentFileSize(file.size);
               const bytes = new Uint8Array(await file.arrayBuffer());
               const parsed = await parseLocalAttachment(file.name, bytes);
               addAttachment(parsed);
