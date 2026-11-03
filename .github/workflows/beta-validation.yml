@@ -1,0 +1,50 @@
+name: Beta validation
+
+on:
+  pull_request:
+    branches: [Beta]
+  push:
+    branches: [Beta]
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend tests and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install frontend dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run unit tests
+        run: npm test
+      - name: Build frontend
+        run: npm run build
+      - name: Upload generated npm lock
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-npm-lock
+          path: package-lock.json
+          if-no-files-found: warn
+
+  rust-windows:
+    name: Windows Rust tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Run Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+      - name: Upload generated Cargo lock
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-cargo-lock
+          path: src-tauri/Cargo.lock
+          if-no-files-found: warn
