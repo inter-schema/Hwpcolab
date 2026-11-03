@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { createHopOverrides } from "./hop-overrides";
+import { isValidHwpxPackage } from "./src/hop-host/core/hwpx-package";
 
 const rootDir = __dirname;
 const hopSrc = resolve(rootDir, "src/hop-host");
@@ -112,7 +113,19 @@ function localClawBridgePlugin(): Plugin {
                   throw new Error(`파일을 찾을 수 없습니다: ${srcPath}`);
                 }
                 const bytes = readFileSync(srcPath);
-                const isHwpx = bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4b;
+                const hasZipSignature = bytes.length >= 4
+                  && bytes[0] === 0x50 && bytes[1] === 0x4b
+                  && bytes[2] === 0x03 && bytes[3] === 0x04;
+                const requestedHwpx = extname(srcPath).toLowerCase() === ".hwpx";
+                const isHwpx = hasZipSignature
+                  ? isValidHwpxPackage(new Uint8Array(bytes))
+                  : false;
+                if (hasZipSignature && !isHwpx) {
+                  throw new Error("유효한 HWPX(OWPML) 패키지가 아닙니다. 일반 ZIP 또는 손상된 문서는 열 수 없습니다.");
+                }
+                if (requestedHwpx && !isHwpx) {
+                  throw new Error("HWPX 파일의 ZIP/OWPML 패키지 구조가 손상되었거나 올바르지 않습니다.");
+                }
                 const ext = isHwpx ? "hwpx" : "hwp";
                 const stagingPath = resolve(stagingDir, `staging_${randomUUID()}.${ext}`);
                 writeFileSync(stagingPath, bytes);
