@@ -266,6 +266,66 @@ mod tests {
         server.await.unwrap();
     }
 
+
+    #[tokio::test]
+    async fn does_not_follow_redirects_to_another_host() {
+        let redirect_target = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let redirect_target_address = redirect_target.local_addr().unwrap();
+        let source = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let source_address = source.local_addr().unwrap();
+
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = source.accept().await.unwrap();
+            let mut request_bytes = [0_u8; 2048];
+            let _ = stream.read(&mut request_bytes).await.unwrap();
+            let response = format!(
+                "HTTP/1.1 302 Found\r\nLocation: http://{}/credential-sink\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                redirect_target_address
+            );
+            stream.write_all(response.as_bytes()).await.unwrap();
+        });
+
+        let mut req = request(format!("http://{source_address}/redirect"), None);
+        req.headers.insert("authorization".to_string(), "Bearer do-not-forward".to_string());
+        let response = call_llm_http(req).await.unwrap();
+
+        assert_eq!(response.status, 302);
+        assert!(
+            tokio::time::timeout(Duration::from_millis(250), redirect_target.accept())
+                .await
+                .is_err(),
+            "the client must not follow a provider redirect to another host"
+        );
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn rejects_oversized_response_content_length_before_body_read() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request_bytes = [0_u8; 2048];
+            let _ = stream.read(&mut request_bytes).await.unwrap();
+            stream
+                .write_all(
+                    format!(
+                        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        MAX_RESPONSE_BODY_BYTES + 1
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+        });
+
+        let result = call_llm_http(request(format!("http://{address}/large"), None)).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("허용 크기"));
+        server.await.unwrap();
+    }
+
     #[tokio::test]
     async fn duplicate_request_ids_do_not_replace_or_cancel_the_original_request() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
