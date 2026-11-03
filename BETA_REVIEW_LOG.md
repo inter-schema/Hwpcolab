@@ -110,3 +110,14 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - Added Node tests for complete replacement, missing staging source, replacement failure, and temporary-file cleanup.
 - Added matching Rust tests for successful overwrite, missing source preservation, and replacement failure preserving an existing directory.
 - These tests intentionally reference the not-yet-implemented atomic copy helper and will be evaluated after the implementation is committed; do not treat this checkpoint as green.
+
+
+### 2026-11-04 — DOCX parsing, atomic save and font asset security
+- Replaced regex-only DOCX extraction with WordprocessingML namespace-aware DOM parsing. Preserves content in `w:t`, explicit tabs, line breaks, non-breaking/soft hyphens, table rows/cells and preserved spaces; ignores raw XML indentation between elements.
+- Added DOCX fixtures for alternate namespace prefixes, entities, pretty-printed indentation, xml:space, tabs, breaks, Markdown tables and malformed XML.
+- Added native and Node atomic-save helpers. Both write a unique temporary sibling, complete the copy, flush/fsync file data, then atomically replace the destination. Native helper uses `tempfile::NamedTempFile::persist`; Vite bridge uses a Node temp sibling and rename. Directory sync is best-effort where the platform supports it.
+- Atomic-save tests cover successful replacement, missing staging input preserving the old file, and replacement failure with temporary-file cleanup.
+- Added a canonical WOFF2 path resolver for Vite's dev middleware. It rejects malformed percent encoding, traversal, sibling-prefix paths, symlink escapes, missing/non-file targets and non-WOFF2 extensions. Middleware uses the canonical resolver instead of string-prefix containment.
+- Latest code before current verification: PR branch head `deb94d5a3e28a4aa720a665b6c27b24409b6a016` (font path security changes).
+- Earlier current-branch run `41717504483` was for a pre-implementation commit and failed only because `atomic-file.ts` was not yet present at that checkpoint: 169 existing tests passed. This is not evidence about the current head.
+- A fresh current-head run is being queued after the latest PR update. Do not claim DOCX, HWPX or atomic-save test success until that run completes.
