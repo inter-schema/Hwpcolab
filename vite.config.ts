@@ -9,6 +9,12 @@ import { isValidHwpxPackage } from "./src/hop-host/core/hwpx-package";
 import { copyFileAtomically } from "./src/hop-host/core/atomic-file";
 import { handleFontAssetRequest } from "./src/hop-host/core/font-asset-middleware";
 import { ActiveHttpRequests } from "./src/hop-host/core/active-http-requests";
+import {
+  normalizeLlmTimeoutMs,
+  readBoundedResponseText,
+  serializeBoundedRequestBody,
+  validateLlmEndpoint,
+} from "./src/hop-host/core/llm-http-bridge";
 
 const rootDir = __dirname;
 const hopSrc = resolve(rootDir, "src/hop-host");
@@ -218,24 +224,34 @@ function localClawBridgePlugin(): Plugin {
 
               case "call_llm_http": {
                 const reqObj = args.req || args;
-                const reqId = reqObj.request_id || reqObj.requestId;
+                const rawRequestId = reqObj.request_id || reqObj.requestId;
+                const reqId = typeof rawRequestId === "string" && rawRequestId.length > 0
+                  ? rawRequestId
+                  : undefined;
+                const endpoint = validateLlmEndpoint(reqObj.url);
+                const body = serializeBoundedRequestBody(reqObj.body_json ?? {});
+                const timeoutMs = normalizeLlmTimeoutMs(reqObj.timeout_ms ?? reqObj.timeoutMs);
+                const headers = new Headers(reqObj.headers || {});
+                if (!headers.has("content-type")) {
+                  headers.set("Content-Type", "application/json");
+                }
+
                 const controller = new AbortController();
                 if (reqId) {
                   activeHttpRequests.register(reqId, controller);
                 }
-                const timeoutMs = reqObj.timeout_ms || reqObj.timeoutMs || 180000;
                 const timer = setTimeout(() => controller.abort(), timeoutMs);
 
                 try {
-                  const resp = await fetch(reqObj.url, {
+                  const resp = await fetch(endpoint, {
                     method: "POST",
-                    headers: reqObj.headers || { "Content-Type": "application/json" },
-                    body: JSON.stringify(reqObj.body_json),
+                    headers,
+                    body,
                     signal: controller.signal,
+                    redirect: "manual",
                   });
-                  clearTimeout(timer);
                   const status = resp.status;
-                  const text = await resp.text();
+                  const text = await readBoundedResponseText(resp);
                   let parsedBody: any;
                   try {
                     parsedBody = JSON.parse(text);
@@ -244,12 +260,12 @@ function localClawBridgePlugin(): Plugin {
                   }
                   result = { status, body: parsedBody };
                 } catch (fetchErr: any) {
-                  clearTimeout(timer);
                   if (fetchErr.name === "AbortError" || controller.signal.aborted) {
                     throw new Error("LLM 요청이 사용자에 의해 취소되었거나 타임아웃되었습니다.");
                   }
                   throw fetchErr;
                 } finally {
+                  clearTimeout(timer);
                   if (reqId) {
                     activeHttpRequests.cleanup(reqId, controller);
                   }
@@ -258,8 +274,10 @@ function localClawBridgePlugin(): Plugin {
               }
 
               case "cancel_llm_request": {
-                const reqId = args.request_id || args.requestId;
-                result = reqId ? activeHttpRequests.cancel(reqId) : false;
+                const rawRequestId = args.request_id || args.requestId;
+                result = typeof rawRequestId === "string" && rawRequestId.length > 0
+                  ? activeHttpRequests.cancel(rawRequestId)
+                  : false;
                 break;
               }
 
