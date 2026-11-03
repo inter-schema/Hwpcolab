@@ -3,6 +3,7 @@ name: Beta validation
 on:
   pull_request:
     branches: [Beta]
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [Beta, "codex/**"]
 
