@@ -87,13 +87,13 @@ mod tests {
     fn mark_entry_encrypted(mut bytes: Vec<u8>, target: &str) -> Vec<u8> {
         let eocd = bytes
             .windows(4)
-            .rposition(|window| window == b"PK\\x05\\x06")
+            .rposition(|window| window == [0x50, 0x4b, 0x05, 0x06])
             .expect("EOCD signature");
         let entry_count = u16::from_le_bytes(bytes[eocd + 10..eocd + 12].try_into().unwrap());
         let mut cursor = u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
 
         for _ in 0..entry_count {
-            assert_eq!(&bytes[cursor..cursor + 4], b"PK\\x01\\x02");
+            assert_eq!(&bytes[cursor..cursor + 4], &[0x50, 0x4b, 0x01, 0x02]);
             let name_length = u16::from_le_bytes(bytes[cursor + 28..cursor + 30].try_into().unwrap()) as usize;
             let extra_length = u16::from_le_bytes(bytes[cursor + 30..cursor + 32].try_into().unwrap()) as usize;
             let comment_length = u16::from_le_bytes(bytes[cursor + 32..cursor + 34].try_into().unwrap()) as usize;
