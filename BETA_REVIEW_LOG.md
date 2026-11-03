@@ -79,3 +79,12 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - Confirmed repository push permission.
 - Re-read current font runtime, Tauri registration, save, DOCX and Vite font middleware source.
 - No production code has been changed at this checkpoint.
+
+
+### 2026-11-04 — CI RED: test discovery boundary
+- PR #1 triggered workflow run `41715250196`.
+- Frontend dependency installation succeeded.
+- `npm test` failed before the new runtime regression test could be evaluated: Vitest's default discovery traversed `third_party/rhwp/rhwp-studio` and collected upstream `.test.mjs`/E2E suites that depend on packages and workspace files not installed by the Hwpcolab root manifest (including `pixelmatch`, `pngjs`, `vite-plugin-pwa`, and upstream-local TypeScript/scripts/assets).
+- This is a test-harness scope defect, not evidence that the runtime regression test is red. Add an explicit first-party test include boundary (`src/**/*.test.ts`) before accepting the runtime RED result.
+- npm lock artifact uploaded by this run: artifact ID `13270301874` (`beta-npm-lock`).
+- Windows Rust job was still running at the time of this log update.
