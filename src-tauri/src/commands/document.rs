@@ -6,10 +6,8 @@ use uuid::Uuid;
 
 /// Recognize the ZIP local-file-header signature (not an EOCD or arbitrary PK prefix).
 fn has_zip_local_file_header(bytes: &[u8]) -> bool {
-    bytes.starts_with(b"PK\\\\x03\\\\x04")
+    bytes.starts_with(b"PK\\x03\\x04")
 }
-
-use crate::hwpx_package::is_valid_hwpx_package;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct OpenedDocSession {
