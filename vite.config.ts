@@ -7,7 +7,7 @@ import react from "@vitejs/plugin-react";
 import { createHopOverrides } from "./hop-overrides";
 import { isValidHwpxPackage } from "./src/hop-host/core/hwpx-package";
 import { copyFileAtomically } from "./src/hop-host/core/atomic-file";
-import { resolveFontAssetPath } from "./src/hop-host/core/font-asset-path";
+import { handleFontAssetRequest } from "./src/hop-host/core/font-asset-middleware";
 
 const rootDir = __dirname;
 const hopSrc = resolve(rootDir, "src/hop-host");
@@ -37,13 +37,7 @@ function hopFontAssets(): Plugin {
     name: "hop-font-assets",
     configureServer(server) {
       server.middlewares.use("/fonts", (req, res, next) => {
-        const candidate = resolveFontAssetPath(fontsDir, req.url ?? "/");
-        if (!candidate) {
-          next();
-          return;
-        }
-        res.setHeader("Content-Type", "font/woff2");
-        res.end(readFileSync(candidate));
+        handleFontAssetRequest(fontsDir, req.url, res, next);
       });
     },
     writeBundle(options) {
