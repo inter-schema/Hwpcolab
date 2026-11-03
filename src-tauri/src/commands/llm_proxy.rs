@@ -193,6 +193,7 @@ pub async fn call_llm_http(req: LlmProxyRequest) -> Result<LlmProxyResponse, Str
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::future::Future;
     use tokio::io::AsyncReadExt;
     use tokio::io::AsyncWriteExt;
     use tokio::net::TcpListener;
