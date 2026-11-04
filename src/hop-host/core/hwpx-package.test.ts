@@ -163,6 +163,43 @@ function addDataDescriptorToMimetype(zip: Uint8Array): Uint8Array {
   return output;
 }
 
+function corruptLastDataDescriptorCrc(zip: Uint8Array): Uint8Array {
+  const output = addDataDescriptorToLastEntry(zip).slice();
+  const view = new DataView(output.buffer, output.byteOffset, output.byteLength);
+  let eocdOffset = -1;
+  for (let offset = output.byteLength - 22; offset >= Math.max(0, output.byteLength - 22 - 0xffff); offset -= 1) {
+    if (view.getUint32(offset, true) === 0x06054b50) {
+      eocdOffset = offset;
+      break;
+    }
+  }
+  if (eocdOffset < 0) throw new Error('ZIP EOCD not found');
+
+  const entryCount = view.getUint16(eocdOffset + 10, true);
+  let cursor = view.getUint32(eocdOffset + 16, true);
+  let lastCentralOffset = -1;
+  for (let index = 0; index < entryCount; index += 1) {
+    if (view.getUint32(cursor, true) !== 0x02014b50) throw new Error('Invalid central directory');
+    lastCentralOffset = cursor;
+    cursor += 46
+      + view.getUint16(cursor + 28, true)
+      + view.getUint16(cursor + 30, true)
+      + view.getUint16(cursor + 32, true);
+  }
+  if (lastCentralOffset < 0) throw new Error('No central directory entries');
+
+  const localOffset = view.getUint32(lastCentralOffset + 42, true);
+  const localNameLength = view.getUint16(localOffset + 26, true);
+  const localExtraLength = view.getUint16(localOffset + 28, true);
+  const compressedSize = view.getUint32(lastCentralOffset + 20, true);
+  const descriptorOffset = localOffset + 30 + localNameLength + localExtraLength + compressedSize;
+  if (view.getUint32(descriptorOffset, true) !== 0x08074b50) {
+    throw new Error('Expected a signed data descriptor');
+  }
+  view.setUint32(descriptorOffset + 4, view.getUint32(descriptorOffset + 4, true) ^ 1, true);
+  return output;
+}
+
 function renameMimetypeLocalHeaderOnly(zip: Uint8Array): Uint8Array {
   const output = zip.slice();
   const view = new DataView(output.buffer, output.byteOffset, output.byteLength);
@@ -183,6 +220,42 @@ function renameMimetypeLocalHeaderOnly(zip: Uint8Array): Uint8Array {
   if (nameLength !== replacement.byteLength) throw new Error('Unexpected mimetype local name length');
   output.set(replacement, localOffset + 30);
   return output;
+}
+
+function renameRegularEntryLocalHeaderOnly(zip: Uint8Array): Uint8Array {
+  const output = zip.slice();
+  const view = new DataView(output.buffer, output.byteOffset, output.byteLength);
+  const targetName = new TextEncoder().encode('Contents/section0.xml');
+  const replacement = new TextEncoder().encode('Contents/sectionX.xml');
+  let eocdOffset = -1;
+  for (let offset = output.byteLength - 22; offset >= Math.max(0, output.byteLength - 22 - 0xffff); offset -= 1) {
+    if (view.getUint32(offset, true) === 0x06054b50) {
+      eocdOffset = offset;
+      break;
+    }
+  }
+  if (eocdOffset < 0) throw new Error('ZIP EOCD not found');
+
+  const entryCount = view.getUint16(eocdOffset + 10, true);
+  let cursor = view.getUint32(eocdOffset + 16, true);
+  for (let index = 0; index < entryCount; index += 1) {
+    if (view.getUint32(cursor, true) !== 0x02014b50) throw new Error('Invalid central directory');
+    const nameLength = view.getUint16(cursor + 28, true);
+    const extraLength = view.getUint16(cursor + 30, true);
+    const commentLength = view.getUint16(cursor + 32, true);
+    const nameStart = cursor + 46;
+    const nameEnd = nameStart + nameLength;
+    const name = output.subarray(nameStart, nameEnd);
+    if (name.byteLength === targetName.byteLength && name.every((byte, i) => byte === targetName[i])) {
+      const localOffset = view.getUint32(cursor + 42, true);
+      const localNameLength = view.getUint16(localOffset + 26, true);
+      if (localNameLength !== replacement.byteLength) throw new Error('Unexpected local entry name length');
+      output.set(replacement, localOffset + 30);
+      return output;
+    }
+    cursor = nameEnd + extraLength + commentLength;
+  }
+  throw new Error('Regular package part not found');
 }
 
 function corruptMimetypeCrc(zip: Uint8Array): Uint8Array {
@@ -407,6 +480,13 @@ describe('HWPX package validation', () => {
     expect(isValidHwpxPackage(archive)).toBe(false);
   });
 
+  it('rejects full Unicode case-fold duplicates such as sharp-s and ss', () => {
+    const entries = makeValidEntries();
+    entries['Contents/Straße.xml'] = strToU8('<x/>');
+    entries['Contents/STRASSE.xml'] = strToU8('<x/>');
+    expect(isValidHwpxPackage(zipSync(entries))).toBe(false);
+  });
+
   it('rejects a mimetype entry marked as using a data descriptor', () => {
     const archive = addDataDescriptorToMimetype(zipSync(makeValidEntries()));
     expect(unzipSync(archive).mimetype).toEqual(strToU8(MIME_TYPE));
@@ -415,6 +495,11 @@ describe('HWPX package validation', () => {
 
   it('rejects a mimetype local name that differs from its central directory name', () => {
     const archive = renameMimetypeLocalHeaderOnly(zipSync(makeValidEntries()));
+    expect(isValidHwpxPackage(archive)).toBe(false);
+  });
+
+  it('rejects a regular package part whose local name differs from its central directory name', () => {
+    const archive = renameRegularEntryLocalHeaderOnly(zipSync(makeValidEntries()));
     expect(isValidHwpxPackage(archive)).toBe(false);
   });
 
@@ -437,6 +522,11 @@ describe('HWPX package validation', () => {
     const archive = addDataDescriptorToLastEntry(zipSync(makeValidEntries()));
     expect(unzipSync(archive)['Contents/section0.xml']).toBeDefined();
     expect(isValidHwpxPackage(archive)).toBe(true);
+  });
+
+  it('rejects an ordinary entry with a data descriptor CRC that disagrees with the central directory', () => {
+    const archive = corruptLastDataDescriptorCrc(zipSync(makeValidEntries()));
+    expect(isValidHwpxPackage(archive)).toBe(false);
   });
 
   it('accepts the repository HWPX samples, not only generated fixtures', () => {
