@@ -55,7 +55,7 @@ pub fn is_valid_hwpx_package(bytes: &[u8]) -> bool {
         }
         has_content_package |= name == "Contents/content.hpf";
         has_header |= name == "Contents/header.xml";
-        has_section |= is_section_part(name);
+        has_section |= is_section_part(&name);
     }
 
     has_content_package && has_header && has_section
