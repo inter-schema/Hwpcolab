@@ -14,6 +14,7 @@ import {
   detectDesktopFonts,
   ensureDesktopFontsAvailable,
   getDesktopFontRecords,
+  getDesktopFontFaceIndex,
   getDesktopFonts,
   getDesktopFontState,
   getDetectedDesktopFonts,
@@ -52,7 +53,9 @@ export async function loadRendererLocalFont(record: LocalFontRecord): Promise<Ho
     return upstreamLocalFonts.loadRendererLocalFont(record);
   }
   const bytes = await loadDesktopFontBytes(record.postscriptName || record.fullName);
-  return bytes ? { bytes, faceIndex: 0 } : null;
+  return bytes
+    ? { bytes, faceIndex: getDesktopFontFaceIndex(record.postscriptName || record.fullName) }
+    : null;
 }
 
 export function isLocalFontAccessSupported(): boolean {
