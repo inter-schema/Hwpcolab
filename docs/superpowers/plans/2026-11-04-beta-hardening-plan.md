@@ -1,6 +1,6 @@
 # Beta Hardening Implementation Plan
 
-> Living plan for the Beta-only hardening workstream. Implementation and CI run directly through GitHub; COS is not part of this continuation.
+> Living plan for the Beta-only hardening workstream. The original implementation used GitHub APIs and Actions; COS was explicitly reauthorized for local QA on 2026-11-04. All integration remains limited to Beta.
 
 **Goal:** Improve the whole Hwpcolab Beta workstream's font handling, document-format validation, safe saves, imports, local development bridge, and repeatable verification.
 
@@ -91,6 +91,36 @@
 - [ ] Record remaining platform-specific limitations. Packaged Tauri WebView smoke testing remains distinct from Rust unit tests.
 - [ ] Confirm Beta has not moved behind the work branch.
 - [ ] Integrate the reviewed result into Beta only; do not merge to main.
+
+### Task 9: Native/TypeScript ZIP directory integrity parity
+- [x] Reproduce the native duplicate-member acceptance from the current Windows CI failure.
+- [x] Inspect the classic ZIP central directory before relying on the name-indexed Rust `ZipArchive` view.
+- [x] Reject duplicate exact/ASCII-case-folded names, ZIP64 locator/sentinel archives, malformed central-directory bounds, encrypted entries, and non-UTF-8 names that are not marked UTF-8.
+- [x] Verify the first `mimetype` local header against its central-directory metadata and payload; reject a data descriptor on that entry.
+- [x] Keep legal data descriptors on ordinary entries accepted.
+- [x] Align TypeScript ZIP64-locator and filename-encoding decisions with the native validator.
+- [x] Add ASCII/Unicode duplicate, ZIP64, mimetype descriptor, and local-header mismatch regressions.
+- [x] Validate the ZIP64 locator structure and test that locator-like bytes in a central-directory comment do not cause a false rejection.
+- [x] Verify the TypeScript ZIP64 regression produces RED without the locator guard and GREEN with it.
+- [ ] Run Rust formatting, Clippy and the full locked test suite on Windows CI.
+- [ ] Obtain independent reviewer/subagent feedback on the native parser and fixture builders.
+
+### Task 10: Reject empty ZIP member names consistently
+- [x] Reproduce a TypeScript/native parity gap with a valid HWPX envelope containing an empty-name ZIP member.
+- [x] Confirm the TypeScript regression test fails before the fix because the validator returns `true`.
+- [x] Reject zero-length central-directory filenames in the TypeScript validator.
+- [x] Add a native unit test proving the raw ZIP preflight rejects a zero-length central-directory filename.
+- [x] Re-run the full frontend suite, TypeScript compiler, Vite production build and npm security audit.
+- [ ] Validate the new Rust test, formatting and Clippy on Windows CI.
+
+## Latest COS verification (2026-11-04)
+- Full Vitest: 32 files, 219 tests passed.
+- Focused HWPX TypeScript suite: 16 tests passed.
+- TypeScript compile and Vite production build: passed; pre-existing warnings remain for externalized Node modules, mixed Tauri imports and large chunks.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- `git diff --check`: passed.
+- Rust tests/format/Clippy were not run locally because Cargo, rustc and rustfmt are unavailable in the Windows COS workspace.
+- Independent Z.ai review remains pending: the requested model endpoint returned HTTP 429 / error 1305; COS's ChatGPT worker launcher could not start workers with the Z.ai model ID.
 
 ## References
 

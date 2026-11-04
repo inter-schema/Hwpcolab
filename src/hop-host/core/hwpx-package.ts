@@ -1,6 +1,8 @@
 const LOCAL_FILE_HEADER = 0x04034b50;
 const CENTRAL_DIRECTORY_HEADER = 0x02014b50;
 const END_OF_CENTRAL_DIRECTORY = 0x06054b50;
+const ZIP64_END_OF_CENTRAL_DIRECTORY = 0x06064b50;
+const ZIP64_END_OF_CENTRAL_DIRECTORY_LOCATOR = 0x07064b50;
 const HWPX_MIME_TYPE = 'application/hwp+zip';
 const REQUIRED_PARTS = [
   'Contents/content.hpf',
@@ -26,6 +28,34 @@ function findEndOfCentralDirectory(view: DataView, bytesLength: number): number 
   return -1;
 }
 
+function hasZip64EndOfCentralDirectoryLocator(view: DataView, eocdOffset: number): boolean {
+  const locatorOffset = eocdOffset - 20;
+  if (locatorOffset < 0 || readUint32(view, locatorOffset) !== ZIP64_END_OF_CENTRAL_DIRECTORY_LOCATOR) {
+    return false;
+  }
+
+  const diskWithZip64End = readUint32(view, locatorOffset + 4);
+  const zip64EndOffsetLow = readUint32(view, locatorOffset + 8);
+  const zip64EndOffsetHigh = readUint32(view, locatorOffset + 12);
+  const totalDisks = readUint32(view, locatorOffset + 16);
+  if (diskWithZip64End !== 0 || totalDisks !== 1) return false;
+  if (zip64EndOffsetHigh !== 0) return true;
+
+  const zip64EndOffset = zip64EndOffsetLow;
+  if (
+    zip64EndOffset + 56 > locatorOffset
+    || readUint32(view, zip64EndOffset) !== ZIP64_END_OF_CENTRAL_DIRECTORY
+  ) {
+    return false;
+  }
+
+  const recordSizeLow = readUint32(view, zip64EndOffset + 4);
+  const recordSizeHigh = readUint32(view, zip64EndOffset + 8);
+  if (recordSizeHigh !== 0) return true;
+  if (recordSizeLow < 44) return false;
+  return zip64EndOffset + 12 + recordSizeLow <= locatorOffset;
+}
+
 /**
  * Validates the OWPML package envelope without decompressing arbitrary ZIP
  * entries. It checks the first local/central entry, stored mimetype payload,
@@ -40,6 +70,10 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     const eocdOffset = findEndOfCentralDirectory(view, bytes.byteLength);
     if (eocdOffset < 0) return false;
+
+    // Validate the ZIP64 locator structure so a coincidental signature in a
+    // central-directory comment is not mistaken for a ZIP64 record.
+    if (hasZip64EndOfCentralDirectoryLocator(view, eocdOffset)) return false;
 
     const diskNumber = readUint16(view, eocdOffset + 4);
     const centralDirectoryDisk = readUint16(view, eocdOffset + 6);
@@ -93,6 +127,7 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
 
       if (
         recordEnd > centralDirectoryOffset + centralDirectorySize
+        || nameLength === 0
         || startDisk !== 0
         || (flags & 0x0041) !== 0
         || compressedSize === 0xffffffff
@@ -102,7 +137,9 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
         return false;
       }
 
-      const name = decoder.decode(bytes.subarray(cursor + 46, cursor + 46 + nameLength));
+      const nameBytes = bytes.subarray(cursor + 46, cursor + 46 + nameLength);
+      if (nameBytes.some((byte) => byte > 0x7f) && (flags & 0x0800) === 0) return false;
+      const name = decoder.decode(nameBytes);
       const normalizedName = name.toLowerCase();
       if (seenNames.has(normalizedName)) return false;
       seenNames.add(normalizedName);
