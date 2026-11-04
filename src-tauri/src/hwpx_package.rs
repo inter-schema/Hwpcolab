@@ -332,19 +332,21 @@ mod tests {
             .windows(4)
             .rposition(|window| window == [0x50, 0x4b, 0x05, 0x06])
             .expect("EOCD signature");
-        let entry_count =
-            u16::from_le_bytes(duplicated[eocd + 10..eocd + 12].try_into().unwrap());
+        let entry_count = u16::from_le_bytes(duplicated[eocd + 10..eocd + 12].try_into().unwrap());
         let mut cursor =
             u32::from_le_bytes(duplicated[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
         let mut names = Vec::new();
         for _ in 0..entry_count {
             assert_eq!(&duplicated[cursor..cursor + 4], &[0x50, 0x4b, 0x01, 0x02]);
             let name_length =
-                u16::from_le_bytes(duplicated[cursor + 28..cursor + 30].try_into().unwrap()) as usize;
+                u16::from_le_bytes(duplicated[cursor + 28..cursor + 30].try_into().unwrap())
+                    as usize;
             let extra_length =
-                u16::from_le_bytes(duplicated[cursor + 30..cursor + 32].try_into().unwrap()) as usize;
+                u16::from_le_bytes(duplicated[cursor + 30..cursor + 32].try_into().unwrap())
+                    as usize;
             let comment_length =
-                u16::from_le_bytes(duplicated[cursor + 32..cursor + 34].try_into().unwrap()) as usize;
+                u16::from_le_bytes(duplicated[cursor + 32..cursor + 34].try_into().unwrap())
+                    as usize;
             names.push(
                 String::from_utf8(duplicated[cursor + 46..cursor + 46 + name_length].to_vec())
                     .unwrap(),
