@@ -398,3 +398,12 @@ Test-authoring corrections recorded for transparency:
 - Current local patch changes nine files: `package.json`/`package-lock.json`, `src-tauri/Cargo.toml`/`Cargo.lock`, both validators, matching tests, and this report/plan. The next PR commit will include the seven source/manifest/report files; the repository's lockfile-sync workflow will generate and publish the two lockfiles.
 - These changes have not yet been published. Next: create a commit parented to exactly `18e0c92` and update only `codex/beta-hardening-2026-11-04` with an expected-head guard. Then verify lockfile sync, npm audit, frontend tests/build and Windows Rust formatting/Clippy/tests. Request a fresh reviewer pass against the exact new SHA.
 - Packaged Windows Tauri WebView smoke test remains outstanding. `Beta` and `main` were not modified; do not merge the PR on this report alone.
+
+
+## 13. Windows CI follow-up — Unicode key ownership fix (2026-11-04)
+
+- Lockfile sync succeeded and resolved the unicase requirement 2.8.1 to locked version 2.10.0; npm lockfile includes unicode-case-folding 1.1.2.
+- Workflow 41802915430 passed lockfile sync and frontend tests/build, and passed Rust formatting. Windows Clippy failed at src-tauri/src/hwpx_package.rs:458 with E0382 because UniCase::new(name) moved the String before required-part name checks reused it; Rust tests were skipped after Clippy failed.
+- Fix: construct the duplicate-key wrapper from name.clone() so the original entry name remains available for required-part detection. No dependency change is required.
+- Fresh Windows Clippy and Rust tests must pass on the next PR head before claiming this cycle is validated.
+- Agent review also identified one medium structural concern for the next loop: local ZIP record ranges are bounded individually but are not yet checked for mutual overlap. Existing data-descriptor tests cover the signed form and corrupted CRC; a valid unsigned descriptor fixture and size-field corruption tests are still missing.

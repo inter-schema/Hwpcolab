@@ -455,7 +455,7 @@ pub fn is_valid_hwpx_package(bytes: &[u8]) -> bool {
             return false;
         };
         let name = entry.name().to_owned();
-        if !seen_names.insert(UniCase::new(name)) {
+        if !seen_names.insert(UniCase::new(name.clone())) {
             return false;
         }
         has_content_package |= name == "Contents/content.hpf";
