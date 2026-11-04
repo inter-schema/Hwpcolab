@@ -328,6 +328,15 @@ mod tests {
     fn rejects_duplicate_package_part_names() {
         let bytes = build_archive(&valid_entries());
         let duplicated = rename_entry(bytes, "Contents/metadata.xml", "Contents/section0.xml");
+        let mut archive = zip::ZipArchive::new(Cursor::new(duplicated.as_slice())).unwrap();
+        let names = (0..archive.len())
+            .map(|index| archive.by_index(index).unwrap().name().to_owned())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            names.iter().filter(|name| name.as_str() == "Contents/section0.xml").count(),
+            2,
+            "fixture must contain duplicate package part names: {names:?}",
+        );
         assert!(!is_valid_hwpx_package(&duplicated));
     }
 }
