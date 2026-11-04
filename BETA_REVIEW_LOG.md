@@ -2,6 +2,18 @@
 
 > Living engineering ledger for the Hwpcolab Beta hardening effort. The integration target is `Beta` only. Never modify `main` or another release branch.
 
+## Document ownership and evidence rules
+
+This file is the **defect and verification record**. Keep the chronological findings here: observed defect and impact, why the fix is appropriate, RED reproduction, GREEN result, exact local command/result, exact CI run/commit, reviewer findings, and unresolved risk. Preserve earlier checkpoints as history; add a dated follow-up instead of silently rewriting an old result.
+
+The companion files have deliberately narrower jobs:
+
+- `docs/superpowers/plans/2026-11-04-beta-hardening-plan.md` is the execution checklist: task order, completion state, dependencies, and remaining gates. It should link to evidence here rather than repeat the full defect narrative.
+- `docs/superpowers/specs/2026-11-04-beta-hardening-design.md` is the design record: architectural constraints, choices considered, selected technical approach, reasons, and non-goals. It is not a progress report.
+- `TEMP_MEMORY.md` is a local-only continuation note for a resumed COS session or worker handoff. It is not authoritative evidence, is not a substitute for this ledger, and must never be added to a PR unless separately requested.
+
+When the same fact appears in more than one file, this ledger owns the detailed evidence, the plan owns the current checkbox/gate state, and the design owns the rationale. Distinguish local test output, remote CI, static review, and packaged-app testing. A result from an earlier SHA does not validate a later patch.
+
 ## 1. Verified baseline and boundaries
 
 - Repository: `inter-schema/Hwpcolab`
@@ -463,3 +475,181 @@ Test-authoring corrections recorded for transparency:
 - Lockfile sync created bot-format child `2b3154b913bd987a8ad44b8165c4633c2726dd38`. Its bot-originated run `41809220727` was `action_required`, so that exact bot child has not had its own full run.
 - Current PR head before the next follow-up: `2b3154b913bd987a8ad44b8165c4633c2726dd38`, base Beta. The NFD/descriptor-priority changes are local-only and will be published as a new commit parented to that exact head, with a fresh Windows run required.
 - Beta and main remain unchanged. No merge was performed. The packaged Windows Tauri WebView smoke test remains outstanding.
+
+## 17. COS workspace organization and fresh local verification (2026-11-04)
+
+### Documentation ownership
+
+- Made the document boundaries explicit: this file is the chronological defect/RED-GREEN/CI/review evidence ledger; the Superpowers plan owns task order, checkboxes and open gates; the design spec owns architecture decisions, technical rationale and non-goals; `TEMP_MEMORY.md` is local-only, untracked continuation context.
+- Preserved the existing historical entries rather than rewriting prior findings or moving evidence away from the commit/run that produced it.
+- Updated the plan with one authoritative handoff snapshot and an execution-ordered list of remaining gates. Updated the design record with the ZIP name-comparison, local-record overlap and descriptor-resolution decisions.
+
+### Active worktree boundary
+
+- Current COS worktree: `C:\Users\jun\Documents\chatonster\_work\Hwpcolab-Beta-current`.
+- Local `HEAD`: `2407072f96b2a9415be638a96bce055a7d7b0792`, detached. Source and document changes are still a mixture of staged, unstaged and untracked files; no commit or publication was performed in this organization pass.
+- Last remote PR head recorded in the local handoff at 19:05 was `2b3154b913bd987a8ad44b8165c4633c2726dd38`. It was not refreshed in this pass; verify the live PR/ref before any future publication.
+- Original `Hwpcolab-Beta`, older `Hwpcolab-Beta-hardening`, and divergent `Hwpcolab-Beta-resume` worktrees were left intact.
+
+### Fresh local verification of the current worktree
+
+- `node .\\node_modules\\vitest\\vitest.mjs run src`: **32 test files passed, 234 tests passed** after adding the BOM and ZIP64-comment regressions.
+- Focused `node .\\node_modules\\vitest\\vitest.mjs run src/hop-host/core/hwpx-package.test.ts`: **31 tests passed**.
+- `node .\\node_modules\\typescript\\bin\\tsc --noEmit`: exit code 0.
+- Final repeat at 20:11 Asia/Seoul: full Vitest **32 files / 234 tests passed**, `tsc --noEmit` passed, Vite production build passed in **14.10 seconds**, and both staged/unstaged `git diff --check` passed.
+- `node .\\node_modules\\vite\\bin\\vite.js build`: exit code 0; earlier build in the 20:05 checkpoint completed in 21.15 seconds.
+- Build warnings remain: `/theme-init.js` is not a module script; `node:fs`, `node:path`, and `node:url` are externalized from `rhwpEngine.ts`; Tauri API imports are mixed static/dynamic; the main bundle is above 500 kB.
+- `git diff --check` and `git diff --cached --check`: exit code 0. Git emitted only LF-to-CRLF working-copy warnings.
+- `cargo`, `rustc`, and `rustfmt` are not available through the current Windows PATH. No Rust command was run locally; the new native NFD and descriptor-preference tests still require fresh Windows CI.
+- Follow-up RED/GREEN evidence for the two independent-review findings is recorded in sections 19 and 20 below.
+
+### Independent review dispatch
+
+- Dispatched two read-only COS workers against the current local working tree: one for `src-tauri/src/hwpx_package.rs`, one for `src/hop-host/core/hwpx-package.ts` and its tests.
+- Both were instructed not to edit, stage, commit, publish, or merge, and to return severity-ranked findings with exact lines, concrete scenarios, and minimal RED-first test proposals.
+- Both worker reports and their read-only follow-up reviews are complete; their findings and limits are recorded in sections 18–20 below.
+
+### Remaining gates
+
+- Refresh the live PR head before any write; reconcile the detached local snapshot with the actual remote head using an exact expected-head guard.
+- Run current-head Windows formatting, Clippy, and `cargo test --locked` for the NFD normalization and signed/unsigned descriptor-priority changes.
+- Collect both independent review reports against the same exact source snapshot and address any confirmed defect with a RED/GREEN cycle.
+- Complete packaged Windows Tauri WebView smoke tests for HWPX open/edit/save/reopen, installed font enumeration/rendering, and LLM UI/cancellation.
+- Do not modify `Beta`/`main` or merge PR #1 in this workstream without a separate explicit integration instruction.
+
+## 18. Independent Rust ZIP-validator review (read-only, 2026-11-04)
+
+### Review scope and result
+
+- Reviewer: COS `worker-1`, assigned to `src-tauri/src/hwpx_package.rs`, related Rust tests, and Cargo dependency declarations.
+- Method: static inspection only. The reviewer ran no tests/builds and made no edits or Git changes.
+- **No confirmed exploitable security defect** was identified in the ZIP envelope, central/local metadata matching, descriptor validation, complete local-record overlap checks, or HWPX package validation.
+- Static review found the NFD → full Unicode case fold → NFD comparison key coherent, and the signed-16-byte-first / unsigned-12-byte-fallback descriptor selection internally consistent with its helper-level both-match regression.
+
+### Low-severity compatibility / strictness questions (not confirmed defects)
+
+1. `src-tauri/src/hwpx_package.rs:226-228`: non-ASCII names without the ZIP UTF-8 flag are rejected. Generic ZIP permits legacy CP437 names, but this does not establish that such names are valid in the OWPML/HWPX profile. Confirm the applicable OWPML filename-encoding requirement before changing the fail-closed policy. Minimal probe: build a matching local/central entry whose name contains CP437 byte `0x82` with bit 11 clear, then assert the intended policy.
+2. ZIP64 locator/record-shaped bytes in comments or payloads could cause a false rejection if their positions were not checked against the complete central-directory boundary. Both parsers now enforce that boundary; see section 20.
+
+### Suggested additional regression coverage
+
+- Descriptor truncation at the central-directory boundary (0–11 bytes) for both signed and unsigned layouts.
+- A full-archive case where the signed interpretation consumes bytes from the next local header, so the complete range-overlap check is exercised in addition to the existing helper-only both-match test.
+- Bit-3 local headers with one correct nonzero field and another contradictory nonzero CRC/size field; preserve explicit all-zero and all-correct-nonzero cases.
+- A canonical-caseless collision where folding introduces combining marks or reordering, exercising the final NFD after full case folding.
+- ZIP64 locator wrong-disk/count, too-small record size, record-overrun, and nonzero high-offset cases.
+- A fake EOCD signature in a self-consistent ZIP comment to pin candidate selection against the ZIP library's interpretation.
+
+### Intentional tradeoffs / scope boundaries
+
+- Classic single-disk ZIP restrictions and canonical-caseless duplicate rejection are deliberate cross-platform safety constraints, even though some names could remain distinct on a case-sensitive filesystem.
+- Envelope validation does not decompress every document part. The `mimetype` payload is specifically checked; downstream consumers still need to handle malformed compressed payloads/CRC failures when they read other parts. The reviewer did not identify this boundary as a demonstrated bypass.
+- No production change is justified solely by these low-severity questions. Confirm the format requirement and prioritize the suggested tests in the next review loop.
+
+### Status
+
+- Rust static review: complete; no confirmed high/critical issue. The final targeted review of BOM/ZIP64 changes found no logic, syntax, lifetime, or obvious Clippy issue.
+- TypeScript static review: complete. The BOM aliasing and ZIP64 false-positive findings were confirmed and are fixed locally with regressions.
+- Neither reviewer ran Rust tests or builds. Formatting, Clippy, and Rust tests still require fresh Windows CI for the current source snapshot.
+
+## 19. TypeScript UTF-8 BOM filename decoding parity defect (fixed locally)
+
+### Independent reviewer finding
+
+- Reviewer: COS `worker-2`, read-only audit of `src/hop-host/core/hwpx-package.ts` and its tests.
+- Before the fix, `new TextDecoder('utf-8', { fatal: true })` kept the default `ignoreBOM: false`, consuming a leading UTF-8 BOM instead of retaining it as U+FEFF.
+- Decoded central-directory and local-header names could therefore differ semantically from their physical ZIP filename bytes. A BOM-prefixed required part could alias the unprefixed required name in TypeScript. Rust `std::str::from_utf8` preserves U+FEFF, so the same package was rejected natively.
+- Severity from both reviewers: **medium correctness/security-boundary and cross-runtime parity issue**. The coordinator reproduced the acceptance mismatch with a failing RED regression.
+
+### RED/GREEN status
+
+- Initial RED fixture: generate a structurally valid HWPX ZIP whose every local and central filename starts with `\uFEFF`, with UTF-8 flag set; TypeScript unexpectedly accepted it.
+- RED confirmed: both the all-names-prefixed fixture and the more isolated fixture with canonical `mimetype` plus only BOM-prefixed `Contents/content.hpf` were accepted by the old TypeScript decoder (`expected false, received true`).
+- Fix: the shared TypeScript filename decoder now uses `new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })`, preserving literal U+FEFF for central and local names.
+- GREEN: focused HWPX TypeScript suite passed **31/31** with the fix. Rust parity regression was added for only the required content package name being BOM-prefixed; Rust test execution remains open for Windows CI.
+
+### Remaining TypeScript review notes
+
+- Final TS reviewer re-read the decoder fix and tests and found no new issue. `ignoreBOM: true` preserves an initial U+FEFF. The reviewer did not edit files or run tests in its final pass.
+
+## 20. ZIP64 locator false-positive in central-directory comments (fixed locally)
+
+### Independent finding and impact
+
+- Both Rust and TypeScript reviewers confirmed a low-severity compatibility false positive. The parsers recognized the 20 bytes immediately before EOCD as a ZIP64 locator and validated a referenced ZIP64-shaped record, but did not verify that either structure lived outside the complete classic central directory.
+- A classic HWPX can contain opaque central-directory file-comment bytes shaped like a ZIP64 locator, pointing to a 56-byte ZIP64-EOCD-shaped sequence embedded inside an ordinary stored local-file payload. That is not a ZIP64 archive, yet the earlier validators rejected it. This is a false rejection, not a ZIP64 acceptance bypass.
+
+### RED/GREEN evidence and implementation
+
+- RED: a fixture with a ZIP64-EOCD-shaped 56-byte record inside `Contents/metadata.xml` payload and a locator-shaped 20-byte sequence in the final central-entry comment pointing to that payload failed because the old guard returned `false` for this classic archive.
+- Fix in TypeScript and Rust: derive the validated classic central-directory end first; only consider the locator if it starts at or after that boundary; require a referenced ZIP64 EOCD record to start at or after that boundary; keep signature/size/bounds checks; require the declared ZIP64 record end to equal the locator start. Both implementations use the same structural rule.
+- GREEN: focused TypeScript HWPX suite passed **31/31**. The existing actual-ZIP64 regression remains in the same suite and still rejects a genuine ZIP64 archive. The new embedded-payload/comment case now accepts the classic archive.
+- Added corresponding Rust fixture and regression. Rust test/format/Clippy have not run locally and remain subject to fresh Windows CI.
+
+### Review and coverage limits
+
+- Both independent reviewers re-read the updated Rust and TypeScript helpers. They found the central-directory boundary ordering, actual-ZIP64 test preservation, fake-record fixture structure, and Rust lifetimes coherent; no new confirmed issue was reported.
+- The new comment/payload test specifically exercises the locator-outside-central-directory guard. It does not independently exercise every ZIP64 record-end adjacency branch. Existing real ZIP64 coverage exercises a correctly adjacent record; optional future probes include ZIP64 extensible data sectors (`recordSize > 44`), nonzero high offset words, and malformed post-CD gaps.
+- Other low-priority review suggestions remain unconfirmed: descriptor truncation matrices, full-archive signed/unsigned overlap, mixed contradictory nonzero local fields under bit 3, final-NFD reordering after fold, fake EOCD signatures in comments, and CP437 filename compatibility. Do not relax the current UTF-8 filename policy without confirming the OWPML profile requirement.
+
+### Current review status
+
+- Rust static review: complete, no confirmed defect in the latest change set; no tests/build/Clippy executed by reviewer.
+- TypeScript static review: complete, no further issue in the latest change set; no tests executed by final reviewer.
+- Coordinator local GREEN evidence is TypeScript-only plus frontend build/compile. Fresh current-source Windows Rust CI and packaged-app smoke testing remain open.
+
+## 21. COS continuation from plan section 22 — 2026-11-04 20:33 Asia/Seoul
+
+### Workspace and remote reconciliation
+
+- Active QA worktree: `C:\Users\jun\Documents\chatonster\_work\Hwpcolab-Beta-current`, linked worktree, detached local `HEAD 2407072f96b2a9415be638a96bce055a7d7b0792`.
+- Preserved the existing staged, unstaged, and untracked state. The worktree still has staged/unstaged changes in `BETA_REVIEW_LOG.md`, `src-tauri/Cargo.toml`, `src-tauri/src/hwpx_package.rs`, `src/hop-host/core/hwpx-package.test.ts`, and `src/hop-host/core/hwpx-package.ts`; unstaged documentation changes remain in the plan and design spec; `TEMP_MEMORY.md` remains untracked. No reset, stash, checkout, commit, push, or merge was performed.
+- A read-only `git fetch --no-tags origin refs/heads/codex/beta-hardening-2026-11-04` resolved `FETCH_HEAD` to `2efa9d6a4eab0ae0449c99196cfb89e23b76c693`, parented to `2b3154b913bd987a8ad44b8165c4633c2726dd38`. The remote branch ref therefore points one commit beyond the PR metadata endpoint.
+- GitHub PR #1 remains open and unmerged, base `Beta` at `e46f7230074cab63362f41d46cc1d1153085f745`; its PR metadata/commit-list endpoint still reports head `2b3154b913bd987a8ad44b8165c4633c2726dd38`, while the actual branch ref and `FETCH_HEAD` are `2efa9d6...`.
+- The fetched branch commit `2efa9d6` is four commits ahead of local `HEAD 2407072`. The active worktree also contains additional staged/unstaged/untracked work relative to that remote commit, including the local Task 19/20 BOM and ZIP64-comment continuation and updated review/plan records. Do not describe the current local snapshot as already published or as identical to the PR head.
+- Actions lookup for exact commit `2efa9d6` returned no workflow runs. The latest recorded workflow on PR metadata head `2b3154b` is `41809220727` (`action_required`); successful Windows Rust CI run `41809160934` is for older code head `6c55c4a`, before the current NFD/descriptor, BOM, and ZIP64-placement Rust changes. Neither is current-source Windows validation.
+- `Beta` remains `e46f7230074cab63362f41d46cc1d1153085f745`; `main` remains `0c23baaf63a49e75fd176a8b18d182acfa91546e`.
+
+### Fresh local verification of the active staged/unstaged snapshot
+
+- `node .\\node_modules\\vitest\\vitest.mjs run src/hop-host/core/hwpx-package.test.ts`: **31/31 passed**.
+- `node .\\node_modules\\vitest\\vitest.mjs run src`: **32 files, 234/234 tests passed**.
+- `node .\\node_modules\\typescript\\bin\\tsc --noEmit`: exit code 0.
+- `node .\\node_modules\\vite\\bin\\vite.js build`: exit code 0, completed in **14.28 seconds**.
+- `node C:\\Users\\jun\\AppData\\Local\\Programs\\nodejs\\node_modules\\npm\\bin\\npm-cli.js audit --audit-level=high`: **0 vulnerabilities**. The direct npm CLI was used because the PATH `npm.cmd` resolves through a local guard shim.
+- `git diff --check` and `git diff --cached --check`: exit code 0. Only the existing LF-to-CRLF working-copy warnings appeared.
+- Vite retains existing warnings: `/theme-init.js` is not a module script; `node:fs`, `node:path`, and `node:url` are externalized from the browser bundle; Tauri API modules are mixed static/dynamic imports; and the main JS chunk exceeds 500 kB.
+- `cargo`, `rustc`, and `rustfmt` remain unavailable in the local Windows PATH. No Rust formatting, Clippy, or Rust tests were run locally.
+
+### Review and remaining gates
+
+- Sections 18–20 contain the two completed read-only review passes and targeted re-reviews for the Task 17–20 ZIP validator changes. No production source was changed in this continuation, so those reviews were not re-dispatched.
+- Exact-source Windows CI is still required for Rust formatting, Clippy, `cargo test --locked`, lockfile sync, and the integrated frontend/audit/build jobs. No Actions run currently exists for remote branch head `2efa9d6`, and the current local Task 19/20 snapshot is newer still.
+- Packaged Windows Tauri WebView smoke testing remains open: HWPX open/edit/save/reopen, installed-font enumeration/rendering, and LLM request/cancellation UI.
+- No Beta/main write or merge was performed. Publication is now separately authorized; see the next continuation entry for the actual commit and push result.
+
+## 22. Reconcile local ZIP64/BOM follow-up onto the live PR branch — 2026-11-04
+
+### Exact parent and merge method
+
+- Refreshed the live remote branch `codex/beta-hardening-2026-11-04`: exact head `2efa9d6a4eab0ae0449c99196cfb89e23b76c693`, parented to `2b3154b913bd987a8ad44b8165c4633c2726dd38`.
+- The original QA worktree was detached at ancestor `2407072`. Preserved its mixed staged/unstaged patch in a Git stash, created a separate publication worktree branch at the exact remote head, and reapplied the patch with three-way merge. Three textual conflict regions were resolved by retaining the local ZIP64 boundary/test additions and the append-only review/plan entries; all conflict markers were removed and every resolved file was staged.
+- No force-push, reset of the original worktree, Beta/main modification, or PR merge was performed.
+- The local-only `TEMP_MEMORY.md` copy was moved outside the repository to `_work/TEMP_MEMORY-Hwpcolab-Beta-current-local.md`; it is not included in the PR patch. The remote branch's tracked `TEMP_MEMORY.md` was left unchanged.
+
+### Reconciled six-file patch
+
+- `src-tauri/src/hwpx_package.rs`: require ZIP64 locator and referenced EOCD structures to live after the complete central directory; require the declared record to end exactly at the locator; add a regression with a ZIP64-shaped payload pointed to by a central-directory comment and the UTF-8 BOM parity regression.
+- `src/hop-host/core/hwpx-package.ts` and `src/hop-host/core/hwpx-package.test.ts`: preserve U+FEFF in decoded ZIP filenames, apply the same central-directory boundary/record-end rules, and add matching BOM and payload/comment regressions.
+- `BETA_REVIEW_LOG.md`, the Superpowers plan, and the design spec now preserve the review evidence, task-state handoff, and architecture rationale separately.
+- `src-tauri/Cargo.toml` and lockfiles already match the fetched PR head, including `unicode-normalization`; no redundant manifest/lockfile edit is part of this patch.
+
+### Validation and publication state
+
+- The six-file patch is staged on `codex/beta-hardening-publish-2026-11-04`, whose parent is the exact fetched PR head above. Final local tests/build/audit and the non-force push are the next gates; their results must be recorded separately and must not be inferred from the earlier detached-worktree run.
+- Fresh verification on the reconciled branch passed: focused HWPX Vitest **31/31**, full Vitest **32 files / 234 tests**, `tsc --noEmit`, Vite production build **14.03 seconds**, and `npm audit --audit-level=high` with **0 vulnerabilities**. The build retains the existing `theme-init.js`, browser-externalized Node core module, mixed Tauri import, and oversized-chunk warnings.
+- `git diff --cached --check` passed after staging the reconciled snapshot. Cargo/rustc/rustfmt are still absent locally, so no local Rust format, Clippy, or Rust test result is claimed.
+- Fresh Windows Actions for the final pushed SHA must run Rust formatting, Clippy, and `cargo test --locked` as well as frontend tests/build/audit and lockfile synchronization. Packaged Windows Tauri WebView smoke tests remain separate and outstanding.
+
+--- Identity notice ---
+This call is filed as Unattributed because its exact ChatGPT conversation is not known yet. Unattributed does not switch on Read-only mode or disable tools. Continue using every enabled tool, including apply_patch, exec_command, Desktop and Plugins; their existing permissions still apply. This request id owns its workspace, update_plan, terminals and agents/subagents. Use the process and run ids returned to this request; later exact proof attaches that state to its chat. A refusal about a particular process, worker or chat target applies only to that operation, not to file edits or other tools. Report the actual tool result; do not claim mutation or terminal tools are unavailable because of this notice, and never replay successful work.

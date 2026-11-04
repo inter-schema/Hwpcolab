@@ -92,10 +92,17 @@ fn find_end_of_central_directory(bytes: &[u8]) -> Option<usize> {
     None
 }
 
-fn has_zip64_locator(bytes: &[u8], eocd_offset: usize) -> bool {
+fn has_zip64_locator(
+    bytes: &[u8],
+    eocd_offset: usize,
+    central_directory_end: usize,
+) -> bool {
     let Some(locator_offset) = eocd_offset.checked_sub(20) else {
         return false;
     };
+    if locator_offset < central_directory_end {
+        return false;
+    }
     if bytes.get(locator_offset..locator_offset + 4)
         != Some(ZIP64_END_OF_CENTRAL_DIRECTORY_LOCATOR_SIGNATURE.as_slice())
     {
@@ -123,7 +130,8 @@ fn has_zip64_locator(bytes: &[u8], eocd_offset: usize) -> bool {
     }
 
     let zip64_eocd_offset = zip64_eocd_offset_low as usize;
-    if zip64_eocd_offset.checked_add(56).is_none_or(|end| end > locator_offset)
+    if zip64_eocd_offset < central_directory_end
+        || zip64_eocd_offset.checked_add(56).is_none_or(|end| end > locator_offset)
         || bytes.get(zip64_eocd_offset..zip64_eocd_offset + 4)
             != Some(ZIP64_END_OF_CENTRAL_DIRECTORY_SIGNATURE.as_slice())
     {
@@ -143,7 +151,7 @@ fn has_zip64_locator(bytes: &[u8], eocd_offset: usize) -> bool {
     zip64_eocd_offset
         .checked_add(12)
         .and_then(|start| start.checked_add(record_size_low as usize))
-        .is_some_and(|end| end <= locator_offset)
+        .is_some_and(|end| end == locator_offset)
 }
 
 /// Inspect classic ZIP central-directory records before using ZipArchive.
@@ -152,12 +160,6 @@ fn has_zip64_locator(bytes: &[u8], eocd_offset: usize) -> bool {
 /// silently falling back to that lossy view.
 fn inspect_classic_zip_directory(bytes: &[u8]) -> Option<ClassicZipDirectory> {
     let eocd_offset = find_end_of_central_directory(bytes)?;
-    // A valid ZIP64 locator is placed immediately before the classic EOCD,
-    // even when the classic fields happen to fit. Verify its structure so a
-    // coincidental signature in a ZIP comment is not mistaken for a locator.
-    if has_zip64_locator(bytes, eocd_offset) {
-        return None;
-    }
     let disk_number = read_u16(bytes, eocd_offset + 4)?;
     let central_directory_disk = read_u16(bytes, eocd_offset + 6)?;
     let entries_on_disk = read_u16(bytes, eocd_offset + 8)?;
@@ -179,6 +181,13 @@ fn inspect_classic_zip_directory(bytes: &[u8]) -> Option<ClassicZipDirectory> {
     let central_directory_offset = central_directory_offset as usize;
     let central_directory_end = central_directory_offset.checked_add(central_directory_size as usize)?;
     if central_directory_end > eocd_offset {
+        return None;
+    }
+
+    // A ZIP64 locator/record must live after the complete central directory.
+    // Opaque central-directory comments can contain locator/record-shaped
+    // bytes and must not be interpreted as structural ZIP64 records.
+    if has_zip64_locator(bytes, eocd_offset, central_directory_end) {
         return None;
     }
 
@@ -720,6 +729,7 @@ mod tests {
 
     fn add_central_directory_comment_that_resembles_zip64_locator(
         mut bytes: Vec<u8>,
+        zip64_eocd_offset: usize,
     ) -> Vec<u8> {
         let eocd = find_eocd_offset(&bytes);
         let entry_count = u16::from_le_bytes(bytes[eocd + 10..eocd + 12].try_into().unwrap());
@@ -740,22 +750,51 @@ mod tests {
             cursor += 46 + name_length + extra_length + comment_length;
         }
 
-        let comment = [
-            0x50, 0x4b, 0x06, 0x07, // ZIP64 locator signature
-            0, 0, 0, 0, // disk with ZIP64 EOCD
-            0, 0, 0, 0, // ZIP64 EOCD offset low
-            0, 0, 0, 0, // ZIP64 EOCD offset high
-            1, 0, 0, 0, // total disks
-        ];
+        let mut comment = Vec::with_capacity(20);
+        comment.extend_from_slice(&0x0706_4b50_u32.to_le_bytes());
+        comment.extend_from_slice(&0_u32.to_le_bytes());
+        comment.extend_from_slice(&(zip64_eocd_offset as u32).to_le_bytes());
+        comment.extend_from_slice(&0_u32.to_le_bytes());
+        comment.extend_from_slice(&1_u32.to_le_bytes());
+        assert_eq!(comment.len(), 20);
         let old_directory_size =
             u32::from_le_bytes(bytes[eocd + 12..eocd + 16].try_into().unwrap());
-        bytes.splice(eocd..eocd, comment);
+        bytes.splice(eocd..eocd, comment.iter().copied());
         bytes[last_central_entry + 32..last_central_entry + 34]
             .copy_from_slice(&(comment.len() as u16).to_le_bytes());
         let new_eocd = eocd + comment.len();
         bytes[new_eocd + 12..new_eocd + 16]
             .copy_from_slice(&(old_directory_size + comment.len() as u32).to_le_bytes());
         bytes
+    }
+
+    fn find_local_data_offset(bytes: &[u8], target_name: &str) -> usize {
+        let eocd = find_eocd_offset(bytes);
+        let entry_count = u16::from_le_bytes(bytes[eocd + 10..eocd + 12].try_into().unwrap());
+        let mut cursor =
+            u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
+        for _ in 0..entry_count {
+            assert_eq!(&bytes[cursor..cursor + 4], CENTRAL_DIRECTORY_HEADER_SIGNATURE);
+            let name_length =
+                u16::from_le_bytes(bytes[cursor + 28..cursor + 30].try_into().unwrap()) as usize;
+            let extra_length =
+                u16::from_le_bytes(bytes[cursor + 30..cursor + 32].try_into().unwrap()) as usize;
+            let comment_length =
+                u16::from_le_bytes(bytes[cursor + 32..cursor + 34].try_into().unwrap()) as usize;
+            if &bytes[cursor + 46..cursor + 46 + name_length] == target_name.as_bytes() {
+                let local_offset =
+                    u32::from_le_bytes(bytes[cursor + 42..cursor + 46].try_into().unwrap()) as usize;
+                let local_name_length =
+                    u16::from_le_bytes(bytes[local_offset + 26..local_offset + 28].try_into().unwrap())
+                        as usize;
+                let local_extra_length =
+                    u16::from_le_bytes(bytes[local_offset + 28..local_offset + 30].try_into().unwrap())
+                        as usize;
+                return local_offset + 30 + local_name_length + local_extra_length;
+            }
+            cursor += 46 + name_length + extra_length + comment_length;
+        }
+        panic!("ZIP entry not found: {target_name}");
     }
 
     fn rename_mimetype_local_header_only(mut bytes: Vec<u8>) -> Vec<u8> {
@@ -1133,6 +1172,37 @@ mod tests {
     }
 
     #[test]
+    fn rejects_package_part_names_prefixed_with_utf8_bom() {
+        let entries = [
+            ("mimetype", HWPX_MIME_TYPE, CompressionMethod::Stored),
+            ("version.xml", "<HCFVersion/>", CompressionMethod::Deflated),
+            (
+                "\u{feff}Contents/content.hpf",
+                "<opf:package/>",
+                CompressionMethod::Deflated,
+            ),
+            (
+                "Contents/header.xml",
+                "<hh:head/>",
+                CompressionMethod::Deflated,
+            ),
+            (
+                "Contents/section0.xml",
+                "<hs:sec/>",
+                CompressionMethod::Deflated,
+            ),
+            (
+                "Contents/metadata.xml",
+                "<meta/>",
+                CompressionMethod::Deflated,
+            ),
+        ];
+        let bytes = mark_entry_utf8(build_archive(&entries), "\u{feff}Contents/content.hpf");
+
+        assert!(!is_valid_hwpx_package(&bytes));
+    }
+
+    #[test]
     fn rejects_generic_zip_archives() {
         let bytes = build_archive(&[("notes.txt", "not HWPX", CompressionMethod::Stored)]);
         assert!(!is_valid_hwpx_package(&bytes));
@@ -1425,7 +1495,55 @@ mod tests {
     #[test]
     fn accepts_a_central_directory_comment_that_resembles_a_zip64_locator() {
         let bytes = build_archive(&valid_entries());
-        let commented = add_central_directory_comment_that_resembles_zip64_locator(bytes);
+        let commented = add_central_directory_comment_that_resembles_zip64_locator(bytes, 0);
+        assert!(is_valid_hwpx_package(&commented));
+    }
+
+    #[test]
+    fn accepts_zip64_shaped_payload_bytes_referenced_by_a_central_directory_comment() {
+        let mut fake_zip64_eocd = Vec::with_capacity(56);
+        fake_zip64_eocd.extend_from_slice(&0x0606_4b50_u32.to_le_bytes());
+        fake_zip64_eocd.extend_from_slice(&44_u64.to_le_bytes());
+        fake_zip64_eocd.extend_from_slice(&45_u16.to_le_bytes());
+        fake_zip64_eocd.extend_from_slice(&45_u16.to_le_bytes());
+        fake_zip64_eocd.extend_from_slice(&0_u32.to_le_bytes());
+        fake_zip64_eocd.extend_from_slice(&0_u32.to_le_bytes());
+        fake_zip64_eocd.extend_from_slice(&6_u64.to_le_bytes());
+        fake_zip64_eocd.extend_from_slice(&6_u64.to_le_bytes());
+        fake_zip64_eocd.extend_from_slice(&0_u64.to_le_bytes());
+        fake_zip64_eocd.extend_from_slice(&0_u64.to_le_bytes());
+        assert_eq!(fake_zip64_eocd.len(), 56);
+        let fake_zip64_eocd = String::from_utf8(fake_zip64_eocd).unwrap();
+
+        let entries = [
+            ("mimetype", HWPX_MIME_TYPE, CompressionMethod::Stored),
+            ("version.xml", "<HCFVersion/>", CompressionMethod::Deflated),
+            (
+                "Contents/content.hpf",
+                "<opf:package/>",
+                CompressionMethod::Deflated,
+            ),
+            (
+                "Contents/header.xml",
+                "<hh:head/>",
+                CompressionMethod::Deflated,
+            ),
+            (
+                "Contents/section0.xml",
+                "<hs:sec/>",
+                CompressionMethod::Deflated,
+            ),
+            (
+                "Contents/metadata.xml",
+                fake_zip64_eocd.as_str(),
+                CompressionMethod::Stored,
+            ),
+        ];
+        let bytes = build_archive(&entries);
+        let fake_zip64_offset = find_local_data_offset(&bytes, "Contents/metadata.xml");
+        let commented =
+            add_central_directory_comment_that_resembles_zip64_locator(bytes, fake_zip64_offset);
+
         assert!(is_valid_hwpx_package(&commented));
     }
 
@@ -1494,3 +1612,6 @@ mod tests {
         assert!(inspect_classic_zip_directory(&bytes).is_none());
     }
 }
+
+--- Identity notice ---
+This call is filed as Unattributed because its exact ChatGPT conversation is not known yet. Unattributed does not switch on Read-only mode or disable tools. Continue using every enabled tool, including apply_patch, exec_command, Desktop and Plugins; their existing permissions still apply. This request id owns its workspace, update_plan, terminals and agents/subagents. Use the process and run ids returned to this request; later exact proof attaches that state to its chat. A refusal about a particular process, worker or chat target applies only to that operation, not to file edits or other tools. Report the actual tool result; do not claim mutation or terminal tools are unavailable because of this notice, and never replay successful work.

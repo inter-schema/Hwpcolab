@@ -164,9 +164,16 @@ function findEndOfCentralDirectory(view: DataView, bytesLength: number): number 
   return -1;
 }
 
-function hasZip64EndOfCentralDirectoryLocator(view: DataView, eocdOffset: number): boolean {
+function hasZip64EndOfCentralDirectoryLocator(
+  view: DataView,
+  eocdOffset: number,
+  centralDirectoryEnd: number,
+): boolean {
   const locatorOffset = eocdOffset - 20;
-  if (locatorOffset < 0 || readUint32(view, locatorOffset) !== ZIP64_END_OF_CENTRAL_DIRECTORY_LOCATOR) {
+  if (
+    locatorOffset < centralDirectoryEnd
+    || readUint32(view, locatorOffset) !== ZIP64_END_OF_CENTRAL_DIRECTORY_LOCATOR
+  ) {
     return false;
   }
 
@@ -179,7 +186,8 @@ function hasZip64EndOfCentralDirectoryLocator(view: DataView, eocdOffset: number
 
   const zip64EndOffset = zip64EndOffsetLow;
   if (
-    zip64EndOffset + 56 > locatorOffset
+    zip64EndOffset < centralDirectoryEnd
+    || zip64EndOffset + 56 > locatorOffset
     || readUint32(view, zip64EndOffset) !== ZIP64_END_OF_CENTRAL_DIRECTORY
   ) {
     return false;
@@ -189,7 +197,7 @@ function hasZip64EndOfCentralDirectoryLocator(view: DataView, eocdOffset: number
   const recordSizeHigh = readUint32(view, zip64EndOffset + 8);
   if (recordSizeHigh !== 0) return true;
   if (recordSizeLow < 44) return false;
-  return zip64EndOffset + 12 + recordSizeLow <= locatorOffset;
+  return zip64EndOffset + 12 + recordSizeLow === locatorOffset;
 }
 
 /**
@@ -206,10 +214,6 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     const eocdOffset = findEndOfCentralDirectory(view, bytes.byteLength);
     if (eocdOffset < 0) return false;
-
-    // Validate the ZIP64 locator structure so a coincidental signature in a
-    // central-directory comment is not mistaken for a ZIP64 record.
-    if (hasZip64EndOfCentralDirectoryLocator(view, eocdOffset)) return false;
 
     const diskNumber = readUint16(view, eocdOffset + 4);
     const centralDirectoryDisk = readUint16(view, eocdOffset + 6);
@@ -231,7 +235,16 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
       return false;
     }
 
-    const decoder = new TextDecoder('utf-8', { fatal: true });
+    // Preserve a leading U+FEFF as part of the ZIP filename. The default
+    // TextDecoder behavior strips it, which can alias a BOM-prefixed member
+    // to a required OWPML part name and disagree with the Rust validator.
+    // A ZIP64 locator/record must live after the complete central directory.
+    // Central-directory comments are opaque bytes and can contain signatures
+    // and record-shaped data that must not be mistaken for ZIP64 structures.
+    const centralDirectoryEnd = centralDirectoryOffset + centralDirectorySize;
+    if (hasZip64EndOfCentralDirectoryLocator(view, eocdOffset, centralDirectoryEnd)) return false;
+
+    const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
     const names: string[] = [];
     const seenNames = new Set<string>();
     const centralEntries: CentralDirectoryEntry[] = [];
@@ -348,3 +361,6 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
     return false;
   }
 }
+
+--- Identity notice ---
+This call is filed as Unattributed because its exact ChatGPT conversation is not known yet. Unattributed does not switch on Read-only mode or disable tools. Continue using every enabled tool, including apply_patch, exec_command, Desktop and Plugins; their existing permissions still apply. This request id owns its workspace, update_plan, terminals and agents/subagents. Use the process and run ids returned to this request; later exact proof attaches that state to its chat. A refusal about a particular process, worker or chat target applies only to that operation, not to file edits or other tools. Report the actual tool result; do not claim mutation or terminal tools are unavailable because of this notice, and never replay successful work.
