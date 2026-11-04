@@ -80,7 +80,6 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - Re-read current font runtime, Tauri registration, save, DOCX and Vite font middleware source.
 - No production code has been changed at this checkpoint.
 
-
 ### 2026-11-04 — CI RED: test discovery boundary
 - PR #1 triggered workflow run `41715250196`.
 - Frontend dependency installation succeeded.
@@ -88,7 +87,6 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - This is a test-harness scope defect, not evidence that the runtime regression test is red. Add an explicit first-party test include boundary (`src/**/*.test.ts`) before accepting the runtime RED result.
 - npm lock artifact uploaded by this run: artifact ID `13270301874` (`beta-npm-lock`).
 - Windows Rust job was still running at the time of this log update.
-
 
 ### 2026-11-04 — CI RED confirmed
 - First PR run exposed test discovery collecting upstream E2E suites. The Vitest config was narrowed to `src/**/*.test.ts`.
@@ -98,19 +96,16 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - One unrelated existing test suite failed at import time because `src/hop-host/command/replace-upstream-commands.test.ts` referenced `../../index.html` (resolving under `src/`) instead of the repository-root `index.html`. Corrected the test import path by one directory level.
 - These findings are now isolated; the production runtime fix removes only the unconditional early return.
 
-
 ### 2026-11-04 — Native font catalog validation
 - The first font catalog CI run (41716034285) completed frontend tests and build successfully.
 - Windows Rust test job also completed successfully with the native font catalog, command registration, `fontdb 0.23.0`, and canonical allow-list unit tests.
 - The later HWPX test-only run (41716475651) confirmed the intended TypeScript RED: 23 test files passed, 163 tests passed, and the new HWPX suite could not import the not-yet-implemented package validator.
 - This is an expected RED checkpoint; no HWPX production path has been changed yet.
 
-
 ### 2026-11-04 — Atomic save RED tests
 - Added Node tests for complete replacement, missing staging source, replacement failure, and temporary-file cleanup.
 - Added matching Rust tests for successful overwrite, missing source preservation, and replacement failure preserving an existing directory.
 - These tests intentionally reference the not-yet-implemented atomic copy helper and will be evaluated after the implementation is committed; do not treat this checkpoint as green.
-
 
 ### 2026-11-04 — DOCX parsing, atomic save and font asset security
 - Replaced regex-only DOCX extraction with WordprocessingML namespace-aware DOM parsing. Preserves content in `w:t`, explicit tabs, line breaks, non-breaking/soft hyphens, table rows/cells and preserved spaces; ignores raw XML indentation between elements.
@@ -122,32 +117,28 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - Earlier current-branch run `41717504483` was for a pre-implementation commit and failed only because `atomic-file.ts` was not yet present at that checkpoint: 169 existing tests passed. This is not evidence about the current head.
 - A fresh current-head run is being queued after the latest PR update. Do not claim DOCX, HWPX or atomic-save test success until that run completes.
 
-
 ### 2026-11-04 — SheetJS security audit
 - The manifest previously resolved registry `xlsx@0.18.5`, which is affected by SheetJS ReDoS CVE-2024-22363 (all CE releases through 0.20.1) and is distributed from a stale npm registry endpoint.
 - SheetJS's own advisory identifies 0.20.2+ as the ReDoS fix, and its official installation documentation recommends the CDN NodeJS tarball. The official CDN currently lists 0.20.3 as the recommended release.
 - Updated `package.json` to the official `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz` tarball and added a workbook-import compatibility fixture that asserts both Markdown and structured sheet data.
 - Lockfile regeneration and full CI validation remain pending; do not consider this dependency upgrade verified until the current-head install, tests and build pass.
 
-
 ### 2026-11-04 — LLM proxy cancellation correctness
 - Traced the frontend call sites: the OpenAI-compatible provider passes `request_id`, while `claudeProvider.ts` invokes the same Tauri command without one. The previous Rust implementation created a oneshot receiver unconditionally but only stored its sender when an ID existed; the sender was immediately dropped for Claude/no-ID calls, causing the select to resolve as cancelled before sending.
 - Found a second race: inserting duplicate request IDs into the HashMap replaced the original sender. Cleanup from either request could also remove the other request's cancellation entry.
-- Added localhost HTTP integration tests for both cases before changing the implementation:
+- Added localhost HTTP integration tests for both cases:
   - A no-ID request must reach a local server and receive HTTP 200.
   - A duplicate in-flight ID must be rejected with an explicit conflict message; the first request must remain cancellable.
-- Fixed registration to create the oneshot channel only when an ID exists, use HashMap::Entry to reject duplicate active IDs, surface lock poisoning as an error, and avoid stale cleanup removing another active request.
+- Fix registration to create the oneshot channel only when an ID exists, use HashMap::Entry to reject duplicate active IDs, surface lock poisoning as an error, and avoid stale cleanup removing another active request.
 - Tokio `net` feature was added for the local TCP fixture.
 - RED execution was requested in Actions run `41719841955`; GitHub reported both jobs queued for an extended period, so the exact failing output was not captured before implementing the fix. This is recorded as a TDD verification gap, not as a confirmed RED observation.
 - Fix commit: `171893a89987b9ef41d116403e36ac3ee28a3d03`. A fresh Windows Rust CI run is required to validate both integration tests and compilation.
-
 
 ### 2026-11-04 — Tauri WebView CSP hardening
 - Found `src-tauri/tauri.conf.json` explicitly set `app.security.csp: null`, which disables Tauri's Content Security Policy protection.
 - Added separate production and development CSPs. Production allows local/custom-protocol assets, Tauri IPC, app-bundled workers/fonts/images and WASM execution, but no remote network origins or general eval. Development adds only the Vite localhost origin and HMR websocket.
 - Added configuration contract tests for non-null CSP, IPC, the required Tauri custom protocol, WASM support, no general `unsafe-eval`, object-src none, and dev-only localhost/HMR.
 - Tauri v2 documentation notes that CSP is only enabled when configured and that its injected asset CSP modifications append hashes/nonces to bundled code. Runtime smoke testing in packaged WebView remains desirable after CI.
-
 
 ### 2026-11-04 — LLM proxy resource and redirect hardening
 - Added HTTP/HTTPS endpoint validation and rejected URL userinfo. Loopback and private custom endpoints remain available for local Ollama and user-selected gateways.
@@ -158,7 +149,6 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - Added unit/integration coverage for URL scheme/userinfo, request and response limits, timeout normalization, and cross-host redirect suppression.
 - Fix commit: `8ada00e6caccfa90b75e62e6af07c5bc0c7beebe`; additional redirect/large-response tests commit: `97039a9ab947c3041580d360e64b2dd11722fe67`.
 - Current Windows Rust CI validation is pending; these resource hardening behaviors are not marked verified yet.
-
 
 ### 2026-11-04 — Attachment ZIP-bomb and file-size hardening
 - Added a preflight helper using fflate's ZIP filter callback. It inspects central-directory expanded sizes without inflating entries, enforces per-entry/total expansion limits, and supports a path allow-list.
@@ -259,3 +249,12 @@ Test-authoring corrections recorded for transparency:
   2. Re-read the complete PR diff, especially the Tauri command registration, font allow-list, native/Vite save parity, HWPX parser parity, and LLM request lifecycle.
   3. Record any remaining platform-only limitations. A packaged Tauri WebView smoke test is not equivalent to the Windows Rust unit suite and remains a separate runtime check.
   4. Integrate into Beta only after the current-head checks are green. Do not merge to main.
+
+## 9. COS reconnection handoff — 2026-11-04
+
+- Created `COS_RECONNECT_TEST_PLAN.md` in the repository root on the isolated PR branch.
+- The plan contains CON-01 through CON-08 connection/API safety checks, a baseline refresh requirement, a concrete P0 HWPX duplicate-fixture task, subsystem regression matrices for fonts, HWPX, saves, DOCX/XLSX, Vite path containment and LLM proxy parity, plus a packaged Windows WebView smoke test.
+- Proposed execution backlog is numbered COS-BOOT-01 through COS-REVIEW-01 with acceptance evidence and a definition-of-done checklist.
+- COS has not yet been connected or used for this test-preparation step. The supplied API contract is intentionally not assumed; the next COS session must inspect it before making requests or configuring credentials.
+- Plan commit: `639f1543330d570224070c57b2ca6eb291d5283b`.
+- PR #1 is still open against `Beta`; the work branch remains separate. `main` remains untouched.
