@@ -128,6 +128,9 @@
 - `git diff --check`: passed.
 - Rust tests/format/Clippy were not run locally because Cargo, rustc and rustfmt are unavailable in the Windows COS workspace. The first Windows CI run exposed two Rust compile errors in `bytes.get(..)? != Some(...)`; both `?` operators have now been removed, and the next CI run must confirm the correction.
 - Independent Z.ai review remains pending: the requested model endpoint returned HTTP 429 / error 1305; COS's ChatGPT worker launcher could not start workers with the Z.ai model ID.
+- The correction was published at `ce7cd14`; the lockfile-sync job formatted the Rust source and created bot commit `24e6029`. The formatted remote source still contains the CRC test/helper and both corrected `Option` comparisons.
+- On run `41776142633` (code head `ce7cd14`), lockfile sync, frontend tests/build, npm audit and Rust formatting passed; Clippy was in progress and Rust tests were pending at this checkpoint. A separate run for bot head `24e6029` finished `action_required` without executing.
+- Current PR head is `24e6029115679f85840a2b86b5fea967231ac7c6`; a follow-up commit is being prepared on that head so the full workflow can re-run after formatting has stabilized.
 
 ## References
 
