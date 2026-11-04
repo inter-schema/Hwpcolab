@@ -63,6 +63,7 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
 
     const decoder = new TextDecoder('utf-8', { fatal: true });
     const names: string[] = [];
+    const seenNames = new Set<string>();
     let firstCentralEntry: {
       name: string;
       flags: number;
@@ -102,6 +103,9 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
       }
 
       const name = decoder.decode(bytes.subarray(cursor + 46, cursor + 46 + nameLength));
+      const normalizedName = name.toLowerCase();
+      if (seenNames.has(normalizedName)) return false;
+      seenNames.add(normalizedName);
       names.push(name);
       if (index === 0) {
         firstCentralEntry = {
