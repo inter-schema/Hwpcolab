@@ -327,3 +327,31 @@ Final repeat after the last code/document changes completed at 20:11: full Vites
 - [ ] Verify the new GitHub Actions run on the exact pushed SHA, including Windows Rust formatting, Clippy, and `cargo test --locked`.
 
 Beta, main, and PR merge state are outside this publication step. The packaged Windows Tauri WebView smoke test also remains an open acceptance gate.
+
+
+## 25. Publication complete; integrated CI green — 2026-11-04
+
+### Published branch
+
+- [x] Reconcile the Task 19/20 HWPX changes on the exact live PR head.
+- [x] Publish the six-file HWPX/verification-document follow-up to `codex/beta-hardening-2026-11-04`.
+- [x] Correct the accidental session-notice suffix from the first publication commit with a normal fast-forward correction commit.
+- [x] Adopt the lockfile-sync automation commit `d670b925098113667fd36044e8295abd82781e7f`, which applies rustfmt formatting and updates `src-tauri/Cargo.lock`.
+- [x] Synchronize the local publication worktree to the exact live PR head; no uncommitted repository changes remain.
+
+### Exact CI evidence
+
+- [x] GitHub Actions run `41826874359`: overall **success**.
+- [x] Sync dependency lockfiles and Rust formatting: passed.
+- [x] Windows `rustfmt --check`: passed.
+- [x] Windows Clippy with `-D warnings`: passed.
+- [x] Windows `cargo test --locked`: **49 passed, 0 failed**.
+- [x] Frontend npm audit: **0 vulnerabilities**.
+- [x] Frontend Vitest: **32 files / 234 tests passed**.
+- [x] Frontend production build: passed in **7.01s**.
+- [x] Confirmed from both test-job checkout logs that the tested source SHA was the live PR head `d670b925098113667fd36044e8295abd82781e7f`, despite the run event metadata recording the parent SHA.
+- [ ] Complete packaged Windows Tauri WebView smoke tests: HWPX open/edit/save/reopen; installed font enumeration/rendering; LLM request and cancellation UI.
+
+The bot-triggered duplicate run `41826931257` is `action_required` with no jobs. It does not replace or negate the successful integrated run above, whose Windows and frontend jobs checked out and validated the exact `d670b92` PR head.
+
+PR #1 remains open against `Beta`; neither `Beta` nor `main` was modified or merged.
