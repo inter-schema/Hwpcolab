@@ -167,3 +167,95 @@ Non-goals: no main-branch edits, no blanket dependency upgrades, no wholesale up
 - Added regression tests for per-entry expansion overflow, total expansion overflow, and ignoring unneeded large DOCX media entries.
 - Added a 128 MiB raw attachment size limit at three boundaries: browser picker/drop before `arrayBuffer()`, parser entry point, and native Tauri metadata check before `fs::read`. UI now surfaces the size-limit error instead of leaving an unhandled promise rejection.
 - Remaining caveat: XLS legacy OLE containers do not use ZIP, so the ZIP expansion preflight applies to DOCX/XLSX only. The raw 128 MiB input limit applies to every attachment type.
+
+## 8. Extended correctness loop — 2026-11-04
+
+This continuation was performed directly through GitHub and GitHub Actions. Chat On Steroids was not used.
+
+### Additional defects found and corrected
+
+#### F7. Native HWPX routing used an incorrectly escaped ZIP signature
+- The open_document_session gate used a byte string containing literal backslash sequences rather than the four ZIP local-header bytes.
+- A RED test verified that the real byte sequence 50 4B 03 04 was not recognized.
+- Fixed by comparing against [0x50, 0x4B, 0x03, 0x04].
+- The HWPX package validator itself was already tested; this defect was in the native document-open routing gate.
+
+#### F8. Native LLM cancellation cleanup could remove a replacement request
+- The cleanup guard originally removed the cancellation-map entry by request ID only.
+- Race: request A is cancelled and removed; request B reuses the same ID; A's delayed Drop cleanup then removes B's entry.
+- A deterministic Tokio integration test reproduced the race.
+- Fixed with monotonically increasing registration tokens (AtomicU64). Cleanup removes an entry only if its token still matches the registration it owns.
+- Duplicate active request IDs remain rejected.
+
+#### F9. Vite font middleware fell through after rejecting an unsafe path
+- The path resolver rejected traversal/symlink/sibling paths, but the middleware called next() when resolution failed.
+- That allowed the request to continue into Vite's general static middleware rather than terminating at the font route.
+- Extracted a testable middleware helper; rejected paths now return HTTP 404 and do not call next().
+
+#### F10. Vite LLM request registry had the same stale-cleanup race
+- The development bridge used a raw Map<string, AbortController>, overwrote duplicate IDs, and unconditionally deleted IDs in finally.
+- Added ActiveHttpRequests: duplicate registration is rejected, cancellation removes and aborts the current controller, and cleanup is identity-checked.
+- Added tests for duplicate IDs and ID reuse after cancellation.
+
+#### F11. Vite development LLM proxy was weaker than the native proxy
+- It followed redirects, accepted non-HTTP schemes/userinfo, did not bound request/response bodies, cleared timeout before reading the response body, and did not clamp timeout values.
+- Added shared helpers and tests:
+  - HTTP/HTTPS-only endpoint validation and rejection of URL userinfo
+  - UTF-8 byte-size bound for serialized request bodies
+  - timeout clamp to 1 second–10 minutes
+  - streaming response-size enforcement, including Content-Length preflight
+  - UTF-8 BOM removal
+  - manual redirect handling
+  - timeout remains active until response body reading finishes
+- The development bridge now follows the same safety envelope as the native Rust bridge.
+
+#### F12. TypeScript HWPX validator rejected legal ZIP data descriptors on ordinary entries
+- The validator rejected general-purpose flag bit 3 for every ZIP entry, although ZIP permits data descriptors for ordinary entries.
+- Added a generated HWPX fixture whose final document part uses a valid signed data descriptor; fflate successfully unzips it.
+- The TypeScript validator now accepts descriptors on ordinary entries while retaining strict first-entry mimetype validation.
+- Encryption flags remain rejected. A Rust test verifies that an encrypted OWPML document part is rejected by the native validator.
+
+### TDD and verification evidence
+
+- RED: workflow run 41740640233 reproduced the native ZIP-signature routing failure (22 passed, the new regression test failed).
+- RED: workflow run 41741637004 reproduced stale native LLM cancellation cleanup (23 passed, the new race test failed).
+- RED: workflow run 41742242016 reproduced Vite active-request registry behavior (existing tests passed; new registry assertions failed).
+- RED: workflow run 41742434249 exposed the Vite LLM HTTP helper gaps; a separate test-only typo was corrected before the green run.
+- RED: workflow run 41742805991 reproduced rejection of a valid ordinary-entry ZIP data descriptor.
+- GREEN: workflow run 41743013233 passed 25 Windows Rust tests and 209 frontend tests, plus the frontend build.
+- GREEN: workflow run 41742673645 passed the 208-test frontend suite/build and 24 Windows Rust tests.
+- GREEN: workflow run 41742350152 passed the 202-test frontend suite/build and 24 Windows Rust tests.
+- GREEN: workflow run 41743372019 completed npm ci, npm audit --audit-level=high, the 209-test frontend suite and production build successfully. Its Windows cargo test --locked job was still running at the time of this log update.
+- Workflow run 41743558019 is the current validation after upgrading GitHub Actions runtimes; treat its final result as authoritative for the latest workflow file.
+
+Test-authoring corrections recorded for transparency:
+- One intermediate document.rs patch accidentally displaced the existing HWPX validator import; it was restored before the behavior test was rerun.
+- The Tokio race test needed std::future::Future in scope.
+- The LLM bridge test initially referenced the wrong timeout constant; corrected before the passing 208-test run.
+- These were test/patch construction errors, not additional production defects.
+
+### Lockfiles and CI hardening
+
+- Committed the generated root package-lock.json and src-tauri/Cargo.lock to this workstream.
+- Added a narrowly scoped same-repository PR job that regenerates and commits lockfiles only on codex/beta-hardening-2026-11-04; it does not run for forks or push events.
+- Frontend CI now uses npm ci, runs npm audit --audit-level=high, executes Vitest and builds the production frontend.
+- Windows CI now uses cargo test --locked.
+- Updated GitHub Actions to actions/checkout@v7.0.1 and actions/setup-node@v7.1.0 to avoid the Node 20 deprecation warning. Official release pages were checked before the update.
+- The lockfile synchronization job confirmed the committed lockfiles are already up to date.
+
+### Upstream comparison
+
+- HOP v0.4.5 was used as the reference for the native font catalog; only the relevant catalog/command behavior was adapted to Hwpcolab's Tauri command architecture.
+- RHWP v0.8.7 was already the current stable version in the vendored engine, so no blind RHWP replacement was made.
+- No wholesale HOP rebase or RHWP source rewrite was justified by the reviewed differences.
+
+### Current state and remaining gates
+
+- Integration base remains origin/Beta at e46f7230074cab63362f41d46cc1d1153085f745; comparison showed no Beta commits missing from the workstream at the last check.
+- All work remains on codex/beta-hardening-2026-11-04 and PR #1. main has not been modified.
+- Lockfiles are committed and the npm audit gate passed.
+- Remaining before integration:
+  1. Obtain the final result of current-head Windows cargo test --locked and the latest Actions run.
+  2. Re-read the complete PR diff, especially the Tauri command registration, font allow-list, native/Vite save parity, HWPX parser parity, and LLM request lifecycle.
+  3. Record any remaining platform-only limitations. A packaged Tauri WebView smoke test is not equivalent to the Windows Rust unit suite and remains a separate runtime check.
+  4. Integrate into Beta only after the current-head checks are green. Do not merge to main.
