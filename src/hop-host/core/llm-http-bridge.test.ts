@@ -34,6 +34,22 @@ describe('Vite LLM HTTP bridge limits', () => {
     await expect(readBoundedResponseText(response, 4)).rejects.toThrow(/size|limit|bytes/i);
   });
 
+  it('cancels an oversized response stream immediately when Content-Length exceeds the limit', async () => {
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('12345'));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const response = new Response(body, { headers: { 'content-length': '5' } });
+
+    await expect(readBoundedResponseText(response, 4)).rejects.toThrow(/size|limit|bytes/i);
+    expect(cancelled).toBe(true);
+  });
+
   it('enforces the limit while streaming when Content-Length is absent', async () => {
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
