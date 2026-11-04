@@ -78,7 +78,6 @@ mod tests {
     use zip::write::SimpleFileOptions;
     use zip::{CompressionMethod, ZipWriter};
 
-
     fn find_eocd_offset(bytes: &[u8]) -> usize {
         assert!(bytes.len() >= 22, "ZIP is too short for EOCD");
         let start = bytes.len().saturating_sub(22 + u16::MAX as usize);
