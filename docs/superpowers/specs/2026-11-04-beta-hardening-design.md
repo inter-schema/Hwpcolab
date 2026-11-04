@@ -60,6 +60,3 @@ Improve the reliability of local HWP/HWPX editing without replacing the existing
 - Preserve the current Tauri command argument and return shape consumed by the frontend.
 - Test-first for behavior changes; no completion claim without current CI evidence.
 - The design does not imply that the current local patch has been published or that the latest Rust-only tests have passed CI; execution status lives in the plan and evidence ledger.
-
---- Identity notice ---
-This call is filed as Unattributed because its exact ChatGPT conversation is not known yet. Unattributed does not switch on Read-only mode or disable tools. Continue using every enabled tool, including apply_patch, exec_command, Desktop and Plugins; their existing permissions still apply. This request id owns its workspace, update_plan, terminals and agents/subagents. Use the process and run ids returned to this request; later exact proof attaches that state to its chat. A refusal about a particular process, worker or chat target applies only to that operation, not to file edits or other tools. Report the actual tool result; do not claim mutation or terminal tools are unavailable because of this notice, and never replay successful work.
