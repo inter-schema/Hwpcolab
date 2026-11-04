@@ -85,7 +85,7 @@ mod tests {
         (start..=end)
             .rev()
             .find(|offset| {
-                if &bytes[*offset..*offset + 4] != [0x50, 0x4b, 0x05, 0x06] {
+                if bytes[*offset..*offset + 4] != [0x50, 0x4b, 0x05, 0x06] {
                     return false;
                 }
                 let comment_length =
