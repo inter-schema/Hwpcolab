@@ -11,7 +11,7 @@ pub fn is_valid_hwpx_package(bytes: &[u8]) -> bool {
         return false;
     };
 
-    if archive.len() == 0 {
+    if archive.is_empty() {
         return false;
     }
 
