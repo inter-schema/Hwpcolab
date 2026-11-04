@@ -377,7 +377,10 @@ function addZip64EndRecords(zip: Uint8Array): Uint8Array {
   return output;
 }
 
-function addCentralDirectoryCommentThatResemblesZip64Locator(zip: Uint8Array): Uint8Array {
+function addCentralDirectoryCommentThatResemblesZip64Locator(
+  zip: Uint8Array,
+  zip64EocdOffset = 0,
+): Uint8Array {
   const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
   let eocdOffset = -1;
   for (let offset = zip.byteLength - 22; offset >= Math.max(0, zip.byteLength - 22 - 0xffff); offset -= 1) {
@@ -408,6 +411,7 @@ function addCentralDirectoryCommentThatResemblesZip64Locator(zip: Uint8Array): U
     0, 0, 0, 0,
     1, 0, 0, 0,
   ]);
+  new DataView(comment.buffer).setUint32(8, zip64EocdOffset, true);
   const output = new Uint8Array(zip.byteLength + comment.byteLength);
   output.set(zip.subarray(0, eocdOffset), 0);
   output.set(comment, eocdOffset);
@@ -417,6 +421,36 @@ function addCentralDirectoryCommentThatResemblesZip64Locator(zip: Uint8Array): U
   outputView.setUint16(lastCentralEntry + 32, comment.byteLength, true);
   outputView.setUint32(eocdOffset + comment.byteLength + 12, cursor - directoryOffset + comment.byteLength, true);
   return output;
+}
+
+function findLocalDataOffset(zip: Uint8Array, targetName: string): number {
+  const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+  let eocdOffset = -1;
+  for (let offset = zip.byteLength - 22; offset >= Math.max(0, zip.byteLength - 22 - 0xffff); offset -= 1) {
+    if (view.getUint32(offset, true) === 0x06054b50) {
+      eocdOffset = offset;
+      break;
+    }
+  }
+  if (eocdOffset < 0) throw new Error('ZIP EOCD not found');
+
+  const entryCount = view.getUint16(eocdOffset + 10, true);
+  let cursor = view.getUint32(eocdOffset + 16, true);
+  for (let index = 0; index < entryCount; index += 1) {
+    if (view.getUint32(cursor, true) !== 0x02014b50) throw new Error('Invalid central directory');
+    const nameLength = view.getUint16(cursor + 28, true);
+    const extraLength = view.getUint16(cursor + 30, true);
+    const commentLength = view.getUint16(cursor + 32, true);
+    const name = new TextDecoder().decode(zip.subarray(cursor + 46, cursor + 46 + nameLength));
+    if (name === targetName) {
+      const localOffset = view.getUint32(cursor + 42, true);
+      const localNameLength = view.getUint16(localOffset + 26, true);
+      const localExtraLength = view.getUint16(localOffset + 28, true);
+      return localOffset + 30 + localNameLength + localExtraLength;
+    }
+    cursor += 46 + nameLength + extraLength + commentLength;
+  }
+  throw new Error(`ZIP entry not found: ${targetName}`);
 }
 
 function makeValidEntries(): Zippable {
@@ -487,6 +521,23 @@ function buildOverlappingLocalRecordsArchive(): Uint8Array {
 describe('HWPX package validation', () => {
   it('accepts a valid OWPML ZIP with the stored mimetype first', () => {
     expect(isValidHwpxPackage(zipSync(makeValidEntries()))).toBe(true);
+  });
+
+  it('rejects package-part names that begin with a UTF-8 BOM', () => {
+    const entries: Zippable = {};
+    for (const [name, data] of Object.entries(makeValidEntries())) {
+      entries[`\uFEFF${name}`] = data;
+    }
+
+    expect(isValidHwpxPackage(zipSync(entries))).toBe(false);
+  });
+
+  it('rejects a BOM-prefixed required part even when the first mimetype name is normal', () => {
+    const entries = makeValidEntries();
+    delete entries['Contents/content.hpf'];
+    entries['\uFEFFContents/content.hpf'] = strToU8('<opf:package/>');
+
+    expect(isValidHwpxPackage(zipSync(entries))).toBe(false);
   });
 
   it('rejects a generic ZIP without the HWPX mimetype', () => {
@@ -663,6 +714,25 @@ describe('HWPX package validation', () => {
     expect(isValidHwpxPackage(archive)).toBe(true);
   });
 
+  it('does not treat a ZIP64-shaped record inside a payload as structural when a central comment points to it', () => {
+    const fakeZip64Eocd = new Uint8Array(56);
+    const fakeView = new DataView(fakeZip64Eocd.buffer);
+    fakeView.setUint32(0, 0x06064b50, true);
+    fakeView.setBigUint64(4, 44n, true);
+    fakeView.setUint16(12, 45, true);
+    fakeView.setUint16(14, 45, true);
+    fakeView.setBigUint64(24, 6n, true);
+    fakeView.setBigUint64(32, 6n, true);
+
+    const entries = makeValidEntries();
+    entries['Contents/metadata.xml'] = [fakeZip64Eocd, { level: 0 }];
+    const zip = zipSync(entries);
+    const fakeZip64Offset = findLocalDataOffset(zip, 'Contents/metadata.xml');
+    const archive = addCentralDirectoryCommentThatResemblesZip64Locator(zip, fakeZip64Offset);
+
+    expect(isValidHwpxPackage(archive)).toBe(true);
+  });
+
   it('accepts data descriptors on ordinary entries while keeping mimetype strict', () => {
     const archive = addDataDescriptorToLastEntry(zipSync(makeValidEntries()));
     expect(unzipSync(archive)['Contents/section0.xml']).toBeDefined();
@@ -714,3 +784,6 @@ describe('HWPX package validation', () => {
   });
 
 });
+
+--- Identity notice ---
+This call is filed as Unattributed because its exact ChatGPT conversation is not known yet. Unattributed does not switch on Read-only mode or disable tools. Continue using every enabled tool, including apply_patch, exec_command, Desktop and Plugins; their existing permissions still apply. This request id owns its workspace, update_plan, terminals and agents/subagents. Use the process and run ids returned to this request; later exact proof attaches that state to its chat. A refusal about a particular process, worker or chat target applies only to that operation, not to file edits or other tools. Report the actual tool result; do not claim mutation or terminal tools are unavailable because of this notice, and never replay successful work.
