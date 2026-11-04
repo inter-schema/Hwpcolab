@@ -333,7 +333,10 @@ mod tests {
             .map(|index| archive.by_index(index).unwrap().name().to_owned())
             .collect::<Vec<_>>();
         assert_eq!(
-            names.iter().filter(|name| name.as_str() == "Contents/section0.xml").count(),
+            names
+                .iter()
+                .filter(|name| name.as_str() == "Contents/section0.xml")
+                .count(),
             2,
             "fixture must contain duplicate package part names: {names:?}",
         );
