@@ -125,7 +125,6 @@ mod tests {
         panic!("ZIP entry not found: {target}");
     }
 
-
     fn rename_entry(mut bytes: Vec<u8>, from: &str, to: &str) -> Vec<u8> {
         assert_eq!(from.len(), to.len());
         let eocd = bytes
@@ -133,21 +132,32 @@ mod tests {
             .rposition(|window| window == [0x50, 0x4b, 0x05, 0x06])
             .expect("EOCD signature");
         let entry_count = u16::from_le_bytes(bytes[eocd + 10..eocd + 12].try_into().unwrap());
-        let mut cursor = u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
+        let mut cursor =
+            u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
 
         for _ in 0..entry_count {
             assert_eq!(&bytes[cursor..cursor + 4], &[0x50, 0x4b, 0x01, 0x02]);
-            let name_length = u16::from_le_bytes(bytes[cursor + 28..cursor + 30].try_into().unwrap()) as usize;
-            let extra_length = u16::from_le_bytes(bytes[cursor + 30..cursor + 32].try_into().unwrap()) as usize;
-            let comment_length = u16::from_le_bytes(bytes[cursor + 32..cursor + 34].try_into().unwrap()) as usize;
+            let name_length =
+                u16::from_le_bytes(bytes[cursor + 28..cursor + 30].try_into().unwrap()) as usize;
+            let extra_length =
+                u16::from_le_bytes(bytes[cursor + 30..cursor + 32].try_into().unwrap()) as usize;
+            let comment_length =
+                u16::from_le_bytes(bytes[cursor + 32..cursor + 34].try_into().unwrap()) as usize;
             let matches = &bytes[cursor + 46..cursor + 46 + name_length] == from.as_bytes();
 
             if matches {
-                let local_offset = u32::from_le_bytes(bytes[cursor + 42..cursor + 46].try_into().unwrap()) as usize;
-                let local_name_length = u16::from_le_bytes(bytes[local_offset + 26..local_offset + 28].try_into().unwrap()) as usize;
+                let local_offset =
+                    u32::from_le_bytes(bytes[cursor + 42..cursor + 46].try_into().unwrap())
+                        as usize;
+                let local_name_length = u16::from_le_bytes(
+                    bytes[local_offset + 26..local_offset + 28]
+                        .try_into()
+                        .unwrap(),
+                ) as usize;
                 assert_eq!(local_name_length, to.len());
                 bytes[cursor + 46..cursor + 46 + name_length].copy_from_slice(to.as_bytes());
-                bytes[local_offset + 30..local_offset + 30 + local_name_length].copy_from_slice(to.as_bytes());
+                bytes[local_offset + 30..local_offset + 30 + local_name_length]
+                    .copy_from_slice(to.as_bytes());
                 return bytes;
             }
 
@@ -310,5 +320,4 @@ mod tests {
         let duplicated = rename_entry(bytes, "META-INF/manifest.xml", "Contents/section0.xml");
         assert!(!is_valid_hwpx_package(&duplicated));
     }
-
 }
