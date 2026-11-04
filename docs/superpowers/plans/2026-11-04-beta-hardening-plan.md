@@ -113,13 +113,20 @@
 - [x] Re-run the full frontend suite, TypeScript compiler, Vite production build and npm security audit.
 - [ ] Validate the new Rust test, formatting and Clippy on Windows CI.
 
+### Task 11: Verify the mimetype payload CRC
+- [x] Reproduce acceptance when local and central CRC fields agree with each other but not with the MIME payload.
+- [x] Confirm the new TypeScript regression test fails before the fix.
+- [x] Calculate CRC-32 over the actual `mimetype` bytes and compare it with the central-directory CRC.
+- [x] Add a native regression fixture that corrupts both CRC fields while preserving the MIME payload.
+- [ ] Validate the native CRC regression and compile fix on Windows CI.
+
 ## Latest COS verification (2026-11-04)
-- Full Vitest: 32 files, 219 tests passed.
+- Full Vitest: 32 files, 220 tests passed after the CRC regression/fix.
 - Focused HWPX TypeScript suite: 16 tests passed.
 - TypeScript compile and Vite production build: passed; pre-existing warnings remain for externalized Node modules, mixed Tauri imports and large chunks.
 - `npm audit --audit-level=high`: 0 vulnerabilities.
 - `git diff --check`: passed.
-- Rust tests/format/Clippy were not run locally because Cargo, rustc and rustfmt are unavailable in the Windows COS workspace.
+- Rust tests/format/Clippy were not run locally because Cargo, rustc and rustfmt are unavailable in the Windows COS workspace. The first Windows CI run exposed two Rust compile errors in `bytes.get(..)? != Some(...)`; both `?` operators have now been removed, and the next CI run must confirm the correction.
 - Independent Z.ai review remains pending: the requested model endpoint returned HTTP 429 / error 1305; COS's ChatGPT worker launcher could not start workers with the Z.ai model ID.
 
 ## References
