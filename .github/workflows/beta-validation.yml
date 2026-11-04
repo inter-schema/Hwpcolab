@@ -18,10 +18,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.ref }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: 22
       - name: Generate npm lockfile without running package scripts
@@ -49,10 +49,10 @@ jobs:
     if: ${{ always() && needs.sync-lockfiles.result != 'failure' && needs.sync-lockfiles.result != 'cancelled' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref || github.sha }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: 22
       - name: Install frontend dependencies from lockfile
@@ -74,7 +74,7 @@ jobs:
     if: ${{ always() && needs.sync-lockfiles.result != 'failure' && needs.sync-lockfiles.result != 'cancelled' }}
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref || github.sha }}
       - name: Install stable Rust
