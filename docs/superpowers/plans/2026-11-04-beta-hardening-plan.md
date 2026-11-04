@@ -72,13 +72,12 @@
 
 ## Current verification evidence
 
-- Frontend: 209 tests pass; production build passes.
-- Windows Rust: 25 tests pass.
+- Frontend: 223 tests pass; production build passes.
+- Windows Rust: the latest completed PR run (`41776400497`) passed rustfmt, Clippy and `cargo test --locked` for the previous published checkpoint. New native tests in the current local patch still need a fresh Windows run.
 - Locked frontend install: npm ci passes.
 - Dependency audit: npm audit --audit-level=high passes.
-- The most recent completed integrated checkpoint is workflow run 41743372019: lockfiles were already up to date, npm ci/audit/tests/build passed, and Windows cargo test --locked was still running at log time.
-- Workflow run 41743558019 validates the updated Node 24 GitHub Actions releases.
-- The latest BETA_REVIEW_LOG.md update and this plan update trigger subsequent runs; their current-head results must be checked before integration.
+- The most recent completed integrated checkpoint before the current local patch is workflow run `41776400497` on head `18e0c9254a12f63f61a6c5cb4055b8de1ae9817a`; all three jobs succeeded, including Windows Clippy and `cargo test --locked`.
+- The current local patch adds new tests and the `unicode-case-folding`/`unicase` dependencies; it is not yet on the PR branch and needs new lockfile/CI validation.
 
 ## Remaining work
 
@@ -102,8 +101,8 @@
 - [x] Add ASCII/Unicode duplicate, ZIP64, mimetype descriptor, and local-header mismatch regressions.
 - [x] Validate the ZIP64 locator structure and test that locator-like bytes in a central-directory comment do not cause a false rejection.
 - [x] Verify the TypeScript ZIP64 regression produces RED without the locator guard and GREEN with it.
-- [ ] Run Rust formatting, Clippy and the full locked test suite on Windows CI.
-- [ ] Obtain independent reviewer/subagent feedback on the native parser and fixture builders.
+- [x] Run Rust formatting, Clippy and the full locked test suite on Windows CI for the previously published checkpoint (`41776400497`).
+- [ ] Obtain an independent reviewer/subagent pass against the latest new commit after publication. The first pass found the Unicode full-fold and local-header gaps; the attempted follow-up was blocked by the PR SHA lag.
 
 ### Task 10: Reject empty ZIP member names consistently
 - [x] Reproduce a TypeScript/native parity gap with a valid HWPX envelope containing an empty-name ZIP member.
@@ -111,23 +110,43 @@
 - [x] Reject zero-length central-directory filenames in the TypeScript validator.
 - [x] Add a native unit test proving the raw ZIP preflight rejects a zero-length central-directory filename.
 - [x] Re-run the full frontend suite, TypeScript compiler, Vite production build and npm security audit.
-- [ ] Validate the new Rust test, formatting and Clippy on Windows CI.
+- [x] Validate the empty-name and mimetype CRC native tests, formatting and Clippy on Windows CI for the published checkpoint (`41776400497`).
 
 ### Task 11: Verify the mimetype payload CRC
 - [x] Reproduce acceptance when local and central CRC fields agree with each other but not with the MIME payload.
 - [x] Confirm the new TypeScript regression test fails before the fix.
 - [x] Calculate CRC-32 over the actual `mimetype` bytes and compare it with the central-directory CRC.
 - [x] Add a native regression fixture that corrupts both CRC fields while preserving the MIME payload.
-- [ ] Validate the native CRC regression and compile fix on Windows CI.
+- [x] Validate the native mimetype CRC regression and prior compile fixes on Windows CI (`41776400497`).
+
+### Task 12: Validate every local file header against its central-directory entry
+- [x] Reproduce acceptance when an ordinary `Contents/section0.xml` local name is changed while the central-directory name remains unchanged.
+- [x] Reject mismatched local filename bytes, flags, compression method, CRC and size metadata for all entries in TypeScript and Rust.
+- [x] Preserve valid ordinary entries with data descriptors whose local metadata is zero or matches the central directory.
+- [x] Add matching TypeScript and Rust local-name-only mismatch regressions.
+- [ ] Validate the native change and full fixture matrix on Windows CI.
+
+### Task 13: Use full Unicode case folding for duplicate names
+- [x] Confirm simple lowercasing allows `Straße` and `STRASSE` to remain distinct.
+- [x] Add TypeScript full case folding with pinned `unicode-case-folding` 1.1.2 and a sharp-s regression.
+- [x] Add Rust case-insensitive key comparison with pinned `unicase` 2.8.1 and a matching regression.
+- [x] Update package and Cargo lockfiles locally; publish regenerated lockfiles through the repository lockfile-sync workflow.
+- [ ] Verify exact JS/Rust behavior and locked installation in CI.
+
+### Task 14: Verify ordinary ZIP data descriptors
+- [x] Add a signed ordinary-entry data descriptor and confirm valid descriptors remain accepted.
+- [x] Corrupt only the descriptor CRC and confirm the TypeScript test fails before the fix.
+- [x] Verify descriptor CRC, compressed size and uncompressed size with and without the optional signature in both validators.
+- [ ] Run the new native descriptor regression and complete Windows CI on the latest published head.
 
 ## Latest COS verification (2026-11-04)
-- Full Vitest: 32 files, 220 tests passed after the CRC regression/fix.
-- Focused HWPX TypeScript suite: 16 tests passed.
+- Full Vitest: 32 files, 223 tests passed after the latest local-header, Unicode case-fold and descriptor fixes.
+- Focused HWPX TypeScript suite: 20 tests passed.
 - TypeScript compile and Vite production build: passed; pre-existing warnings remain for externalized Node modules, mixed Tauri imports and large chunks.
 - `npm audit --audit-level=high`: 0 vulnerabilities.
 - `git diff --check`: passed.
-- Rust tests/format/Clippy were not run locally because Cargo, rustc and rustfmt are unavailable in the Windows COS workspace. The first Windows CI run exposed two Rust compile errors in `bytes.get(..)? != Some(...)`; both `?` operators have now been removed, and the next CI run must confirm the correction.
-- Independent Z.ai review remains pending: the requested model endpoint returned HTTP 429 / error 1305; COS's ChatGPT worker launcher could not start workers with the Z.ai model ID.
+- Rust tests/format/Clippy were not run locally because Cargo, rustc and rustfmt are unavailable in the Windows COS workspace. The latest completed published checkpoint did pass Windows CI, but the new native regressions need another CI run.
+- Z.ai `glm-4.7-flash` returned HTTP 429 / error 1305. Only then the BAZE backup `gpt-6-luna` was tested successfully with HTTP 200. One COS reviewer found the first two issues; the second worker startup timed out, and a fresh review against the new head remains pending.
 - The correction was published at `ce7cd14`; the lockfile-sync job formatted the Rust source and created bot commit `24e6029`. The formatted remote source still contains the CRC test/helper and both corrected `Option` comparisons.
 - On run `41776142633` (code head `ce7cd14`), lockfile sync, frontend tests/build, npm audit and Rust formatting passed; Clippy was in progress and Rust tests were pending at this checkpoint. A separate run for bot head `24e6029` finished `action_required` without executing.
 - Current PR head is `24e6029115679f85840a2b86b5fea967231ac7c6`; a follow-up commit is being prepared on that head so the full workflow can re-run after formatting has stabilized.

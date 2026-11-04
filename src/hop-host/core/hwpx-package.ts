@@ -1,6 +1,9 @@
+import { caseFold } from 'unicode-case-folding';
+
 const LOCAL_FILE_HEADER = 0x04034b50;
 const CENTRAL_DIRECTORY_HEADER = 0x02014b50;
 const END_OF_CENTRAL_DIRECTORY = 0x06054b50;
+const DATA_DESCRIPTOR_SIGNATURE = 0x08074b50;
 const ZIP64_END_OF_CENTRAL_DIRECTORY = 0x06064b50;
 const ZIP64_END_OF_CENTRAL_DIRECTORY_LOCATOR = 0x07064b50;
 const HWPX_MIME_TYPE = 'application/hwp+zip';
@@ -27,6 +30,86 @@ function calculateCrc32(bytes: Uint8Array): number {
     }
   }
   return (checksum ^ 0xffff_ffff) >>> 0;
+}
+
+type CentralDirectoryEntry = {
+  name: string;
+  nameBytes: Uint8Array;
+  flags: number;
+  method: number;
+  crc32: number;
+  compressedSize: number;
+  uncompressedSize: number;
+  localHeaderOffset: number;
+};
+
+function hasConsistentLocalHeader(
+  bytes: Uint8Array,
+  view: DataView,
+  entry: CentralDirectoryEntry,
+  centralDirectoryOffset: number,
+): boolean {
+  const localOffset = entry.localHeaderOffset;
+  if (
+    localOffset + 30 > centralDirectoryOffset
+    || readUint32(view, localOffset) !== LOCAL_FILE_HEADER
+  ) {
+    return false;
+  }
+
+  const localFlags = readUint16(view, localOffset + 6);
+  const localMethod = readUint16(view, localOffset + 8);
+  const localCrc32 = readUint32(view, localOffset + 14);
+  const localCompressedSize = readUint32(view, localOffset + 18);
+  const localUncompressedSize = readUint32(view, localOffset + 22);
+  const localNameLength = readUint16(view, localOffset + 26);
+  const localExtraLength = readUint16(view, localOffset + 28);
+  const localNameStart = localOffset + 30;
+  const localNameEnd = localNameStart + localNameLength;
+  const localDataStart = localNameEnd + localExtraLength;
+  const localDataEnd = localDataStart + entry.compressedSize;
+  if (
+    localDataEnd > centralDirectoryOffset
+    || localNameEnd > bytes.byteLength
+    || localDataStart > bytes.byteLength
+    || localDataEnd > bytes.byteLength
+  ) {
+    return false;
+  }
+
+  const localName = bytes.subarray(localNameStart, localNameEnd);
+  if (
+    localName.byteLength !== entry.nameBytes.byteLength
+    || !localName.every((byte, index) => byte === entry.nameBytes[index])
+    || localFlags !== entry.flags
+    || localMethod !== entry.method
+  ) {
+    return false;
+  }
+
+  const usesDataDescriptor = (entry.flags & 0x0008) !== 0;
+  const crcMatches = usesDataDescriptor
+    ? localCrc32 === 0 || localCrc32 === entry.crc32
+    : localCrc32 === entry.crc32;
+  const compressedSizeMatches = usesDataDescriptor
+    ? localCompressedSize === 0 || localCompressedSize === entry.compressedSize
+    : localCompressedSize === entry.compressedSize;
+  const uncompressedSizeMatches = usesDataDescriptor
+    ? localUncompressedSize === 0 || localUncompressedSize === entry.uncompressedSize
+    : localUncompressedSize === entry.uncompressedSize;
+
+  if (!crcMatches || !compressedSizeMatches || !uncompressedSizeMatches) return false;
+  if (!usesDataDescriptor) return true;
+
+  const descriptorMatchesAt = (offset: number): boolean => (
+    offset + 12 <= centralDirectoryOffset
+    && readUint32(view, offset) === entry.crc32
+    && readUint32(view, offset + 4) === entry.compressedSize
+    && readUint32(view, offset + 8) === entry.uncompressedSize
+  );
+  const signedDescriptorMatches = readUint32(view, localDataEnd) === DATA_DESCRIPTOR_SIGNATURE
+    && descriptorMatchesAt(localDataEnd + 4);
+  return signedDescriptorMatches || descriptorMatchesAt(localDataEnd);
 }
 
 function findEndOfCentralDirectory(view: DataView, bytesLength: number): number {
@@ -109,15 +192,8 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
     const decoder = new TextDecoder('utf-8', { fatal: true });
     const names: string[] = [];
     const seenNames = new Set<string>();
-    let firstCentralEntry: {
-      name: string;
-      flags: number;
-      method: number;
-      crc32: number;
-      compressedSize: number;
-      uncompressedSize: number;
-      localHeaderOffset: number;
-    } | null = null;
+    const centralEntries: CentralDirectoryEntry[] = [];
+    let firstCentralEntry: CentralDirectoryEntry | null = null;
     let cursor = centralDirectoryOffset;
 
     for (let index = 0; index < totalEntries; index += 1) {
@@ -151,26 +227,28 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
       const nameBytes = bytes.subarray(cursor + 46, cursor + 46 + nameLength);
       if (nameBytes.some((byte) => byte > 0x7f) && (flags & 0x0800) === 0) return false;
       const name = decoder.decode(nameBytes);
-      const normalizedName = name.toLowerCase();
+      const normalizedName = caseFold(name);
       if (seenNames.has(normalizedName)) return false;
       seenNames.add(normalizedName);
       names.push(name);
-      if (index === 0) {
-        firstCentralEntry = {
-          name,
-          flags,
-          method,
-          crc32,
-          compressedSize,
-          uncompressedSize,
-          localHeaderOffset,
-        };
-      }
+      const entry = {
+        name,
+        nameBytes: nameBytes.slice(),
+        flags,
+        method,
+        crc32,
+        compressedSize,
+        uncompressedSize,
+        localHeaderOffset,
+      };
+      centralEntries.push(entry);
+      if (index === 0) firstCentralEntry = entry;
       cursor = recordEnd;
     }
 
     if (
       cursor !== centralDirectoryOffset + centralDirectorySize
+      || !centralEntries.every((entry) => hasConsistentLocalHeader(bytes, view, entry, centralDirectoryOffset))
       || !firstCentralEntry
       || firstCentralEntry.name !== 'mimetype'
       || firstCentralEntry.method !== 0

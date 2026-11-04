@@ -367,3 +367,34 @@ Test-authoring corrections recorded for transparency:
 - Workflow `41776178382` on bot head `24e6029` ended `action_required` and did not execute tests. Workflow `41776142633` on code head `ce7cd14` completed lockfile sync, frontend tests/build and Rust formatting successfully; Windows Clippy was still running at this log update, with Rust tests pending.
 - Current PR head: `24e6029115679f85840a2b86b5fea967231ac7c6`. The next user-authored follow-up is a documentation-only status update parented to this exact head, intended to trigger a fresh CI run after automatic formatting has stabilized.
 - `main` and `Beta` were not modified. No merge was performed.
+
+## 12. Continued QA loop — local-header parity, Unicode case folding and descriptor integrity (2026-11-04)
+
+### API / reviewer route
+
+- Primary `z.aifree.env` was tested first using `glm-4.7-flash`; the completion returned HTTP 429 / service-overload code 1305.
+- Only after that failure, the added `backup_baze_api.env` was tested. BAZE `/models` and a `gpt-6-luna` chat completion both returned HTTP 200 with a non-empty answer. No key value was printed, logged or committed.
+- A COS worker's first read-only pass identified the full-Unicode-case-fold gap and ordinary-entry local-header mismatch. Its attempted second pass was blocked because the new local changes were not yet on the PR SHA; request a fresh pass after publication.
+- The second COS worker did not start within the worker launcher timeout. No review result is claimed from it.
+
+### New defects and regression evidence
+
+1. **Ordinary-part local-header mismatch.** A fixture changes only the local filename for `Contents/section0.xml` to `Contents/sectionX.xml`, leaving the central directory untouched. Before the fix, the TypeScript validator accepted it. Both validators now compare every local header to its central entry: raw filename bytes, general-purpose flags, compression method, CRC, compressed/uncompressed sizes, and local-data bounds.
+2. **Full Unicode case-fold collisions.** Existing Unicode lowercase checks did not fold `Straße` and `STRASSE` to the same key. Added the `unicode-case-folding` 1.1.2 TypeScript package and `unicase` 2.8.1 Rust crate, with a regression in each implementation.
+3. **Corrupt ordinary data descriptor.** A generated signed descriptor for the final ordinary part had only its CRC field modified. Before the fix, the TypeScript validator accepted it (RED confirmed: expected false, received true). Both implementations now verify descriptor CRC and sizes against the central directory, with and without the optional descriptor signature, while preserving valid ordinary data descriptors.
+
+### Local verification
+
+- Focused HWPX TypeScript suite after the latest changes: **20 passed**.
+- Full Vitest: **32 files, 223 tests passed**.
+- TypeScript compilation passed.
+- Vite production build passed. Existing warnings remain for `/theme-init.js`, Node core modules externalized from `rhwpEngine.ts`, mixed Tauri imports, and large chunks.
+- `git diff --check` passed. Rust cannot be run locally because Cargo/rustc/rustfmt are not installed in this COS Windows workspace; new native regressions require Windows CI.
+- The latest completed integrated Actions checkpoint before this local patch was run `41776400497` on head `18e0c92`, with all three jobs successful, including Windows `cargo fmt`, Clippy, and `cargo test --locked`.
+
+### Current publication boundary
+
+- Latest verified remote PR head before this local change set: `18e0c9254a12f63f61a6c5cb4055b8de1ae9817a`.
+- Current local patch changes nine files: `package.json`/`package-lock.json`, `src-tauri/Cargo.toml`/`Cargo.lock`, both validators, matching tests, and this report/plan. The next PR commit will include the seven source/manifest/report files; the repository's lockfile-sync workflow will generate and publish the two lockfiles.
+- These changes have not yet been published. Next: create a commit parented to exactly `18e0c92` and update only `codex/beta-hardening-2026-11-04` with an expected-head guard. Then verify lockfile sync, npm audit, frontend tests/build and Windows Rust formatting/Clippy/tests. Request a fresh reviewer pass against the exact new SHA.
+- Packaged Windows Tauri WebView smoke test remains outstanding. `Beta` and `main` were not modified; do not merge the PR on this report alone.
