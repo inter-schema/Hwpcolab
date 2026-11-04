@@ -31,7 +31,7 @@ jobs:
         with:
           components: rustfmt
       - name: Format changed Rust sources
-        run: rustfmt --edition 2021 src-tauri/src/commands/attachment.rs src-tauri/src/commands/document.rs src-tauri/src/commands/fonts.rs src-tauri/src/commands/llm_proxy.rs src-tauri/src/commands/mod.rs src-tauri/src/font_catalog.rs src-tauri/src/hwpx_package.rs src-tauri/src/lib.rs
+        run: rustfmt --edition 2021 --config skip_children=true src-tauri/src/commands/attachment.rs src-tauri/src/commands/document.rs src-tauri/src/commands/fonts.rs src-tauri/src/commands/llm_proxy.rs src-tauri/src/commands/mod.rs src-tauri/src/font_catalog.rs src-tauri/src/hwpx_package.rs src-tauri/src/lib.rs
       - name: Generate Cargo lockfile
         run: cargo generate-lockfile --manifest-path src-tauri/Cargo.toml
       - name: Commit lockfiles when changed
@@ -86,7 +86,7 @@ jobs:
         with:
           components: rustfmt, clippy
       - name: Check formatting of changed Rust sources
-        run: rustfmt --check --edition 2021 src-tauri/src/commands/attachment.rs src-tauri/src/commands/document.rs src-tauri/src/commands/fonts.rs src-tauri/src/commands/llm_proxy.rs src-tauri/src/commands/mod.rs src-tauri/src/font_catalog.rs src-tauri/src/hwpx_package.rs src-tauri/src/lib.rs
+        run: rustfmt --check --edition 2021 --config skip_children=true src-tauri/src/commands/attachment.rs src-tauri/src/commands/document.rs src-tauri/src/commands/fonts.rs src-tauri/src/commands/llm_proxy.rs src-tauri/src/commands/mod.rs src-tauri/src/font_catalog.rs src-tauri/src/hwpx_package.rs src-tauri/src/lib.rs
       - name: Run Clippy
         run: cargo clippy --locked --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
       - name: Run Rust tests with committed lockfile
