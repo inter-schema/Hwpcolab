@@ -185,6 +185,11 @@ mod tests {
                 "<hs:sec/>",
                 CompressionMethod::Deflated,
             ),
+            (
+                "Contents/metadata.xml",
+                "<meta/>",
+                CompressionMethod::Deflated,
+            ),
         ]
     }
 
@@ -317,7 +322,7 @@ mod tests {
     #[test]
     fn rejects_duplicate_package_part_names() {
         let bytes = build_archive(&valid_entries());
-        let duplicated = rename_entry(bytes, "META-INF/manifest.xml", "Contents/section0.xml");
+        let duplicated = rename_entry(bytes, "Contents/metadata.xml", "Contents/section0.xml");
         assert!(!is_valid_hwpx_package(&duplicated));
     }
 }
