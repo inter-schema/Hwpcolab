@@ -152,7 +152,6 @@ pub fn read_desktop_local_font(requested_path: &Path) -> Result<Vec<u8>, String>
     })
 }
 
-
 fn make_local_font_entry(
     face: &fontdb::FaceInfo,
     family: String,
@@ -353,5 +352,4 @@ mod tests {
         );
         assert_eq!(entry.face_index, 3);
     }
-
 }
