@@ -164,9 +164,11 @@ fn classify_source(path: Option<&str>, extra_font_dirs: &[PathBuf]) -> &'static 
     let Some(path) = path else {
         return "system-installed";
     };
-    let candidate = normalize_existing_path(Path::new(path))
-        .unwrap_or_else(|| PathBuf::from(path));
-    if extra_font_dirs.iter().any(|root| path_is_within_root(&candidate, root)) {
+    let candidate = normalize_existing_path(Path::new(path)).unwrap_or_else(|| PathBuf::from(path));
+    if extra_font_dirs
+        .iter()
+        .any(|root| path_is_within_root(&candidate, root))
+    {
         "file-backed"
     } else {
         "system-installed"

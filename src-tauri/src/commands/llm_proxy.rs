@@ -18,7 +18,10 @@ pub fn get_cancel_map() -> &'static Arc<Mutex<HashMap<String, CancelEntry>>> {
 
 fn cleanup_cancel_registration(request_id: &str, token: u64) {
     if let Ok(mut lock) = get_cancel_map().lock() {
-        if lock.get(request_id).is_some_and(|entry| entry.token == token) {
+        if lock
+            .get(request_id)
+            .is_some_and(|entry| entry.token == token)
+        {
             lock.remove(request_id);
         }
     }
@@ -193,8 +196,8 @@ pub async fn call_llm_http(req: LlmProxyRequest) -> Result<LlmProxyResponse, Str
             .map_err(|error| format!("LLM 네트워크 요청 실패: {}", error))?;
         let status = response.status().as_u16();
         let text = read_bounded_response_text(response).await?;
-        let body = serde_json::from_str(&text)
-            .unwrap_or_else(|_| serde_json::json!({ "raw_text": text }));
+        let body =
+            serde_json::from_str(&text).unwrap_or_else(|_| serde_json::json!({ "raw_text": text }));
         Ok::<LlmProxyResponse, String>(LlmProxyResponse { status, body })
     };
 
@@ -218,7 +221,6 @@ mod tests {
     use tokio::net::TcpListener;
     use uuid::Uuid;
 
-
     #[test]
     fn endpoint_validation_allows_http_and_https_but_rejects_other_schemes_and_userinfo() {
         assert!(parse_llm_endpoint("https://api.example.test/v1/chat").is_ok());
@@ -241,7 +243,9 @@ mod tests {
     #[test]
     fn response_content_length_is_rejected_above_the_memory_limit() {
         assert!(validate_response_content_length(Some(MAX_RESPONSE_BODY_BYTES as u64)).is_ok());
-        assert!(validate_response_content_length(Some(MAX_RESPONSE_BODY_BYTES as u64 + 1)).is_err());
+        assert!(
+            validate_response_content_length(Some(MAX_RESPONSE_BODY_BYTES as u64 + 1)).is_err()
+        );
         assert!(validate_response_content_length(None).is_ok());
     }
 
@@ -281,11 +285,13 @@ mod tests {
 
         let response = call_llm_http(request(format!("http://{address}/chat"), None)).await;
 
-        assert!(response.is_ok(), "request without an ID should run: {response:?}");
+        assert!(
+            response.is_ok(),
+            "request without an ID should run: {response:?}"
+        );
         assert_eq!(response.unwrap().status, 200);
         server.await.unwrap();
     }
-
 
     #[tokio::test]
     async fn does_not_follow_redirects_to_another_host() {
@@ -306,7 +312,10 @@ mod tests {
         });
 
         let mut req = request(format!("http://{source_address}/redirect"), None);
-        req.headers.insert("authorization".to_string(), "Bearer do-not-forward".to_string());
+        req.headers.insert(
+            "authorization".to_string(),
+            "Bearer do-not-forward".to_string(),
+        );
         let response = call_llm_http(req).await.unwrap();
 
         assert_eq!(response.status, 302);
@@ -371,7 +380,10 @@ mod tests {
         ))
         .await;
 
-        assert!(duplicate.is_err(), "a duplicate in-flight request ID must be rejected");
+        assert!(
+            duplicate.is_err(),
+            "a duplicate in-flight request ID must be rejected"
+        );
         assert!(
             duplicate.unwrap_err().contains("이미 실행 중"),
             "duplicate ID should produce an explicit conflict error"
@@ -406,9 +418,10 @@ mod tests {
 
         // Poll the replacement request through registration and into its pending
         // network future without yielding to the cancelled request's cleanup.
-        let mut second = Box::pin(call_llm_http(
-            request(format!("http://{address}/second"), Some(request_id.clone())),
-        ));
+        let mut second = Box::pin(call_llm_http(request(
+            format!("http://{address}/second"),
+            Some(request_id.clone()),
+        )));
         std::future::poll_fn(|cx| match second.as_mut().poll(cx) {
             std::task::Poll::Pending => std::task::Poll::Ready(()),
             std::task::Poll::Ready(result) => {
@@ -428,5 +441,4 @@ mod tests {
         assert!(second.await.is_err());
         assert!(first.await.unwrap().is_err());
     }
-
 }

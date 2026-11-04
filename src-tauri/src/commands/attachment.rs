@@ -15,8 +15,12 @@ fn validate_attachment_size(file_path: &str, size: u64) -> Result<(), String> {
 
 #[command]
 pub async fn read_attachment_bytes(file_path: String) -> Result<Vec<u8>, String> {
-    let metadata = fs::metadata(&file_path)
-        .map_err(|error| format!("첨부 파일 정보를 읽을 수 없습니다: {} ({})", file_path, error))?;
+    let metadata = fs::metadata(&file_path).map_err(|error| {
+        format!(
+            "첨부 파일 정보를 읽을 수 없습니다: {} ({})",
+            file_path, error
+        )
+    })?;
     if !metadata.is_file() {
         return Err(format!("첨부 경로가 일반 파일이 아닙니다: {}", file_path));
     }

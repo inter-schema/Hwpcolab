@@ -1,9 +1,9 @@
+use crate::hwpx_package::is_valid_hwpx_package;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
-use crate::hwpx_package::is_valid_hwpx_package;
 
 /// Recognize the ZIP local-file-header signature (not an EOCD or arbitrary PK prefix).
 fn has_zip_local_file_header(bytes: &[u8]) -> bool {
@@ -33,7 +33,10 @@ pub async fn pick_local_file(extensions: Vec<String>) -> Result<Option<String>, 
 
 /// 2) HWP/HWPX 문서 열기 + Shadow Staging 파일 생성 + ZIP 로컬 파일 헤더 시그니처 기반 포맷 판별
 #[tauri::command]
-pub async fn open_document_session(app: AppHandle, file_path: String) -> Result<OpenedDocSession, String> {
+pub async fn open_document_session(
+    app: AppHandle,
+    file_path: String,
+) -> Result<OpenedDocSession, String> {
     let src_path = PathBuf::from(&file_path);
     let bytes = fs::read(&src_path).map_err(|e| format!("파일 읽기 실패: {}", e))?;
 
@@ -45,18 +48,27 @@ pub async fn open_document_session(app: AppHandle, file_path: String) -> Result<
         .unwrap_or(false);
     let is_hwpx = if has_zip_signature {
         if !is_valid_hwpx_package(&bytes) {
-            return Err("유효한 HWPX(OWPML) 패키지가 아닙니다. 일반 ZIP 또는 손상된 문서는 열 수 없습니다.".to_string());
+            return Err(
+                "유효한 HWPX(OWPML) 패키지가 아닙니다. 일반 ZIP 또는 손상된 문서는 열 수 없습니다."
+                    .to_string(),
+            );
         }
         true
     } else {
         if requested_hwpx {
-            return Err("HWPX 파일의 ZIP/OWPML 패키지 구조가 손상되었거나 올바르지 않습니다.".to_string());
+            return Err(
+                "HWPX 파일의 ZIP/OWPML 패키지 구조가 손상되었거나 올바르지 않습니다.".to_string(),
+            );
         }
         false
     };
     let ext = if is_hwpx { "hwpx" } else { "hwp" };
 
-    let staging_dir = app.path().app_cache_dir().map_err(|e| e.to_string())?.join("hop-staging");
+    let staging_dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| e.to_string())?
+        .join("hop-staging");
     fs::create_dir_all(&staging_dir).map_err(|e| e.to_string())?;
 
     let staging_file_name = format!("staging_{}.{}", Uuid::new_v4(), ext);
@@ -79,9 +91,16 @@ pub async fn open_document_session(app: AppHandle, file_path: String) -> Result<
 
 /// 3) 빈 화면에서 신규 문서 세션 시작
 #[tauri::command]
-pub async fn create_blank_session(app: AppHandle, is_hwpx: bool) -> Result<OpenedDocSession, String> {
+pub async fn create_blank_session(
+    app: AppHandle,
+    is_hwpx: bool,
+) -> Result<OpenedDocSession, String> {
     let ext = if is_hwpx { "hwpx" } else { "hwp" };
-    let staging_dir = app.path().app_cache_dir().map_err(|e| e.to_string())?.join("hop-staging");
+    let staging_dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| e.to_string())?
+        .join("hop-staging");
     fs::create_dir_all(&staging_dir).map_err(|e| e.to_string())?;
     let staging_path = staging_dir.join(format!("new_{}.{}", Uuid::new_v4(), ext));
 
@@ -175,7 +194,10 @@ fn commit_staged_file_atomically(
 }
 
 #[tauri::command]
-pub async fn commit_staging_to_original(staging_path: String, original_path: String) -> Result<String, String> {
+pub async fn commit_staging_to_original(
+    staging_path: String,
+    original_path: String,
+) -> Result<String, String> {
     let target = if original_path.trim().is_empty() {
         let picked = rfd::AsyncFileDialog::new()
             .add_filter("HWP/HWPX Document", &["hwp", "hwpx"])
@@ -188,19 +210,20 @@ pub async fn commit_staging_to_original(staging_path: String, original_path: Str
     } else {
         original_path
     };
-    commit_staged_file_atomically(std::path::Path::new(&staging_path), std::path::Path::new(&target))?;
+    commit_staged_file_atomically(
+        std::path::Path::new(&staging_path),
+        std::path::Path::new(&target),
+    )?;
     Ok(target)
 }
 
 /// 5) OS 파일 연결(.hwp/.hwpx 더블클릭) 등으로 실행 시 전달된 시작 파일 경로 조회
 #[tauri::command]
 pub fn get_startup_file() -> Option<String> {
-    std::env::args()
-        .skip(1)
-        .find(|arg| {
-            let lower = arg.to_lowercase();
-            (lower.ends_with(".hwp") || lower.ends_with(".hwpx")) && PathBuf::from(arg).exists()
-        })
+    std::env::args().skip(1).find(|arg| {
+        let lower = arg.to_lowercase();
+        (lower.ends_with(".hwp") || lower.ends_with(".hwpx")) && PathBuf::from(arg).exists()
+    })
 }
 
 #[cfg(test)]
@@ -253,5 +276,4 @@ mod tests {
         assert!(!has_zip_local_file_header(&[0x50, 0x4b]));
         assert!(!has_zip_local_file_header(&[0x50, 0x4b, 0x05, 0x06]));
     }
-
 }

@@ -83,28 +83,40 @@ mod tests {
         writer.finish().unwrap().into_inner()
     }
 
-
     fn mark_entry_encrypted(mut bytes: Vec<u8>, target: &str) -> Vec<u8> {
         let eocd = bytes
             .windows(4)
             .rposition(|window| window == [0x50, 0x4b, 0x05, 0x06])
             .expect("EOCD signature");
         let entry_count = u16::from_le_bytes(bytes[eocd + 10..eocd + 12].try_into().unwrap());
-        let mut cursor = u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
+        let mut cursor =
+            u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
 
         for _ in 0..entry_count {
             assert_eq!(&bytes[cursor..cursor + 4], &[0x50, 0x4b, 0x01, 0x02]);
-            let name_length = u16::from_le_bytes(bytes[cursor + 28..cursor + 30].try_into().unwrap()) as usize;
-            let extra_length = u16::from_le_bytes(bytes[cursor + 30..cursor + 32].try_into().unwrap()) as usize;
-            let comment_length = u16::from_le_bytes(bytes[cursor + 32..cursor + 34].try_into().unwrap()) as usize;
+            let name_length =
+                u16::from_le_bytes(bytes[cursor + 28..cursor + 30].try_into().unwrap()) as usize;
+            let extra_length =
+                u16::from_le_bytes(bytes[cursor + 30..cursor + 32].try_into().unwrap()) as usize;
+            let comment_length =
+                u16::from_le_bytes(bytes[cursor + 32..cursor + 34].try_into().unwrap()) as usize;
             let name = &bytes[cursor + 46..cursor + 46 + name_length];
 
             if name == target.as_bytes() {
-                let central_flags = u16::from_le_bytes(bytes[cursor + 8..cursor + 10].try_into().unwrap());
-                bytes[cursor + 8..cursor + 10].copy_from_slice(&(central_flags | 0x0001).to_le_bytes());
-                let local_offset = u32::from_le_bytes(bytes[cursor + 42..cursor + 46].try_into().unwrap()) as usize;
-                let local_flags = u16::from_le_bytes(bytes[local_offset + 6..local_offset + 8].try_into().unwrap());
-                bytes[local_offset + 6..local_offset + 8].copy_from_slice(&(local_flags | 0x0001).to_le_bytes());
+                let central_flags =
+                    u16::from_le_bytes(bytes[cursor + 8..cursor + 10].try_into().unwrap());
+                bytes[cursor + 8..cursor + 10]
+                    .copy_from_slice(&(central_flags | 0x0001).to_le_bytes());
+                let local_offset =
+                    u32::from_le_bytes(bytes[cursor + 42..cursor + 46].try_into().unwrap())
+                        as usize;
+                let local_flags = u16::from_le_bytes(
+                    bytes[local_offset + 6..local_offset + 8]
+                        .try_into()
+                        .unwrap(),
+                );
+                bytes[local_offset + 6..local_offset + 8]
+                    .copy_from_slice(&(local_flags | 0x0001).to_le_bytes());
                 return bytes;
             }
 
@@ -117,9 +129,21 @@ mod tests {
         vec![
             ("mimetype", HWPX_MIME_TYPE, CompressionMethod::Stored),
             ("version.xml", "<HCFVersion/>", CompressionMethod::Deflated),
-            ("Contents/content.hpf", "<opf:package/>", CompressionMethod::Deflated),
-            ("Contents/header.xml", "<hh:head/>", CompressionMethod::Deflated),
-            ("Contents/section0.xml", "<hs:sec/>", CompressionMethod::Deflated),
+            (
+                "Contents/content.hpf",
+                "<opf:package/>",
+                CompressionMethod::Deflated,
+            ),
+            (
+                "Contents/header.xml",
+                "<hh:head/>",
+                CompressionMethod::Deflated,
+            ),
+            (
+                "Contents/section0.xml",
+                "<hs:sec/>",
+                CompressionMethod::Deflated,
+            ),
         ]
     }
 
@@ -139,17 +163,41 @@ mod tests {
         let wrong_order = build_archive(&[
             ("version.xml", "<HCFVersion/>", CompressionMethod::Stored),
             ("mimetype", HWPX_MIME_TYPE, CompressionMethod::Stored),
-            ("Contents/content.hpf", "<opf:package/>", CompressionMethod::Stored),
-            ("Contents/header.xml", "<hh:head/>", CompressionMethod::Stored),
-            ("Contents/section0.xml", "<hs:sec/>", CompressionMethod::Stored),
+            (
+                "Contents/content.hpf",
+                "<opf:package/>",
+                CompressionMethod::Stored,
+            ),
+            (
+                "Contents/header.xml",
+                "<hh:head/>",
+                CompressionMethod::Stored,
+            ),
+            (
+                "Contents/section0.xml",
+                "<hs:sec/>",
+                CompressionMethod::Stored,
+            ),
         ]);
         assert!(!is_valid_hwpx_package(&wrong_order));
 
         let compressed = build_archive(&[
             ("mimetype", HWPX_MIME_TYPE, CompressionMethod::Deflated),
-            ("Contents/content.hpf", "<opf:package/>", CompressionMethod::Stored),
-            ("Contents/header.xml", "<hh:head/>", CompressionMethod::Stored),
-            ("Contents/section0.xml", "<hs:sec/>", CompressionMethod::Stored),
+            (
+                "Contents/content.hpf",
+                "<opf:package/>",
+                CompressionMethod::Stored,
+            ),
+            (
+                "Contents/header.xml",
+                "<hh:head/>",
+                CompressionMethod::Stored,
+            ),
+            (
+                "Contents/section0.xml",
+                "<hs:sec/>",
+                CompressionMethod::Stored,
+            ),
         ]);
         assert!(!is_valid_hwpx_package(&compressed));
     }
@@ -158,29 +206,52 @@ mod tests {
     fn rejects_packages_missing_required_document_parts() {
         let missing_content = build_archive(&[
             ("mimetype", HWPX_MIME_TYPE, CompressionMethod::Stored),
-            ("Contents/header.xml", "<hh:head/>", CompressionMethod::Stored),
-            ("Contents/section0.xml", "<hs:sec/>", CompressionMethod::Stored),
+            (
+                "Contents/header.xml",
+                "<hh:head/>",
+                CompressionMethod::Stored,
+            ),
+            (
+                "Contents/section0.xml",
+                "<hs:sec/>",
+                CompressionMethod::Stored,
+            ),
         ]);
         assert!(!is_valid_hwpx_package(&missing_content));
 
         let missing_header = build_archive(&[
             ("mimetype", HWPX_MIME_TYPE, CompressionMethod::Stored),
-            ("Contents/content.hpf", "<opf:package/>", CompressionMethod::Stored),
-            ("Contents/section0.xml", "<hs:sec/>", CompressionMethod::Stored),
+            (
+                "Contents/content.hpf",
+                "<opf:package/>",
+                CompressionMethod::Stored,
+            ),
+            (
+                "Contents/section0.xml",
+                "<hs:sec/>",
+                CompressionMethod::Stored,
+            ),
         ]);
         assert!(!is_valid_hwpx_package(&missing_header));
 
         let missing_section = build_archive(&[
             ("mimetype", HWPX_MIME_TYPE, CompressionMethod::Stored),
-            ("Contents/content.hpf", "<opf:package/>", CompressionMethod::Stored),
-            ("Contents/header.xml", "<hh:head/>", CompressionMethod::Stored),
+            (
+                "Contents/content.hpf",
+                "<opf:package/>",
+                CompressionMethod::Stored,
+            ),
+            (
+                "Contents/header.xml",
+                "<hh:head/>",
+                CompressionMethod::Stored,
+            ),
         ]);
         assert!(!is_valid_hwpx_package(&missing_section));
     }
     #[test]
     fn accepts_repository_hwpx_samples() {
-        let samples_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../samples");
+        let samples_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../samples");
         for sample in [
             "(날짜)(교시)(과목명)교수.학습과정안(이름).hwpx",
             "demo_official_report.hwpx",
@@ -202,5 +273,4 @@ mod tests {
         let encrypted = mark_entry_encrypted(bytes, "Contents/section0.xml");
         assert!(!is_valid_hwpx_package(&encrypted));
     }
-
 }
