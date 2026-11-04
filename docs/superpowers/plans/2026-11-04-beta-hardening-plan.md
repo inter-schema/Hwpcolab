@@ -155,3 +155,10 @@
 
 - Design: `docs/superpowers/specs/2026-11-04-beta-hardening-design.md`
 - Evidence and running history: `BETA_REVIEW_LOG.md`
+
+
+### Latest Windows CI follow-up
+- Run 41802915430 on the 7-source-file PR update: lockfile sync and frontend tests/build passed; Rust formatting passed; Clippy failed with E0382 because UniCase::new(name) moved the String used later for required-part matching. Rust tests were skipped.
+- The Rust fix now uses UniCase::new(name.clone()); verify on a fresh Windows run.
+- Cargo resolved the semver requirement unicase = "2.8.1" to lockfile version 2.10.0. JS uses unicode-case-folding 1.1.2.
+- Next audit item: reject mutually overlapping local ZIP record ranges and add an unsigned data-descriptor fixture plus independent compressed/uncompressed-size corruption tests.
