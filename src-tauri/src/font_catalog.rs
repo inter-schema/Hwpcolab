@@ -11,6 +11,7 @@ pub struct LocalFontEntry {
     pub post_script_name: String,
     pub style: String,
     pub weight: u16,
+    pub face_index: u32,
     pub source_kind: String,
     pub path: Option<String>,
 }
@@ -78,6 +79,7 @@ pub fn collect_desktop_local_font_entries() -> Vec<LocalFontEntry> {
                 face.post_script_name.clone(),
                 style,
                 face.weight.0,
+                face.index,
                 source_kind,
                 path.clone(),
             );
@@ -85,14 +87,12 @@ pub fn collect_desktop_local_font_entries() -> Vec<LocalFontEntry> {
                 continue;
             }
 
-            entries.push(LocalFontEntry {
+            entries.push(make_local_font_entry(
+                face,
                 family,
-                post_script_name: face.post_script_name.clone(),
-                style: style.to_owned(),
-                weight: face.weight.0,
-                source_kind: source_kind.to_owned(),
-                path: path.clone(),
-            });
+                source_kind,
+                path.clone(),
+            ));
         }
     }
 
@@ -102,6 +102,7 @@ pub fn collect_desktop_local_font_entries() -> Vec<LocalFontEntry> {
             .then(left.weight.cmp(&right.weight))
             .then(left.style.cmp(&right.style))
             .then(left.post_script_name.cmp(&right.post_script_name))
+            .then(left.face_index.cmp(&right.face_index))
     });
     entries
 }
@@ -149,6 +150,24 @@ pub fn read_desktop_local_font(requested_path: &Path) -> Result<Vec<u8>, String>
             error
         )
     })
+}
+
+
+fn make_local_font_entry(
+    face: &fontdb::FaceInfo,
+    family: String,
+    source_kind: &str,
+    path: Option<String>,
+) -> LocalFontEntry {
+    LocalFontEntry {
+        family,
+        post_script_name: face.post_script_name.clone(),
+        style: style_name(face.style).to_owned(),
+        weight: face.weight.0,
+        face_index: face.index,
+        source_kind: source_kind.to_owned(),
+        path,
+    }
 }
 
 fn source_path(source: &Source) -> Option<String> {
@@ -309,4 +328,30 @@ mod tests {
             )]
         );
     }
+    #[test]
+    fn preserves_font_collection_face_index() {
+        let face = fontdb::FaceInfo {
+            id: fontdb::ID::dummy(),
+            source: Source::File(PathBuf::from("C:/Users/test/Fonts/collection.ttc")),
+            index: 3,
+            families: vec![(
+                "Collection Family".to_owned(),
+                fontdb::Language::English_UnitedStates,
+            )],
+            post_script_name: "Collection-Regular".to_owned(),
+            style: fontdb::Style::Normal,
+            weight: fontdb::Weight::NORMAL,
+            stretch: fontdb::Stretch::Normal,
+            monospaced: false,
+        };
+
+        let entry = make_local_font_entry(
+            &face,
+            "Collection Family".to_owned(),
+            "file-backed",
+            Some("C:/Users/test/Fonts/collection.ttc".to_owned()),
+        );
+        assert_eq!(entry.face_index, 3);
+    }
+
 }
