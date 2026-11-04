@@ -663,16 +663,19 @@ mod tests {
             &bytes[central_offset..central_offset + 4],
             &[0x50, 0x4b, 0x01, 0x02]
         );
-        let local_offset =
-            u32::from_le_bytes(bytes[central_offset + 42..central_offset + 46].try_into().unwrap())
-                as usize;
-        let incorrect_crc =
-            u32::from_le_bytes(bytes[central_offset + 16..central_offset + 20].try_into().unwrap())
-                ^ 1;
+        let local_offset = u32::from_le_bytes(
+            bytes[central_offset + 42..central_offset + 46]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let incorrect_crc = u32::from_le_bytes(
+            bytes[central_offset + 16..central_offset + 20]
+                .try_into()
+                .unwrap(),
+        ) ^ 1;
         bytes[central_offset + 16..central_offset + 20]
             .copy_from_slice(&incorrect_crc.to_le_bytes());
-        bytes[local_offset + 14..local_offset + 18]
-            .copy_from_slice(&incorrect_crc.to_le_bytes());
+        bytes[local_offset + 14..local_offset + 18].copy_from_slice(&incorrect_crc.to_le_bytes());
         bytes
     }
 
