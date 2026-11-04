@@ -68,6 +68,44 @@ function addDataDescriptorToLastEntry(zip: Uint8Array): Uint8Array {
   return output;
 }
 
+
+function renameZipEntry(zip: Uint8Array, from: string, to: string): Uint8Array {
+  const fromBytes = new TextEncoder().encode(from);
+  const toBytes = new TextEncoder().encode(to);
+  if (fromBytes.byteLength !== toBytes.byteLength) throw new Error('ZIP entry names must have equal byte length');
+
+  const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+  let eocdOffset = -1;
+  for (let offset = zip.byteLength - 22; offset >= Math.max(0, zip.byteLength - 22 - 0xffff); offset -= 1) {
+    if (view.getUint32(offset, true) === 0x06054b50) {
+      eocdOffset = offset;
+      break;
+    }
+  }
+  if (eocdOffset < 0) throw new Error('ZIP EOCD not found');
+
+  const entryCount = view.getUint16(eocdOffset + 10, true);
+  let cursor = view.getUint32(eocdOffset + 16, true);
+  const output = zip.slice();
+  for (let index = 0; index < entryCount; index += 1) {
+    if (view.getUint32(cursor, true) !== 0x02014b50) throw new Error('Invalid central directory');
+    const nameLength = view.getUint16(cursor + 28, true);
+    const extraLength = view.getUint16(cursor + 30, true);
+    const commentLength = view.getUint16(cursor + 32, true);
+    const name = new TextDecoder().decode(zip.subarray(cursor + 46, cursor + 46 + nameLength));
+    if (name === from) {
+      const localOffset = view.getUint32(cursor + 42, true);
+      const localNameLength = view.getUint16(localOffset + 26, true);
+      if (localNameLength !== toBytes.byteLength) throw new Error('Unexpected local entry name length');
+      output.set(toBytes, cursor + 46);
+      output.set(toBytes, localOffset + 30);
+      return output;
+    }
+    cursor += 46 + nameLength + extraLength + commentLength;
+  }
+  throw new Error(`ZIP entry not found: ${from}`);
+}
+
 function makeValidEntries(): Zippable {
   return {
     mimetype: [strToU8(MIME_TYPE), { level: 0 }],
@@ -121,6 +159,16 @@ describe('HWPX package validation', () => {
     const missingSection = makeValidEntries();
     delete missingSection['Contents/section0.xml'];
     expect(isValidHwpxPackage(zipSync(missingSection))).toBe(false);
+  });
+
+
+  it('rejects duplicate package part names instead of accepting ambiguous ZIP entries', () => {
+    const archive = renameZipEntry(
+      zipSync(makeValidEntries()),
+      'META-INF/manifest.xml',
+      'Contents/section0.xml',
+    );
+    expect(isValidHwpxPackage(archive)).toBe(false);
   });
 
   it('accepts data descriptors on ordinary entries while keeping mimetype strict', () => {
