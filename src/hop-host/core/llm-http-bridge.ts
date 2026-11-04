@@ -45,6 +45,11 @@ export async function readBoundedResponseText(
   if (contentLengthHeader) {
     const contentLength = Number(contentLengthHeader);
     if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+      try {
+        await response.body?.cancel();
+      } catch {
+        // Preserve the size-limit error if the response stream is already closed.
+      }
       throw new Error(`LLM response body exceeds the ${maxBytes}-byte limit.`);
     }
   }
