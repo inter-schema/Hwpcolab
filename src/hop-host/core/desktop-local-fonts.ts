@@ -13,6 +13,7 @@ export interface LocalFontEntry {
   postScriptName: string;
   style: string;
   weight?: number;
+  faceIndex?: number;
   sourceKind: 'system-installed' | 'file-backed';
   path?: string | null;
 }
@@ -97,6 +98,14 @@ export async function loadDesktopFontBytesFor(
     return bytes ? ([localFontFaceKey(record), bytes] as const) : null;
   }));
   return new Map(loaded.filter((entry): entry is readonly [string, ArrayBuffer] => entry !== null));
+}
+
+export function getDesktopFontFaceIndex(fontName: string): number {
+  const normalized = normalizeFontName(fontName);
+  const entry = (cachedFontEntries ?? []).find(
+    (candidate) => normalizeFontName(candidate.postScriptName) === normalized,
+  );
+  return entry?.faceIndex ?? 0;
 }
 
 export async function loadDesktopFontBytes(fontName: string): Promise<ArrayBuffer | null> {
@@ -218,8 +227,18 @@ async function ensureDesktopFontFace(entry: LocalFontEntry, bytes: Uint8Array): 
 async function loadDesktopFontFace(entry: LocalFontEntry, bytes: Uint8Array): Promise<FontFace> {
   const descriptors: FontFaceDescriptors = { style: entry.style || 'normal' };
   if (entry.weight) descriptors.weight = String(entry.weight);
-  const face = new FontFace(entry.family, bytes.slice(), descriptors);
-  return face.load();
+
+  if (/\\.(?:ttc|otc)$/i.test(entry.path ?? '')) {
+    const objectUrl = URL.createObjectURL(new Blob([bytes.slice()], { type: 'font/collection' }));
+    try {
+      const source = `url("${objectUrl}#${encodeURIComponent(entry.postScriptName)}") format("collection")`;
+      return await new FontFace(entry.family, source, descriptors).load();
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
+
+  return new FontFace(entry.family, bytes.slice(), descriptors).load();
 }
 
 function normalizeFontEntries(entries: LocalFontEntry[]): LocalFontEntry[] {
@@ -232,6 +251,7 @@ function normalizeFontEntries(entries: LocalFontEntry[]): LocalFontEntry[] {
       postScriptName: entry.postScriptName?.trim() || family,
       style: entry.style?.trim() || 'normal',
       weight: entry.weight,
+      faceIndex: Number.isInteger(entry.faceIndex) && (entry.faceIndex ?? 0) >= 0 ? entry.faceIndex : 0,
       sourceKind: entry.sourceKind ?? 'system-installed',
       path: entry.path ?? null,
     };
@@ -240,7 +260,8 @@ function normalizeFontEntries(entries: LocalFontEntry[]): LocalFontEntry[] {
   return [...byKey.values()].sort((left, right) =>
     left.family.localeCompare(right.family, 'ko')
     || left.style.localeCompare(right.style, 'en')
-    || left.postScriptName.localeCompare(right.postScriptName, 'en'),
+    || left.postScriptName.localeCompare(right.postScriptName, 'en')
+    || (left.faceIndex ?? 0) - (right.faceIndex ?? 0),
   );
 }
 
@@ -282,7 +303,7 @@ function groupEntriesByPath(entries: LocalFontEntry[]): Map<string, LocalFontEnt
 }
 
 function fontEntryKey(entry: LocalFontEntry): string {
-  return [entry.family, entry.postScriptName, entry.style, entry.weight ?? '', entry.path ?? ''].join('\u0000');
+  return [entry.family, entry.postScriptName, entry.style, entry.weight ?? '', entry.faceIndex ?? 0, entry.path ?? ''].join('\u0000');
 }
 
 function localFontFaceKey(record: Pick<LocalFontRecord, 'family' | 'fullName' | 'postscriptName'>): string {
