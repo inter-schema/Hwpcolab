@@ -10,7 +10,7 @@
 - Implementation branch: `codex/beta-hardening-2026-11-04`, created directly from the verified Beta baseline.
 - The linked GitHub installation has push permission for this repository.
 - All implementation commits remain on the isolated branch until tests, CI and review are satisfactory. The final integration destination is Beta only.
-- User explicitly authorized broad code and work-file additions on Beta and separately instructed that COS must not be used. Work is therefore performed through GitHub APIs and GitHub Actions only; no COS tools are used.
+- User explicitly authorized broad code and work-file additions on the isolated PR branch. The initial implementation phase was GitHub-only at the user's direction; on 2026-11-04 the user explicitly reauthorized COS for local QA. The integration target remains Beta only.
 
 ## 2. Goals
 
@@ -258,3 +258,96 @@ Test-authoring corrections recorded for transparency:
 - COS has not yet been connected or used for this test-preparation step. The supplied API contract is intentionally not assumed; the next COS session must inspect it before making requests or configuring credentials.
 - Plan commit: `639f1543330d570224070c57b2ca6eb291d5283b`.
 - PR #1 is still open against `Beta`; the work branch remains separate. `main` remains untouched.
+
+## 10. COS follow-up — native ZIP validation hardening (2026-11-04)
+
+### Reconnected baseline
+
+- COS workspace became reachable at `/chatonster`.
+- Created a fresh local worktree `/chatonster/_work/Hwpcolab-Beta-resume` from the then-current remote PR head `7be157ae69e853a3abe6c9f47fe63cdd2ab80eb3`.
+- Local branch: `codex/beta-hardening-resume-2026-11-04`.
+- PR #1 remains open, base `Beta` at `e46f7230074cab63362f41d46cc1d1153085f745`; remote PR head and Beta were unchanged during this session.
+- The previous COS worktree and the original Beta checkout were left untouched.
+
+### Confirmed current-head CI failure
+
+- GitHub Actions run `41755601913` on commit `7be157a` completed with frontend tests/build and lockfile sync passing, but Windows Rust tests failed.
+- Rust result: 26 passed, 1 failed. Failing test: `hwpx_package::tests::rejects_duplicate_package_part_names`.
+- The job log shows the fixture contains two central-directory records named `Contents/section0.xml`; the native validator nevertheless accepts it. This confirms the duplicate-record issue is in the native validator/ZIP index handling, not merely a fixture that failed to create a duplicate.
+
+### Local changes
+
+- Test-only commit `b7997ed5d2e595ce2845c14568d0a214a5f19b43` was created locally before implementation changes. It is not pushed.
+- Follow-up local implementation commits: `825cbbb9791bf4b8f7e2dfe1280c9ff6995e20bc` (raw native ZIP directory preflight and parity checks) and `ec78f88a8060322898f5d4da9eddfc63bf78d436` (structural ZIP64 locator validation and false-positive coverage). Both remain local and are not pushed.
+- Implementation checkpoint: `ec78f88a8060322898f5d4da9eddfc63bf78d436`; a subsequent ledger-only commit records the updated 218-test result. All commits remain local on `codex/beta-hardening-resume-2026-11-04`; no push was performed.
+- Native HWPX validation now has a raw classic-ZIP central-directory preflight before `ZipArchive` indexing. It rejects malformed central-directory layouts, multi-disk archives, structurally valid ZIP64 locators/sentinels, duplicate names, unsupported encryption flags, non-UTF-8 or incorrectly flagged non-ASCII names, and mismatched first-entry `mimetype` local/central metadata.
+- TypeScript HWPX validation now rejects a ZIP64 locator even when classic EOCD count/size/offset fields still fit, and applies the same UTF-8 filename-flag policy as the native path.
+- Regression coverage was added for case-insensitive and Unicode case-insensitive duplicate names, a genuine mimetype data descriptor, local/central mimetype name mismatch, ZIP64 end records with otherwise representable classic EOCD values, a locator-like byte sequence in a valid central-directory comment, and a valid data descriptor on an ordinary package part.
+- The TypeScript mimetype descriptor fixture is checked with `unzipSync` before asserting rejection, so it is a readable ZIP with a real descriptor rather than only a modified flag bit.
+
+### Local verification
+
+- Focused TypeScript HWPX suite: **15 tests passed**.
+- Full Vitest suite: **32 files, 218 tests passed**.
+- `npm run build`: exit code 0. Existing warnings remain for `/theme-init.js`, Node core modules externalized from `rhwpEngine.ts`, mixed static/dynamic Tauri API imports, and chunks over 500 KB.
+- `git diff --check`: exit code 0; Git reports only the repository's existing LF-to-CRLF working-copy normalization warning.
+- TDD RED evidence: temporarily removing the TypeScript ZIP64-locator guard made `rejects ZIP64 archives even when the classic EOCD fields still fit` fail because the validator returned `true`; restoring the guard made the focused test pass.
+- The ZIP64 locator detector validates the locator's disk fields, referenced ZIP64 EOCD signature and record bounds. A regression test confirms a locator-like byte pattern inside an otherwise valid central-directory comment is not mistaken for a ZIP64 locator.
+- Rust execution was **not run** in this Windows COS environment: `cargo`/`rustc` are not installed or on PATH, and WSL is not installed. The new Rust implementation and new Rust regression tests therefore still require Windows CI validation.
+
+### Z.ai and subagent execution
+
+- The API key file was read from the COS workspace without printing its value. The official Z.ai `/models` request returned HTTP 200; the listed catalog did not include the two requested Flash IDs.
+- A direct `glm-4.7-flash` chat-completion request was accepted and returned that model ID, but the small token budget produced no visible answer text. A later minimal request returned HTTP 429 (service temporarily overloaded), and a full code-review request returned HTTP 400 without actionable response details. No independent Z.ai review result is claimed.
+- Two COS worker dispatches using `glm-4.6v-flash` failed before starting because the ChatGPT worker launcher could not start a ChatGPT chat for that model ID. The active worker status confirms both workers failed; no worker review or test report was returned. The current worker launcher does not establish that it can route agents to the Z.ai API.
+- No API key value was printed, logged, or committed.
+
+### Remaining gates
+
+1. Run Rust formatting, Clippy and the full Rust suite on Windows CI against the new code; verify the genuine mimetype descriptor fixture and ZIP64 fixture compile and behave as expected.
+2. Obtain a working Z.ai/Agent Desktop subagent route or use a compatible reviewer; the requested independent subagent review has not yet completed.
+3. Re-run the latest PR checks and review the complete diff after the new branch head is published. No push, PR update, or merge was performed in this session.
+4. Packaged Windows Tauri WebView smoke testing remains outstanding.
+
+## 11. COS continuation — empty ZIP member parity (2026-11-04)
+
+### Verified boundary and workspace
+
+- Active checkout: `[local path redacted]
+- Local branch: `codex/beta-hardening-resume-2026-11-04`; pre-change HEAD `b980382b5fc09fb3b20ea2f49b4ae87242241a3e`.
+- PR #1 base: `Beta` at `e46f7230074cab63362f41d46cc1d1153085f745`.
+- Remote PR branch head before publication: `7be157ae69e853a3abe6c9f47fe63cdd2ab80eb3`; local resume branch was four commits ahead and had no remote-only commits.
+- Remote `main` was read-only checked at `0c23baaf63a49e75fd176a8b18d182acfa91546e`. No writes, checkout, commits or pushes were made to `main` or `Beta`.
+- The separate `Hwpcolab-Beta` and `Hwpcolab-Beta-hardening` working directories were not modified during this continuation.
+
+### Defect and RED/GREEN evidence
+
+- A generated ZIP containing all required HWPX members plus one empty-name member was accepted by `isValidHwpxPackage()`.
+- The first test-only run failed as expected: `expected true to be false` at `hwpx-package.test.ts` for the empty filename fixture.
+- TypeScript fix: reject `nameLength === 0` while parsing central-directory records.
+- Native Rust already rejected zero-length central-directory names. Added a direct unit regression for `inspect_classic_zip_directory()` to preserve that invariant.
+
+### Local verification
+
+- Focused TypeScript HWPX suite: **16 passed**.
+- Full Vitest suite: **32 files, 219 tests passed**.
+- TypeScript compile: passed.
+- Vite production build: passed. Existing warnings remain for Node core modules externalized from `rhwpEngine.ts`, mixed static/dynamic Tauri API imports, and chunks over 500 KB.
+- `npm audit --audit-level=high`: **0 vulnerabilities**.
+- `git diff --check`: passed; only LF-to-CRLF working-copy warnings were reported.
+- Rust formatting, Clippy and Rust tests were not run locally because Cargo, rustc and rustfmt are unavailable in this Windows COS environment. The new Rust regression is pending Windows CI.
+
+### Z.ai and independent review status
+
+- The user-provided secret file was read without printing its value or copying it into the repository. The official Z.ai `/models` endpoint returned HTTP 200.
+- A direct `glm-4.7-flash` chat-completion request returned HTTP 200 but no visible text when constrained to 8 output tokens. A follow-up request with thinking disabled returned HTTP 429, business code `1305` (service temporarily overloaded). No Z.ai code-review answer is claimed.
+- Two read-only COS worker dispatches using the account-listed `glm-4.7` model failed before starting: the worker launcher could not confirm that model in the ChatGPT model picker. No replacement worker was launched and no subagent findings are claimed.
+- The API `/models` response listed 12 model IDs and did not include either requested Flash ID; nevertheless the direct `glm-4.7-flash` completion route accepted the model name before the 429 response.
+- No credential value was printed, written to project files, committed or included in a prompt.
+
+### Publication and remaining gates
+
+- The two TypeScript files and this log/plan update are local working-tree changes on the resume branch only. They have not yet been committed or pushed.
+- Next: commit the tested patch, recheck the exact remote PR head, then fast-forward only `codex/beta-hardening-2026-11-04` to publish the four existing commits plus this patch. This should trigger Windows Rust CI.
+- After publication: inspect fresh PR checks and the complete diff; run Rust formatting/Clippy/tests through Windows CI; keep the independent reviewer and packaged Windows WebView smoke test as explicit gates.
+- `Beta` and `main` remain unchanged. Do not merge the PR without a separate integration decision.
