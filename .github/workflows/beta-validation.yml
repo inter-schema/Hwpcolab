@@ -91,7 +91,7 @@ jobs:
         run: cargo clippy --locked --manifest-path src-tauri/Cargo.toml --lib -- -D warnings
       - name: Run Rust tests with committed lockfile
         if: ${{ needs.sync-lockfiles.result == 'success' || github.event_name == 'push' }}
-        run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml -- --test-threads=1 --nocapture
       - name: Run Rust tests for fork pull requests
         if: ${{ needs.sync-lockfiles.result == 'skipped' && github.event_name != 'push' }}
         run: cargo test --manifest-path src-tauri/Cargo.toml
