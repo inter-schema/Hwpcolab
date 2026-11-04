@@ -90,3 +90,17 @@ The actual current worktree has staged/unstaged changes across these six tracked
 - Separate local test results, Actions evidence, static review, and unrun packaged-app checks.
 - Never claim a commit, push, review, test, or CI result without its actual tool evidence.
 - Do not call the loop complete while concrete unverified checks or known risks remain.
+
+## Latest continuation — 2026-11-04 19:05 Asia/Seoul
+
+This section supersedes earlier pending-head/test-count notes above.
+
+- Current remote PR head before the next source follow-up: 2b3154b913bd987a8ad44b8165c4633c2726dd38 (lockfile-sync/rustfmt bot child of code commit 6c55c4a). PR base remains Beta at e46f7230074cab63362f41d46cc1d1153085f745; main remains 0c23baaf63a49e75fd176a8b18d182acfa91546e.
+- Windows Actions run 41809160934 for code commit 6c55c4a completed successfully in all 3 jobs. Windows rustfmt, Clippy, and cargo test --locked passed; frontend tests/build and lockfile sync passed. Bot child 2b3154b's own run 41809220727 was action_required, so the exact latest head needs a new user-authored full run.
+- New local-only follow-up uses canonical Unicode caseless matching: NFD → full case fold → NFD. JS uses String.normalize plus unicode-case-folding 1.1.2. Rust adds unicode-normalization 0.1.26 and uses unicase 2.10.0.
+- New duplicate-name regressions cover Latin NFC/NFD, precomposed Hangul versus decomposed Jamo, Greek final sigma, ffi ligature, and Kelvin sign.
+- Descriptor resolution now prefers a fully matching signed 16-byte descriptor; only if signed parsing fails does it accept the unsigned 12-byte layout. Both languages have a helper-level regression for the both-match case.
+- Latest local tests after these changes: focused HWPX 28/28, full Vitest 32 files / 231 tests, TypeScript compile, and Vite build in 16.98 seconds all pass. npm audit reports 0 vulnerabilities. The latest Rust NFD/descriptor-priority tests have not yet run in Windows CI.
+- Primary Z.ai glm-4.7-flash last returned HTTP 429/code 1305. Only after that failure, backup BAZE gpt-6-luna was called and returned HTTP 200. Never expose or commit either key.
+- Independent Rust and TS reviewer follow-ups identified the NFC/NFD collision and rare descriptor ambiguity; both are addressed locally. The TS reviewer confirmed vite.config.ts registers the LLM bridge. No further actionable code defect was reported in these focused reviews.
+- Next action: publish the local NFD/descriptor-priority patch and updated logs/memory as one commit parented to exact PR head 2b3154b, with expected-head guard and force=false. Then check lockfile sync for unicode-normalization 0.1.26 and fresh Windows rustfmt/Clippy/cargo test --locked. Do not touch Beta/main or merge PR #1.

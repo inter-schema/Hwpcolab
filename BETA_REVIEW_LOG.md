@@ -433,3 +433,33 @@ Test-authoring corrections recorded for transparency:
 - Current merged source patch is prepared for one parent-checked commit on detached worktree `[local path redacted]
 - After publication, verify the returned commit SHA and require fresh Windows rustfmt, Clippy and `cargo test --locked`, plus frontend CI on that exact code head.
 - Spawn fresh read-only Rust and TS review workers against the newly published exact head. Keep the packaged Windows Tauri WebView smoke test outstanding. Do not modify `Beta`/`main` or merge PR #1.
+
+## 16. Canonical Unicode normalization and descriptor ambiguity compatibility (2026-11-04)
+
+### Independent reviewer follow-up
+
+- Rust review identified a cross-platform path collision risk not covered by case folding alone: canonically equivalent NFC/NFD names (for example `café` vs `cafe` + combining acute) may alias on some filesystems.
+- Rust review also noted that rejecting a descriptor when both signed and unsigned interpretations match can reject a rare valid archive.
+- The TypeScript reviewer questioned the LLM bridge call site in its first pass; direct inspection confirmed `vite.config.ts` imports and registers the bridge. Document-open also invokes the HWPX validator. No production-call-site defect remains.
+
+### Local fixes and regressions
+
+1. Duplicate-name keys now use canonical caseless matching: NFD → full Unicode case fold → NFD. TypeScript uses built-in `String.normalize('NFD')`; Rust uses `unicode-normalization` 0.1.26 plus `unicase` 2.10.0.
+2. Added NFC/NFD collision regressions for Latin accent forms and precomposed Hangul syllable versus decomposed Jamo. Added full case-fold collision pairs for Greek final sigma, the ffi ligature, and Kelvin sign.
+3. Descriptor parsing now prefers the signed 16-byte interpretation when the signature and all fields match; only if that interpretation fails does it try the unsigned 12-byte form. Added a helper-level test where both interpretations match and signed is selected.
+
+### Local verification after this follow-up
+
+- Focused HWPX TypeScript suite: **28/28 passed**.
+- Full Vitest: **32 files, 231/231 tests passed**.
+- TypeScript compilation: passed.
+- Vite production build: passed in 16.98 seconds. Existing warnings remain for `/theme-init.js`, externalized Node core modules, mixed Tauri static/dynamic imports, and the large main chunk.
+- `npm audit --audit-level=high`: **0 vulnerabilities**.
+- The new Rust NFD and descriptor-priority tests have not yet run in CI.
+
+### Latest completed Windows checkpoint and publication boundary
+
+- Actions run `41809160934` for code head `6c55c4a46724fc0078567e9cb975c235a0a74622` completed successfully in all three jobs. Windows formatting, Clippy and `cargo test --locked` passed; frontend tests/build and lockfile sync passed.
+- Lockfile sync created bot-format child `2b3154b913bd987a8ad44b8165c4633c2726dd38`. Its bot-originated run `41809220727` was `action_required`, so that exact bot child has not had its own full run.
+- Current PR head before the next follow-up: `2b3154b913bd987a8ad44b8165c4633c2726dd38`, base Beta. The NFD/descriptor-priority changes are local-only and will be published as a new commit parented to that exact head, with a fresh Windows run required.
+- Beta and main remain unchanged. No merge was performed. The packaged Windows Tauri WebView smoke test remains outstanding.

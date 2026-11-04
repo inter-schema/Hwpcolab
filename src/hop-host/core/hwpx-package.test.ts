@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { strToU8, unzipSync, zipSync, type Zippable } from 'fflate';
-import { isValidHwpxPackage } from './hwpx-package';
+import { isValidHwpxPackage, resolveZipDataDescriptorEnd } from './hwpx-package';
 
 const MIME_TYPE = 'application/hwp+zip';
 
@@ -595,6 +595,35 @@ describe('HWPX package validation', () => {
     expect(isValidHwpxPackage(zipSync(entries))).toBe(false);
   });
 
+  it('rejects canonically equivalent NFC and NFD package part names', () => {
+    const entries = makeValidEntries();
+    entries['Contents/café.xml'] = strToU8('<x/>');
+    entries['Contents/cafe\u0301.xml'] = strToU8('<x/>');
+    expect(isValidHwpxPackage(zipSync(entries))).toBe(false);
+  });
+
+  it('rejects canonically equivalent precomposed Hangul and decomposed Jamo names', () => {
+    const entries = makeValidEntries();
+    entries['Contents/각.xml'] = strToU8('<x/>');
+    entries['Contents/\u1100\u1161\u11a8.xml'] = strToU8('<x/>');
+    expect(isValidHwpxPackage(zipSync(entries))).toBe(false);
+  });
+
+  it('rejects full case-fold collisions beyond sharp-s', () => {
+    const collisions = [
+      ['Contents/Σ.xml', 'Contents/ς.xml'],
+      ['Contents/ﬃ.xml', 'Contents/FFI.xml'],
+      ['Contents/K.xml', 'Contents/k.xml'],
+    ] as const;
+
+    for (const [left, right] of collisions) {
+      const entries = makeValidEntries();
+      entries[left] = strToU8('<x/>');
+      entries[right] = strToU8('<x/>');
+      expect(isValidHwpxPackage(zipSync(entries)), `${left} / ${right}`).toBe(false);
+    }
+  });
+
   it('rejects a mimetype entry marked as using a data descriptor', () => {
     const archive = addDataDescriptorToMimetype(zipSync(makeValidEntries()));
     expect(unzipSync(archive).mimetype).toEqual(strToU8(MIME_TYPE));
@@ -658,6 +687,17 @@ describe('HWPX package validation', () => {
   it('rejects a data descriptor with an uncompressed size that disagrees with the central directory', () => {
     const archive = corruptLastDataDescriptorField(zipSync(makeValidEntries()), 12);
     expect(isValidHwpxPackage(archive)).toBe(false);
+  });
+
+  it('prefers the signed descriptor when signed and unsigned interpretations both match', () => {
+    const signature = 0x08074b50;
+    const descriptor = new Uint8Array(16);
+    const view = new DataView(descriptor.buffer);
+    for (let offset = 0; offset < descriptor.byteLength; offset += 4) {
+      view.setUint32(offset, signature, true);
+    }
+
+    expect(resolveZipDataDescriptorEnd(view, 0, signature, signature, signature, 16)).toBe(16);
   });
 
   it('accepts the repository HWPX samples, not only generated fixtures', () => {

@@ -32,6 +32,33 @@ function calculateCrc32(bytes: Uint8Array): number {
   return (checksum ^ 0xffff_ffff) >>> 0;
 }
 
+function canonicalCaseFold(name: string): string {
+  return caseFold(name.normalize('NFD')).normalize('NFD');
+}
+
+/** @internal Exposed so the ZIP descriptor ambiguity rule can be regression-tested. */
+export function resolveZipDataDescriptorEnd(
+  view: DataView,
+  offset: number,
+  crc32: number,
+  compressedSize: number,
+  uncompressedSize: number,
+  centralDirectoryOffset: number,
+): number | null {
+  const descriptorMatchesAt = (candidateOffset: number): boolean => (
+    candidateOffset + 12 <= centralDirectoryOffset
+    && readUint32(view, candidateOffset) === crc32
+    && readUint32(view, candidateOffset + 4) === compressedSize
+    && readUint32(view, candidateOffset + 8) === uncompressedSize
+  );
+
+  const signedDescriptorMatches = readUint32(view, offset) === DATA_DESCRIPTOR_SIGNATURE
+    && descriptorMatchesAt(offset + 4);
+  if (signedDescriptorMatches) return offset + 16;
+  if (descriptorMatchesAt(offset)) return offset + 12;
+  return null;
+}
+
 type CentralDirectoryEntry = {
   name: string;
   nameBytes: Uint8Array;
@@ -101,17 +128,14 @@ function consistentLocalRecordEnd(
   if (!crcMatches || !compressedSizeMatches || !uncompressedSizeMatches) return null;
   if (!usesDataDescriptor) return localDataEnd;
 
-  const descriptorMatchesAt = (offset: number): boolean => (
-    offset + 12 <= centralDirectoryOffset
-    && readUint32(view, offset) === entry.crc32
-    && readUint32(view, offset + 4) === entry.compressedSize
-    && readUint32(view, offset + 8) === entry.uncompressedSize
+  return resolveZipDataDescriptorEnd(
+    view,
+    localDataEnd,
+    entry.crc32,
+    entry.compressedSize,
+    entry.uncompressedSize,
+    centralDirectoryOffset,
   );
-  const signedDescriptorMatches = readUint32(view, localDataEnd) === DATA_DESCRIPTOR_SIGNATURE
-    && descriptorMatchesAt(localDataEnd + 4);
-  const unsignedDescriptorMatches = descriptorMatchesAt(localDataEnd);
-  if (signedDescriptorMatches === unsignedDescriptorMatches) return null;
-  return localDataEnd + (signedDescriptorMatches ? 16 : 12);
 }
 
 function hasNonOverlappingLocalFileRecords(
@@ -245,7 +269,7 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
       const nameBytes = bytes.subarray(cursor + 46, cursor + 46 + nameLength);
       if (nameBytes.some((byte) => byte > 0x7f) && (flags & 0x0800) === 0) return false;
       const name = decoder.decode(nameBytes);
-      const normalizedName = caseFold(name);
+      const normalizedName = canonicalCaseFold(name);
       if (seenNames.has(normalizedName)) return false;
       seenNames.add(normalizedName);
       names.push(name);
