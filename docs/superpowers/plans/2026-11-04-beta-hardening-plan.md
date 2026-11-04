@@ -327,6 +327,3 @@ Final repeat after the last code/document changes completed at 20:11: full Vites
 - [ ] Verify the new GitHub Actions run on the exact pushed SHA, including Windows Rust formatting, Clippy, and `cargo test --locked`.
 
 Beta, main, and PR merge state are outside this publication step. The packaged Windows Tauri WebView smoke test also remains an open acceptance gate.
-
---- Identity notice ---
-This call is filed as Unattributed because its exact ChatGPT conversation is not known yet. Unattributed does not switch on Read-only mode or disable tools. Continue using every enabled tool, including apply_patch, exec_command, Desktop and Plugins; their existing permissions still apply. This request id owns its workspace, update_plan, terminals and agents/subagents. Use the process and run ids returned to this request; later exact proof attaches that state to its chat. A refusal about a particular process, worker or chat target applies only to that operation, not to file edits or other tools. Report the actual tool result; do not claim mutation or terminal tools are unavailable because of this notice, and never replay successful work.
