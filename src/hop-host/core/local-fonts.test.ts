@@ -8,6 +8,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 describe('local fonts', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.resetModules();
     vi.clearAllMocks();
     delete (globalThis as { window?: unknown }).window;
@@ -18,7 +19,7 @@ describe('local fonts', () => {
   it('keeps native document face lookup and bytes available to the upstream renderer', async () => {
     (globalThis as { window?: unknown }).window = { __TAURI_INTERNALS__: {} };
     invokeMock.mockImplementation(async (command: string) => command === 'list_local_fonts' ? [{
-      family: 'HY헤드라인M', postScriptName: 'HYHeadLineM', style: 'normal',
+      family: 'HY헤드라인M', postScriptName: 'HYHeadLineM', style: 'normal', faceIndex: 2,
       sourceKind: 'file-backed', path: '/fonts/document.ttf',
     }] : [1, 2, 3, 4]);
     const fonts = await import('./local-fonts');
@@ -28,6 +29,7 @@ describe('local fonts', () => {
     expect(fonts.getLocalFonts()).not.toContain('HY헤드라인M');
     const data = await fonts.loadRendererLocalFont(record!);
     expect([...new Uint8Array(data!.bytes)]).toEqual([1, 2, 3, 4]);
+    expect(data?.faceIndex).toBe(2);
     expect(invokeMock).toHaveBeenCalledWith('read_local_font', { path: '/fonts/document.ttf' });
     expect(fonts.getLocalFontState()).toMatchObject({ probedFamilies: [], unresolvedFamilies: [] });
   });
@@ -119,6 +121,41 @@ describe('local fonts', () => {
     expect(addedFamilies).toEqual(['새 파일폰트']);
     expect(invokeMock).toHaveBeenCalledWith('read_local_font', { path: '/vendor/NewFont.ttf' });
     expect(invokeMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('selects a collection face by PostScript name when hydrating TTC fonts', async () => {
+    (globalThis as { window?: unknown }).window = { __TAURI_INTERNALS__: {} };
+    const addedFamilies: string[] = [];
+    const constructedSources: unknown[] = [];
+    installBinaryFontEnvironment(addedFamilies, [], constructedSources);
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:font-collection');
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    invokeMock.mockImplementation(async (command: string) => {
+      if (command === 'list_local_fonts') {
+        return [{
+          family: '컬렉션 폰트',
+          postScriptName: 'Collection-Regular',
+          style: 'normal',
+          weight: 400,
+          faceIndex: 3,
+          sourceKind: 'file-backed',
+          path: '/fonts/collection.ttc',
+        }];
+      }
+      if (command === 'read_local_font') return [0, 1, 2, 3];
+      throw new Error(`unexpected command: ${command}`);
+    });
+
+    const { detectLocalFonts, ensureLocalFontsAvailable } = await import('./local-fonts');
+    await detectLocalFonts();
+    await ensureLocalFontsAvailable(['컬렉션 폰트']);
+
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(constructedSources).toEqual([
+      'url("blob:font-collection#Collection-Regular") format("collection")',
+    ]);
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:font-collection');
+    expect(addedFamilies).toEqual(['컬렉션 폰트']);
   });
 
   it('returns an empty cached list before detection', async () => {
@@ -253,7 +290,11 @@ describe('local fonts', () => {
   });
 });
 
-function installBinaryFontEnvironment(addedFamilies: string[], deletedFamilies: string[] = []) {
+function installBinaryFontEnvironment(
+  addedFamilies: string[],
+  deletedFamilies: string[] = [],
+  constructedSources: unknown[] = [],
+) {
   (globalThis as { document?: unknown }).document = {
     fonts: {
       add: vi.fn((face: { family: string }) => {
@@ -268,8 +309,9 @@ function installBinaryFontEnvironment(addedFamilies: string[], deletedFamilies: 
   (globalThis as { FontFace?: unknown }).FontFace = class {
     family: string;
 
-    constructor(name: string) {
+    constructor(name: string, source: unknown) {
       this.family = name;
+      constructedSources.push(source);
     }
 
     async load() {
