@@ -85,18 +85,18 @@ fn find_end_of_central_directory(bytes: &[u8]) -> Option<usize> {
             continue;
         }
         let comment_length = read_u16(bytes, offset + 20)? as usize;
-        if offset.checked_add(ZIP_EOCD_MIN_LENGTH)?.checked_add(comment_length)? == bytes.len() {
+        if offset
+            .checked_add(ZIP_EOCD_MIN_LENGTH)?
+            .checked_add(comment_length)?
+            == bytes.len()
+        {
             return Some(offset);
         }
     }
     None
 }
 
-fn has_zip64_locator(
-    bytes: &[u8],
-    eocd_offset: usize,
-    central_directory_end: usize,
-) -> bool {
+fn has_zip64_locator(bytes: &[u8], eocd_offset: usize, central_directory_end: usize) -> bool {
     let Some(locator_offset) = eocd_offset.checked_sub(20) else {
         return false;
     };
@@ -131,7 +131,9 @@ fn has_zip64_locator(
 
     let zip64_eocd_offset = zip64_eocd_offset_low as usize;
     if zip64_eocd_offset < central_directory_end
-        || zip64_eocd_offset.checked_add(56).is_none_or(|end| end > locator_offset)
+        || zip64_eocd_offset
+            .checked_add(56)
+            .is_none_or(|end| end > locator_offset)
         || bytes.get(zip64_eocd_offset..zip64_eocd_offset + 4)
             != Some(ZIP64_END_OF_CENTRAL_DIRECTORY_SIGNATURE.as_slice())
     {
@@ -179,7 +181,8 @@ fn inspect_classic_zip_directory(bytes: &[u8]) -> Option<ClassicZipDirectory> {
     }
 
     let central_directory_offset = central_directory_offset as usize;
-    let central_directory_end = central_directory_offset.checked_add(central_directory_size as usize)?;
+    let central_directory_end =
+        central_directory_offset.checked_add(central_directory_size as usize)?;
     if central_directory_end > eocd_offset {
         return None;
     }
@@ -338,8 +341,7 @@ fn consistent_local_file_record_end(
     if local_offset
         .checked_add(30)
         .is_none_or(|end| end > central_directory_offset)
-        || bytes.get(local_offset..local_offset + 4)
-            != Some(LOCAL_FILE_HEADER_SIGNATURE.as_slice())
+        || bytes.get(local_offset..local_offset + 4) != Some(LOCAL_FILE_HEADER_SIGNATURE.as_slice())
     {
         return None;
     }
@@ -418,17 +420,14 @@ fn has_non_overlapping_local_file_records(
 ) -> bool {
     let mut ranges = Vec::with_capacity(entries.len());
     for entry in entries {
-        let Some(end) =
-            consistent_local_file_record_end(bytes, entry, central_directory_offset)
+        let Some(end) = consistent_local_file_record_end(bytes, entry, central_directory_offset)
         else {
             return false;
         };
         ranges.push((entry.local_header_offset as usize, end));
     }
     ranges.sort_unstable_by_key(|range| range.0);
-    ranges
-        .windows(2)
-        .all(|pair| pair[0].1 <= pair[1].0)
+    ranges.windows(2).all(|pair| pair[0].1 <= pair[1].0)
 }
 
 /// Validate the OWPML ZIP envelope without extracting document payloads.
@@ -609,11 +608,8 @@ mod tests {
             let comment_length =
                 u16::from_le_bytes(bytes[cursor + 32..cursor + 34].try_into().unwrap()) as usize;
             if &bytes[cursor + 46..cursor + 46 + name_length] == target.as_bytes() {
-                let flags = u16::from_le_bytes(
-                    bytes[cursor + 8..cursor + 10].try_into().unwrap(),
-                );
-                bytes[cursor + 8..cursor + 10]
-                    .copy_from_slice(&(flags | 0x0800).to_le_bytes());
+                let flags = u16::from_le_bytes(bytes[cursor + 8..cursor + 10].try_into().unwrap());
+                bytes[cursor + 8..cursor + 10].copy_from_slice(&(flags | 0x0800).to_le_bytes());
                 let local_offset =
                     u32::from_le_bytes(bytes[cursor + 42..cursor + 46].try_into().unwrap())
                         as usize;
@@ -636,20 +632,40 @@ mod tests {
         let entry_count = u16::from_le_bytes(bytes[eocd + 10..eocd + 12].try_into().unwrap());
         let central_offset =
             u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
-        assert_eq!(&bytes[central_offset..central_offset + 4], &[0x50, 0x4b, 0x01, 0x02]);
-        let local_offset =
-            u32::from_le_bytes(bytes[central_offset + 42..central_offset + 46].try_into().unwrap())
-                as usize;
-        let crc32 =
-            u32::from_le_bytes(bytes[central_offset + 16..central_offset + 20].try_into().unwrap());
-        let compressed_size =
-            u32::from_le_bytes(bytes[central_offset + 20..central_offset + 24].try_into().unwrap());
-        let uncompressed_size =
-            u32::from_le_bytes(bytes[central_offset + 24..central_offset + 28].try_into().unwrap());
-        let name_length =
-            u16::from_le_bytes(bytes[local_offset + 26..local_offset + 28].try_into().unwrap()) as usize;
-        let extra_length =
-            u16::from_le_bytes(bytes[local_offset + 28..local_offset + 30].try_into().unwrap()) as usize;
+        assert_eq!(
+            &bytes[central_offset..central_offset + 4],
+            &[0x50, 0x4b, 0x01, 0x02]
+        );
+        let local_offset = u32::from_le_bytes(
+            bytes[central_offset + 42..central_offset + 46]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let crc32 = u32::from_le_bytes(
+            bytes[central_offset + 16..central_offset + 20]
+                .try_into()
+                .unwrap(),
+        );
+        let compressed_size = u32::from_le_bytes(
+            bytes[central_offset + 20..central_offset + 24]
+                .try_into()
+                .unwrap(),
+        );
+        let uncompressed_size = u32::from_le_bytes(
+            bytes[central_offset + 24..central_offset + 28]
+                .try_into()
+                .unwrap(),
+        );
+        let name_length = u16::from_le_bytes(
+            bytes[local_offset + 26..local_offset + 28]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let extra_length = u16::from_le_bytes(
+            bytes[local_offset + 28..local_offset + 30]
+                .try_into()
+                .unwrap(),
+        ) as usize;
         let data_start = local_offset + 30 + name_length + extra_length;
         let data_end = data_start + compressed_size as usize;
 
@@ -665,10 +681,8 @@ mod tests {
         for index in 0..entry_count {
             assert_eq!(&bytes[cursor..cursor + 4], &[0x50, 0x4b, 0x01, 0x02]);
             if index == 0 {
-                let flags =
-                    u16::from_le_bytes(bytes[cursor + 8..cursor + 10].try_into().unwrap());
-                bytes[cursor + 8..cursor + 10]
-                    .copy_from_slice(&(flags | 0x0008).to_le_bytes());
+                let flags = u16::from_le_bytes(bytes[cursor + 8..cursor + 10].try_into().unwrap());
+                bytes[cursor + 8..cursor + 10].copy_from_slice(&(flags | 0x0008).to_le_bytes());
             }
             let entry_local_offset =
                 u32::from_le_bytes(bytes[cursor + 42..cursor + 46].try_into().unwrap()) as usize;
@@ -685,8 +699,11 @@ mod tests {
             cursor += 46 + name_length + extra_length + comment_length;
         }
 
-        let local_flags =
-            u16::from_le_bytes(bytes[local_offset + 6..local_offset + 8].try_into().unwrap());
+        let local_flags = u16::from_le_bytes(
+            bytes[local_offset + 6..local_offset + 8]
+                .try_into()
+                .unwrap(),
+        );
         bytes[local_offset + 6..local_offset + 8]
             .copy_from_slice(&(local_flags | 0x0008).to_le_bytes());
         bytes[local_offset + 14..local_offset + 26].fill(0);
@@ -774,7 +791,10 @@ mod tests {
         let mut cursor =
             u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
         for _ in 0..entry_count {
-            assert_eq!(&bytes[cursor..cursor + 4], CENTRAL_DIRECTORY_HEADER_SIGNATURE);
+            assert_eq!(
+                &bytes[cursor..cursor + 4],
+                CENTRAL_DIRECTORY_HEADER_SIGNATURE
+            );
             let name_length =
                 u16::from_le_bytes(bytes[cursor + 28..cursor + 30].try_into().unwrap()) as usize;
             let extra_length =
@@ -783,13 +803,18 @@ mod tests {
                 u16::from_le_bytes(bytes[cursor + 32..cursor + 34].try_into().unwrap()) as usize;
             if &bytes[cursor + 46..cursor + 46 + name_length] == target_name.as_bytes() {
                 let local_offset =
-                    u32::from_le_bytes(bytes[cursor + 42..cursor + 46].try_into().unwrap()) as usize;
-                let local_name_length =
-                    u16::from_le_bytes(bytes[local_offset + 26..local_offset + 28].try_into().unwrap())
+                    u32::from_le_bytes(bytes[cursor + 42..cursor + 46].try_into().unwrap())
                         as usize;
-                let local_extra_length =
-                    u16::from_le_bytes(bytes[local_offset + 28..local_offset + 30].try_into().unwrap())
-                        as usize;
+                let local_name_length = u16::from_le_bytes(
+                    bytes[local_offset + 26..local_offset + 28]
+                        .try_into()
+                        .unwrap(),
+                ) as usize;
+                let local_extra_length = u16::from_le_bytes(
+                    bytes[local_offset + 28..local_offset + 30]
+                        .try_into()
+                        .unwrap(),
+                ) as usize;
                 return local_offset + 30 + local_name_length + local_extra_length;
             }
             cursor += 46 + name_length + extra_length + comment_length;
@@ -801,13 +826,20 @@ mod tests {
         let eocd = find_eocd_offset(&bytes);
         let central_offset =
             u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
-        assert_eq!(&bytes[central_offset..central_offset + 4], &[0x50, 0x4b, 0x01, 0x02]);
-        let local_offset =
-            u32::from_le_bytes(bytes[central_offset + 42..central_offset + 46].try_into().unwrap())
-                as usize;
-        let name_length =
-            u16::from_le_bytes(bytes[local_offset + 26..local_offset + 28].try_into().unwrap())
-                as usize;
+        assert_eq!(
+            &bytes[central_offset..central_offset + 4],
+            &[0x50, 0x4b, 0x01, 0x02]
+        );
+        let local_offset = u32::from_le_bytes(
+            bytes[central_offset + 42..central_offset + 46]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let name_length = u16::from_le_bytes(
+            bytes[local_offset + 26..local_offset + 28]
+                .try_into()
+                .unwrap(),
+        ) as usize;
         assert_eq!(name_length, b"mimetype".len());
         bytes[local_offset + 30..local_offset + 30 + name_length].copy_from_slice(b"mimetyqe");
         bytes
@@ -830,10 +862,13 @@ mod tests {
             let name_end = name_start + name_length;
             if &bytes[name_start..name_end] == b"Contents/section0.xml" {
                 let local_offset =
-                    u32::from_le_bytes(bytes[cursor + 42..cursor + 46].try_into().unwrap()) as usize;
-                let local_name_length =
-                    u16::from_le_bytes(bytes[local_offset + 26..local_offset + 28].try_into().unwrap())
+                    u32::from_le_bytes(bytes[cursor + 42..cursor + 46].try_into().unwrap())
                         as usize;
+                let local_name_length = u16::from_le_bytes(
+                    bytes[local_offset + 26..local_offset + 28]
+                        .try_into()
+                        .unwrap(),
+                ) as usize;
                 assert_eq!(local_name_length, b"Contents/sectionX.xml".len());
                 bytes[local_offset + 30..local_offset + 30 + local_name_length]
                     .copy_from_slice(b"Contents/sectionX.xml");
@@ -848,17 +883,23 @@ mod tests {
         let eocd = find_eocd_offset(&bytes);
         let central_offset =
             u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
-        assert_eq!(&bytes[central_offset..central_offset + 4], &[0x50, 0x4b, 0x01, 0x02]);
-        let local_offset =
-            u32::from_le_bytes(bytes[central_offset + 42..central_offset + 46].try_into().unwrap())
-                as usize;
-        let incorrect_crc =
-            u32::from_le_bytes(bytes[central_offset + 16..central_offset + 20].try_into().unwrap())
-                ^ 1;
+        assert_eq!(
+            &bytes[central_offset..central_offset + 4],
+            &[0x50, 0x4b, 0x01, 0x02]
+        );
+        let local_offset = u32::from_le_bytes(
+            bytes[central_offset + 42..central_offset + 46]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let incorrect_crc = u32::from_le_bytes(
+            bytes[central_offset + 16..central_offset + 20]
+                .try_into()
+                .unwrap(),
+        ) ^ 1;
         bytes[central_offset + 16..central_offset + 20]
             .copy_from_slice(&incorrect_crc.to_le_bytes());
-        bytes[local_offset + 14..local_offset + 18]
-            .copy_from_slice(&incorrect_crc.to_le_bytes());
+        bytes[local_offset + 14..local_offset + 18].copy_from_slice(&incorrect_crc.to_le_bytes());
         bytes
     }
 
@@ -878,10 +919,8 @@ mod tests {
         for _ in 0..entry_count {
             assert_eq!(&bytes[cursor..cursor + 4], &[0x50, 0x4b, 0x01, 0x02]);
             last_central_offset = cursor;
-            last_flags =
-                u16::from_le_bytes(bytes[cursor + 8..cursor + 10].try_into().unwrap());
-            last_crc32 =
-                u32::from_le_bytes(bytes[cursor + 16..cursor + 20].try_into().unwrap());
+            last_flags = u16::from_le_bytes(bytes[cursor + 8..cursor + 10].try_into().unwrap());
+            last_crc32 = u32::from_le_bytes(bytes[cursor + 16..cursor + 20].try_into().unwrap());
             last_compressed_size =
                 u32::from_le_bytes(bytes[cursor + 20..cursor + 24].try_into().unwrap());
             last_uncompressed_size =
@@ -909,7 +948,10 @@ mod tests {
         ) as usize;
         let data_start = last_local_offset + 30 + local_name_length + local_extra_length;
         let data_end = data_start + last_compressed_size as usize;
-        assert_eq!(data_end, central_directory_offset, "last entry must precede central directory");
+        assert_eq!(
+            data_end, central_directory_offset,
+            "last entry must precede central directory"
+        );
 
         let mut descriptor = Vec::with_capacity(16);
         descriptor.extend_from_slice(&0x0807_4b50_u32.to_le_bytes());
@@ -956,22 +998,35 @@ mod tests {
                 u16::from_le_bytes(bytes[cursor + 32..cursor + 34].try_into().unwrap()) as usize;
             cursor += 46 + name_length + extra_length + comment_length;
         }
-        let local_offset =
-            u32::from_le_bytes(bytes[last_central_offset + 42..last_central_offset + 46].try_into().unwrap())
-                as usize;
-        let local_name_length =
-            u16::from_le_bytes(bytes[local_offset + 26..local_offset + 28].try_into().unwrap()) as usize;
-        let local_extra_length =
-            u16::from_le_bytes(bytes[local_offset + 28..local_offset + 30].try_into().unwrap()) as usize;
-        let compressed_size =
-            u32::from_le_bytes(bytes[last_central_offset + 20..last_central_offset + 24].try_into().unwrap())
-                as usize;
-        let descriptor_offset = local_offset + 30 + local_name_length + local_extra_length + compressed_size;
-        assert_eq!(&bytes[descriptor_offset..descriptor_offset + 4], &[0x50, 0x4b, 0x07, 0x08]);
+        let local_offset = u32::from_le_bytes(
+            bytes[last_central_offset + 42..last_central_offset + 46]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let local_name_length = u16::from_le_bytes(
+            bytes[local_offset + 26..local_offset + 28]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let local_extra_length = u16::from_le_bytes(
+            bytes[local_offset + 28..local_offset + 30]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let compressed_size = u32::from_le_bytes(
+            bytes[last_central_offset + 20..last_central_offset + 24]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let descriptor_offset =
+            local_offset + 30 + local_name_length + local_extra_length + compressed_size;
+        assert_eq!(
+            &bytes[descriptor_offset..descriptor_offset + 4],
+            &[0x50, 0x4b, 0x07, 0x08]
+        );
         let field_start = descriptor_offset + field_offset;
         let field_end = field_start + 4;
-        let corrupted =
-            u32::from_le_bytes(bytes[field_start..field_end].try_into().unwrap()) ^ 1;
+        let corrupted = u32::from_le_bytes(bytes[field_start..field_end].try_into().unwrap()) ^ 1;
         bytes[field_start..field_end].copy_from_slice(&corrupted.to_le_bytes());
         bytes
     }
@@ -985,7 +1040,10 @@ mod tests {
         let mut cursor = old_central_offset;
         let mut last_central_offset = 0;
         for _ in 0..entry_count {
-            assert_eq!(&bytes[cursor..cursor + 4], CENTRAL_DIRECTORY_HEADER_SIGNATURE);
+            assert_eq!(
+                &bytes[cursor..cursor + 4],
+                CENTRAL_DIRECTORY_HEADER_SIGNATURE
+            );
             last_central_offset = cursor;
             let name_length =
                 u16::from_le_bytes(bytes[cursor + 28..cursor + 30].try_into().unwrap()) as usize;
@@ -1000,12 +1058,16 @@ mod tests {
                 .try_into()
                 .unwrap(),
         ) as usize;
-        let local_name_length =
-            u16::from_le_bytes(bytes[local_offset + 26..local_offset + 28].try_into().unwrap())
-                as usize;
-        let local_extra_length =
-            u16::from_le_bytes(bytes[local_offset + 28..local_offset + 30].try_into().unwrap())
-                as usize;
+        let local_name_length = u16::from_le_bytes(
+            bytes[local_offset + 26..local_offset + 28]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let local_extra_length = u16::from_le_bytes(
+            bytes[local_offset + 28..local_offset + 30]
+                .try_into()
+                .unwrap(),
+        ) as usize;
         let compressed_size = u32::from_le_bytes(
             bytes[last_central_offset + 20..last_central_offset + 24]
                 .try_into()
@@ -1131,7 +1193,10 @@ mod tests {
         let mut section_central_offset = None;
         let mut metadata_central_offset = None;
         for _ in 0..entry_count {
-            assert_eq!(&bytes[cursor..cursor + 4], CENTRAL_DIRECTORY_HEADER_SIGNATURE);
+            assert_eq!(
+                &bytes[cursor..cursor + 4],
+                CENTRAL_DIRECTORY_HEADER_SIGNATURE
+            );
             let name_length =
                 u16::from_le_bytes(bytes[cursor + 28..cursor + 30].try_into().unwrap()) as usize;
             let extra_length =
@@ -1154,13 +1219,18 @@ mod tests {
                 .try_into()
                 .unwrap(),
         ) as usize;
-        let section_name_length =
-            u16::from_le_bytes(bytes[section_local_offset + 26..section_local_offset + 28].try_into().unwrap())
-                as usize;
-        let section_extra_length =
-            u16::from_le_bytes(bytes[section_local_offset + 28..section_local_offset + 30].try_into().unwrap())
-                as usize;
-        let section_data_start = section_local_offset + 30 + section_name_length + section_extra_length;
+        let section_name_length = u16::from_le_bytes(
+            bytes[section_local_offset + 26..section_local_offset + 28]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let section_extra_length = u16::from_le_bytes(
+            bytes[section_local_offset + 28..section_local_offset + 30]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let section_data_start =
+            section_local_offset + 30 + section_name_length + section_extra_length;
         bytes[metadata_central_offset + 42..metadata_central_offset + 46]
             .copy_from_slice(&((section_data_start + 64) as u32).to_le_bytes());
         bytes
@@ -1363,11 +1433,7 @@ mod tests {
     #[test]
     fn rejects_case_insensitive_duplicate_package_part_names() {
         let bytes = build_archive(&valid_entries());
-        let duplicated = rename_entry(
-            bytes,
-            "Contents/metadata.xml",
-            "contents/SECTION0.xml",
-        );
+        let duplicated = rename_entry(bytes, "Contents/metadata.xml", "contents/SECTION0.xml");
         assert!(!is_valid_hwpx_package(&duplicated));
     }
 
@@ -1397,7 +1463,11 @@ mod tests {
     fn rejects_canonically_equivalent_nfc_and_nfd_package_part_names() {
         let mut entries = valid_entries();
         entries.push(("Contents/café.xml", "<x/>", CompressionMethod::Stored));
-        entries.push(("Contents/cafe\u{0301}.xml", "<x/>", CompressionMethod::Stored));
+        entries.push((
+            "Contents/cafe\u{0301}.xml",
+            "<x/>",
+            CompressionMethod::Stored,
+        ));
         let bytes = build_archive(&entries);
         let bytes = mark_entry_utf8(bytes, "Contents/café.xml");
         let bytes = mark_entry_utf8(bytes, "Contents/cafe\u{0301}.xml");
@@ -1408,7 +1478,11 @@ mod tests {
     fn rejects_canonically_equivalent_precomposed_hangul_and_decomposed_jamo_names() {
         let mut entries = valid_entries();
         entries.push(("Contents/각.xml", "<x/>", CompressionMethod::Stored));
-        entries.push(("Contents/\u{1100}\u{1161}\u{11a8}.xml", "<x/>", CompressionMethod::Stored));
+        entries.push((
+            "Contents/\u{1100}\u{1161}\u{11a8}.xml",
+            "<x/>",
+            CompressionMethod::Stored,
+        ));
         let bytes = build_archive(&entries);
         let bytes = mark_entry_utf8(bytes, "Contents/각.xml");
         let bytes = mark_entry_utf8(bytes, "Contents/\u{1100}\u{1161}\u{11a8}.xml");
