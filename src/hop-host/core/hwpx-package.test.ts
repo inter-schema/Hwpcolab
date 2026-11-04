@@ -163,7 +163,7 @@ function addDataDescriptorToMimetype(zip: Uint8Array): Uint8Array {
   return output;
 }
 
-function corruptLastDataDescriptorCrc(zip: Uint8Array): Uint8Array {
+function corruptLastDataDescriptorField(zip: Uint8Array, fieldOffset: number): Uint8Array {
   const output = addDataDescriptorToLastEntry(zip).slice();
   const view = new DataView(output.buffer, output.byteOffset, output.byteLength);
   let eocdOffset = -1;
@@ -196,8 +196,62 @@ function corruptLastDataDescriptorCrc(zip: Uint8Array): Uint8Array {
   if (view.getUint32(descriptorOffset, true) !== 0x08074b50) {
     throw new Error('Expected a signed data descriptor');
   }
-  view.setUint32(descriptorOffset + 4, view.getUint32(descriptorOffset + 4, true) ^ 1, true);
+  view.setUint32(
+    descriptorOffset + fieldOffset,
+    view.getUint32(descriptorOffset + fieldOffset, true) ^ 1,
+    true,
+  );
   return output;
+}
+
+function removeLastDataDescriptorSignature(zip: Uint8Array): Uint8Array {
+  const output = addDataDescriptorToLastEntry(zip).slice();
+  const view = new DataView(output.buffer, output.byteOffset, output.byteLength);
+  let eocdOffset = -1;
+  for (let offset = output.byteLength - 22; offset >= Math.max(0, output.byteLength - 22 - 0xffff); offset -= 1) {
+    if (view.getUint32(offset, true) === 0x06054b50) {
+      eocdOffset = offset;
+      break;
+    }
+  }
+  if (eocdOffset < 0) throw new Error('ZIP EOCD not found');
+
+  const oldCentralOffset = view.getUint32(eocdOffset + 16, true);
+  const entryCount = view.getUint16(eocdOffset + 10, true);
+  let cursor = oldCentralOffset;
+  let lastCentralOffset = -1;
+  for (let index = 0; index < entryCount; index += 1) {
+    if (view.getUint32(cursor, true) !== 0x02014b50) throw new Error('Invalid central directory');
+    lastCentralOffset = cursor;
+    cursor += 46
+      + view.getUint16(cursor + 28, true)
+      + view.getUint16(cursor + 30, true)
+      + view.getUint16(cursor + 32, true);
+  }
+  if (lastCentralOffset < 0) throw new Error('No central directory entries');
+  const localOffset = view.getUint32(lastCentralOffset + 42, true);
+  const localNameLength = view.getUint16(localOffset + 26, true);
+  const localExtraLength = view.getUint16(localOffset + 28, true);
+  const compressedSize = view.getUint32(lastCentralOffset + 20, true);
+  const descriptorOffset = localOffset + 30 + localNameLength + localExtraLength + compressedSize;
+  if (view.getUint32(descriptorOffset, true) !== 0x08074b50) {
+    throw new Error('Expected a signed data descriptor');
+  }
+
+  const unsigned = new Uint8Array(output.byteLength - 4);
+  unsigned.set(output.subarray(0, descriptorOffset));
+  unsigned.set(output.subarray(descriptorOffset + 4), descriptorOffset);
+  const unsignedView = new DataView(unsigned.buffer, unsigned.byteOffset, unsigned.byteLength);
+  let unsignedEocdOffset = -1;
+  for (let offset = unsigned.byteLength - 22; offset >= Math.max(0, unsigned.byteLength - 22 - 0xffff); offset -= 1) {
+    if (unsignedView.getUint32(offset, true) === 0x06054b50) {
+      unsignedEocdOffset = offset;
+      break;
+    }
+  }
+  if (unsignedEocdOffset < 0) throw new Error('ZIP EOCD not found after signature removal');
+  unsignedView.setUint32(unsignedEocdOffset + 16, oldCentralOffset - 4, true);
+  return unsigned;
 }
 
 function renameMimetypeLocalHeaderOnly(zip: Uint8Array): Uint8Array {
@@ -376,6 +430,60 @@ function makeValidEntries(): Zippable {
   };
 }
 
+function buildOverlappingLocalRecordsArchive(): Uint8Array {
+  const metadataName = 'Contents/metadata.xml';
+  const embeddedName = new TextEncoder().encode(metadataName);
+  const embeddedRecord = new Uint8Array(30 + embeddedName.byteLength);
+  const embeddedView = new DataView(embeddedRecord.buffer);
+  embeddedView.setUint32(0, 0x04034b50, true);
+  embeddedView.setUint16(4, 20, true);
+  embeddedView.setUint16(26, embeddedName.byteLength, true);
+  embeddedRecord.set(embeddedName, 30);
+
+  const payload = new Uint8Array(512);
+  payload.set(embeddedRecord, 64);
+  const entries = makeValidEntries();
+  entries['Contents/section0.xml'] = [strToU8(String.fromCharCode(...payload)), { level: 0 }];
+  entries[metadataName] = [new Uint8Array(0), { level: 0 }];
+  const archive = zipSync(entries);
+  const view = new DataView(archive.buffer, archive.byteOffset, archive.byteLength);
+
+  let eocdOffset = -1;
+  for (let offset = archive.byteLength - 22; offset >= Math.max(0, archive.byteLength - 22 - 0xffff); offset -= 1) {
+    if (view.getUint32(offset, true) === 0x06054b50) {
+      eocdOffset = offset;
+      break;
+    }
+  }
+  if (eocdOffset < 0) throw new Error('ZIP EOCD not found');
+
+  const entryCount = view.getUint16(eocdOffset + 10, true);
+  let cursor = view.getUint32(eocdOffset + 16, true);
+  let sectionCentralOffset = -1;
+  let metadataCentralOffset = -1;
+  const decoder = new TextDecoder();
+  for (let index = 0; index < entryCount; index += 1) {
+    if (view.getUint32(cursor, true) !== 0x02014b50) throw new Error('Invalid central directory');
+    const nameLength = view.getUint16(cursor + 28, true);
+    const extraLength = view.getUint16(cursor + 30, true);
+    const commentLength = view.getUint16(cursor + 32, true);
+    const name = decoder.decode(archive.subarray(cursor + 46, cursor + 46 + nameLength));
+    if (name === 'Contents/section0.xml') sectionCentralOffset = cursor;
+    if (name === metadataName) metadataCentralOffset = cursor;
+    cursor += 46 + nameLength + extraLength + commentLength;
+  }
+  if (sectionCentralOffset < 0 || metadataCentralOffset < 0) {
+    throw new Error('Required central directory entries not found');
+  }
+
+  const sectionLocalOffset = view.getUint32(sectionCentralOffset + 42, true);
+  const sectionNameLength = view.getUint16(sectionLocalOffset + 26, true);
+  const sectionExtraLength = view.getUint16(sectionLocalOffset + 28, true);
+  const sectionDataStart = sectionLocalOffset + 30 + sectionNameLength + sectionExtraLength;
+  view.setUint32(metadataCentralOffset + 42, sectionDataStart + 64, true);
+  return archive;
+}
+
 describe('HWPX package validation', () => {
   it('accepts a valid OWPML ZIP with the stored mimetype first', () => {
     expect(isValidHwpxPackage(zipSync(makeValidEntries()))).toBe(true);
@@ -503,6 +611,14 @@ describe('HWPX package validation', () => {
     expect(isValidHwpxPackage(archive)).toBe(false);
   });
 
+  it('rejects overlapping local file records even when each header matches its central entry', () => {
+    const archive = buildOverlappingLocalRecordsArchive();
+    const extracted = unzipSync(archive);
+    expect(extracted['Contents/metadata.xml']).toBeDefined();
+    expect(extracted['Contents/section0.xml']).toHaveLength(512);
+    expect(isValidHwpxPackage(archive)).toBe(false);
+  });
+
   it('rejects a mimetype whose CRC does not match its payload', () => {
     const archive = corruptMimetypeCrc(zipSync(makeValidEntries()));
     expect(isValidHwpxPackage(archive)).toBe(false);
@@ -524,8 +640,23 @@ describe('HWPX package validation', () => {
     expect(isValidHwpxPackage(archive)).toBe(true);
   });
 
+  it('accepts ordinary entries with an unsigned data descriptor', () => {
+    const archive = removeLastDataDescriptorSignature(zipSync(makeValidEntries()));
+    expect(isValidHwpxPackage(archive)).toBe(true);
+  });
+
   it('rejects an ordinary entry with a data descriptor CRC that disagrees with the central directory', () => {
-    const archive = corruptLastDataDescriptorCrc(zipSync(makeValidEntries()));
+    const archive = corruptLastDataDescriptorField(zipSync(makeValidEntries()), 4);
+    expect(isValidHwpxPackage(archive)).toBe(false);
+  });
+
+  it('rejects a data descriptor with a compressed size that disagrees with the central directory', () => {
+    const archive = corruptLastDataDescriptorField(zipSync(makeValidEntries()), 8);
+    expect(isValidHwpxPackage(archive)).toBe(false);
+  });
+
+  it('rejects a data descriptor with an uncompressed size that disagrees with the central directory', () => {
+    const archive = corruptLastDataDescriptorField(zipSync(makeValidEntries()), 12);
     expect(isValidHwpxPackage(archive)).toBe(false);
   });
 

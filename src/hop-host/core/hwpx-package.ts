@@ -43,18 +43,18 @@ type CentralDirectoryEntry = {
   localHeaderOffset: number;
 };
 
-function hasConsistentLocalHeader(
+function consistentLocalRecordEnd(
   bytes: Uint8Array,
   view: DataView,
   entry: CentralDirectoryEntry,
   centralDirectoryOffset: number,
-): boolean {
+): number | null {
   const localOffset = entry.localHeaderOffset;
   if (
     localOffset + 30 > centralDirectoryOffset
     || readUint32(view, localOffset) !== LOCAL_FILE_HEADER
   ) {
-    return false;
+    return null;
   }
 
   const localFlags = readUint16(view, localOffset + 6);
@@ -74,7 +74,7 @@ function hasConsistentLocalHeader(
     || localDataStart > bytes.byteLength
     || localDataEnd > bytes.byteLength
   ) {
-    return false;
+    return null;
   }
 
   const localName = bytes.subarray(localNameStart, localNameEnd);
@@ -84,7 +84,7 @@ function hasConsistentLocalHeader(
     || localFlags !== entry.flags
     || localMethod !== entry.method
   ) {
-    return false;
+    return null;
   }
 
   const usesDataDescriptor = (entry.flags & 0x0008) !== 0;
@@ -98,8 +98,8 @@ function hasConsistentLocalHeader(
     ? localUncompressedSize === 0 || localUncompressedSize === entry.uncompressedSize
     : localUncompressedSize === entry.uncompressedSize;
 
-  if (!crcMatches || !compressedSizeMatches || !uncompressedSizeMatches) return false;
-  if (!usesDataDescriptor) return true;
+  if (!crcMatches || !compressedSizeMatches || !uncompressedSizeMatches) return null;
+  if (!usesDataDescriptor) return localDataEnd;
 
   const descriptorMatchesAt = (offset: number): boolean => (
     offset + 12 <= centralDirectoryOffset
@@ -109,7 +109,25 @@ function hasConsistentLocalHeader(
   );
   const signedDescriptorMatches = readUint32(view, localDataEnd) === DATA_DESCRIPTOR_SIGNATURE
     && descriptorMatchesAt(localDataEnd + 4);
-  return signedDescriptorMatches || descriptorMatchesAt(localDataEnd);
+  const unsignedDescriptorMatches = descriptorMatchesAt(localDataEnd);
+  if (signedDescriptorMatches === unsignedDescriptorMatches) return null;
+  return localDataEnd + (signedDescriptorMatches ? 16 : 12);
+}
+
+function hasNonOverlappingLocalFileRecords(
+  bytes: Uint8Array,
+  view: DataView,
+  entries: CentralDirectoryEntry[],
+  centralDirectoryOffset: number,
+): boolean {
+  const ranges: Array<{ start: number; end: number }> = [];
+  for (const entry of entries) {
+    const end = consistentLocalRecordEnd(bytes, view, entry, centralDirectoryOffset);
+    if (end === null) return false;
+    ranges.push({ start: entry.localHeaderOffset, end });
+  }
+  ranges.sort((left, right) => left.start - right.start);
+  return ranges.every((range, index) => index === 0 || ranges[index - 1].end <= range.start);
 }
 
 function findEndOfCentralDirectory(view: DataView, bytesLength: number): number {
@@ -248,7 +266,7 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
 
     if (
       cursor !== centralDirectoryOffset + centralDirectorySize
-      || !centralEntries.every((entry) => hasConsistentLocalHeader(bytes, view, entry, centralDirectoryOffset))
+      || !hasNonOverlappingLocalFileRecords(bytes, view, centralEntries, centralDirectoryOffset)
       || !firstCentralEntry
       || firstCentralEntry.name !== 'mimetype'
       || firstCentralEntry.method !== 0

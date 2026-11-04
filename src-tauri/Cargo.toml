@@ -22,6 +22,6 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 rfd = "0.15"
 uuid = { version = "1", features = ["v4"] }
 fontdb = "0.23.0"
-unicase = "2.8.1"
+unicase = "2.10.0"
 zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
 tempfile = "3"
