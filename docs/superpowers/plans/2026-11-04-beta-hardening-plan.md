@@ -141,17 +141,16 @@
 - [ ] Run the new native descriptor regression and complete Windows CI on the latest published head.
 
 ## Latest COS verification (2026-11-04)
-- Full Vitest: 32 files, 227 tests passed after the overlapping-record, unsigned-descriptor and independent descriptor-corruption tests.
-- Focused HWPX TypeScript suite: 24 tests passed.
-- TypeScript compile and Vite production build: passed; pre-existing warnings remain for externalized Node modules, mixed Tauri imports and large chunks.
+- Full Vitest: 32 files, 231 tests passed after canonical Unicode normalization, extra full-fold pairs and descriptor-ambiguity coverage.
+- Focused HWPX TypeScript suite: 28 tests passed.
+- TypeScript compile and Vite production build: passed; pre-existing warnings remain for `/theme-init.js`, externalized Node modules, mixed Tauri imports and large chunks.
 - `npm audit --audit-level=high`: 0 vulnerabilities.
 - `git diff --check`: passed.
 - `npm ci --no-audit --no-fund` passed in the reconciled worktree; esbuild 0.25.12 executes successfully. `npm audit --audit-level=high` reports 0 vulnerabilities.
-- Rust tests/format/Clippy were not run locally because Cargo, rustc and rustfmt are unavailable in the Windows COS workspace. The latest completed published checkpoint did pass Windows CI, but the new native regressions need another CI run.
-- Z.ai `glm-4.7-flash` returned HTTP 429 / error 1305. Only then the BAZE backup `gpt-6-luna` was tested successfully with HTTP 200. One COS reviewer found the first two issues; the second worker startup timed out, and a fresh review against the new head remains pending.
-- The correction was published at `ce7cd14`; the lockfile-sync job formatted the Rust source and created bot commit `24e6029`. The formatted remote source still contains the CRC test/helper and both corrected `Option` comparisons.
-- On run `41776142633` (code head `ce7cd14`), lockfile sync, frontend tests/build, npm audit and Rust formatting passed; Clippy was in progress and Rust tests were pending at this checkpoint. A separate run for bot head `24e6029` finished `action_required` without executing.
-- Current PR head is `24e6029115679f85840a2b86b5fea967231ac7c6`; a follow-up commit is being prepared on that head so the full workflow can re-run after formatting has stabilized.
+- Rust tests/format/Clippy were not run locally because Cargo, rustc and rustfmt are unavailable in the Windows COS workspace. Windows run `41809160934` passed formatting, Clippy and `cargo test --locked` for the published overlap/descriptor patch at `6c55c4a`; the newest NFD and descriptor-priority Rust tests still need another CI run.
+- Z.ai `glm-4.7-flash` returned HTTP 429 / error 1305; only then the BAZE backup `gpt-6-luna` returned HTTP 200. Independent Rust/TS reviewers found the Unicode normalization and descriptor-ambiguity edge cases; both are addressed in the current local patch. The reviewer also confirmed the LLM bridge is registered through `vite.config.ts`.
+- Code commit `6c55c4a` passed all three jobs in run `41809160934`, including Windows formatting, Clippy, and `cargo test --locked`.
+- Lockfile sync created bot-format child `2b3154b`; its bot-originated run `41809220727` was `action_required`. The current PR head before the next patch is `2b3154b913bd987a8ad44b8165c4633c2726dd38`.
 
 ### Current reconciled-worktree checkpoint (2026-11-04)
 - Local resume branch was 6 commits ahead and 8 behind the remote PR branch from common ancestor `7be157a`; instead of pushing it, a disposable worktree was created at remote PR head `2407072` and the local patch was three-way applied.
@@ -177,10 +176,27 @@
 - [x] Verify an ordinary ZIP reader can extract the metadata entry and the full section payload from the crafted archive.
 - [x] Compare complete local-record ranges (header, name/extra, compressed data, and descriptor where present) and reject overlaps in TypeScript and Rust.
 - [x] Add matching TypeScript and Rust regressions for the nested-record fixture.
-- [ ] Validate the native fixture and Windows Clippy/tests in fresh CI.
+- [x] Validate the native fixture and Windows Clippy/tests in run `41809160934` (source head `6c55c4a`).
 
 ### Task 16: Cover signed and unsigned data descriptors
 - [x] Preserve valid signed descriptors and add a valid unsigned-descriptor fixture.
 - [x] Validate descriptor CRC, compressed size and uncompressed size independently.
 - [x] Reject truncated or mismatched descriptor layouts.
-- [ ] Run the expanded native descriptor matrix in Windows CI.
+- [x] Run the expanded native descriptor matrix in Windows CI in run `41809160934` (source head `6c55c4a`).
+
+### Task 17: Detect canonically equivalent Unicode package-part names
+- [x] Normalize comparison keys with NFD, full Unicode case folding, then NFD again in TypeScript and Rust.
+- [x] Add Latin NFC/NFD collision and precomposed Hangul/decomposed Jamo regressions.
+- [x] Add full-fold pairs for Greek final sigma, ffi ligature, and Kelvin sign.
+- [ ] Validate the new Rust normalization tests and locked dependency resolution on Windows CI.
+
+### Task 18: Resolve signed/unsigned descriptor ambiguity compatibly
+- [x] Factor descriptor resolution into testable helpers in TypeScript and Rust.
+- [x] Prefer a fully matching signed 16-byte descriptor; use unsigned 12-byte only when signed does not match.
+- [x] Add helper-level regression proving signed wins when both interpretations match.
+- [ ] Validate the native helper and full descriptor matrix on Windows CI.
+
+### Latest follow-up status
+- Local HWPX 28/28, full Vitest 231/231, TypeScript compile and Vite build passed; npm audit reports 0 vulnerabilities.
+- The NFD/descriptor-priority patch is local-only and must be published parented to `2b3154b`, followed by a fresh Windows Clippy/cargo test run.
+- The packaged Windows Tauri WebView smoke test remains outstanding.
