@@ -72,12 +72,13 @@
 
 ## Current verification evidence
 
-- Frontend: 223 tests pass; production build passes.
+- Frontend: 227 tests pass (32 files); production build passes.
 - Windows Rust: the latest completed PR run (`41776400497`) passed rustfmt, Clippy and `cargo test --locked` for the previous published checkpoint. New native tests in the current local patch still need a fresh Windows run.
 - Locked frontend install: npm ci passes.
 - Dependency audit: npm audit --audit-level=high passes.
-- The most recent completed integrated checkpoint before the current local patch is workflow run `41776400497` on head `18e0c9254a12f63f61a6c5cb4055b8de1ae9817a`; all three jobs succeeded, including Windows Clippy and `cargo test --locked`.
-- The current local patch adds new tests and the `unicode-case-folding`/`unicase` dependencies; it is not yet on the PR branch and needs new lockfile/CI validation.
+- The most recent completed integrated source checkpoint before the current local patch is workflow run `41803650311` on head `2407072f96b2a9415be638a96bce055a7d7b0792`; all three jobs succeeded, including Windows Clippy and `cargo test --locked`.
+- The memory-only commit `e7d3a385e766a4c699a858b54ccf9a4e1264b87f` also has a fully successful run `41806776539`; no code changed in that commit.
+- The current local source patch is not yet on the PR branch and needs fresh Windows Rust CI.
 
 ## Remaining work
 
@@ -129,7 +130,7 @@
 ### Task 13: Use full Unicode case folding for duplicate names
 - [x] Confirm simple lowercasing allows `Straße` and `STRASSE` to remain distinct.
 - [x] Add TypeScript full case folding with pinned `unicode-case-folding` 1.1.2 and a sharp-s regression.
-- [x] Add Rust case-insensitive key comparison with pinned `unicase` 2.8.1 and a matching regression.
+- [x] Add Rust case-insensitive key comparison with pinned `unicase` 2.10.0 and a matching regression.
 - [x] Update package and Cargo lockfiles locally; publish regenerated lockfiles through the repository lockfile-sync workflow.
 - [ ] Verify exact JS/Rust behavior and locked installation in CI.
 
@@ -140,16 +141,24 @@
 - [ ] Run the new native descriptor regression and complete Windows CI on the latest published head.
 
 ## Latest COS verification (2026-11-04)
-- Full Vitest: 32 files, 223 tests passed after the latest local-header, Unicode case-fold and descriptor fixes.
-- Focused HWPX TypeScript suite: 20 tests passed.
+- Full Vitest: 32 files, 227 tests passed after the overlapping-record, unsigned-descriptor and independent descriptor-corruption tests.
+- Focused HWPX TypeScript suite: 24 tests passed.
 - TypeScript compile and Vite production build: passed; pre-existing warnings remain for externalized Node modules, mixed Tauri imports and large chunks.
 - `npm audit --audit-level=high`: 0 vulnerabilities.
 - `git diff --check`: passed.
+- `npm ci --no-audit --no-fund` passed in the reconciled worktree; esbuild 0.25.12 executes successfully. `npm audit --audit-level=high` reports 0 vulnerabilities.
 - Rust tests/format/Clippy were not run locally because Cargo, rustc and rustfmt are unavailable in the Windows COS workspace. The latest completed published checkpoint did pass Windows CI, but the new native regressions need another CI run.
 - Z.ai `glm-4.7-flash` returned HTTP 429 / error 1305. Only then the BAZE backup `gpt-6-luna` was tested successfully with HTTP 200. One COS reviewer found the first two issues; the second worker startup timed out, and a fresh review against the new head remains pending.
 - The correction was published at `ce7cd14`; the lockfile-sync job formatted the Rust source and created bot commit `24e6029`. The formatted remote source still contains the CRC test/helper and both corrected `Option` comparisons.
 - On run `41776142633` (code head `ce7cd14`), lockfile sync, frontend tests/build, npm audit and Rust formatting passed; Clippy was in progress and Rust tests were pending at this checkpoint. A separate run for bot head `24e6029` finished `action_required` without executing.
 - Current PR head is `24e6029115679f85840a2b86b5fea967231ac7c6`; a follow-up commit is being prepared on that head so the full workflow can re-run after formatting has stabilized.
+
+### Current reconciled-worktree checkpoint (2026-11-04)
+- Local resume branch was 6 commits ahead and 8 behind the remote PR branch from common ancestor `7be157a`; instead of pushing it, a disposable worktree was created at remote PR head `2407072` and the local patch was three-way applied.
+- Conflict resolution preserves the remote Cargo lockfile (`unicase 2.10.0`) and the locally improved range-returning local-record validator/descriptor tests.
+- The current reconciled worktree is based on `2407072`; the remote PR has since received memory commit `e7d3a38` and that commit's full Actions run `41806776539` succeeded. The source patch, plan/log and updated TEMP_MEMORY.md are prepared for one commit parented to e7d3a38.
+- Current local evidence: HWPX 24/24, full Vitest 227/227, TypeScript compile, Vite build, npm ci, npm audit (0 vulnerabilities), and diff checks all pass. Fresh Windows Clippy/cargo test is still required for the new native tests.
+- The overlap fixture is extractable by an ordinary ZIP reader before the HWPX validator rejects it, demonstrating that the overlap policy triggers rejection.
 
 ## References
 
@@ -161,4 +170,17 @@
 - Run 41802915430 on the 7-source-file PR update: lockfile sync and frontend tests/build passed; Rust formatting passed; Clippy failed with E0382 because UniCase::new(name) moved the String used later for required-part matching. Rust tests were skipped.
 - The Rust fix now uses UniCase::new(name.clone()); verify on a fresh Windows run.
 - Cargo resolved the semver requirement unicase = "2.8.1" to lockfile version 2.10.0. JS uses unicode-case-folding 1.1.2.
-- Next audit item: reject mutually overlapping local ZIP record ranges and add an unsigned data-descriptor fixture plus independent compressed/uncompressed-size corruption tests.
+- Implemented in the current local patch: reject overlapping local ZIP record ranges, accept valid unsigned descriptors, and independently reject descriptor CRC/compressed-size/uncompressed-size corruption. Fresh Windows native CI is still required.
+
+### Task 15: Reject overlapping ZIP local records
+- [x] Construct an HWPX fixture with a valid metadata local header embedded inside the stored payload of section0, and point the central metadata record at the embedded header.
+- [x] Verify an ordinary ZIP reader can extract the metadata entry and the full section payload from the crafted archive.
+- [x] Compare complete local-record ranges (header, name/extra, compressed data, and descriptor where present) and reject overlaps in TypeScript and Rust.
+- [x] Add matching TypeScript and Rust regressions for the nested-record fixture.
+- [ ] Validate the native fixture and Windows Clippy/tests in fresh CI.
+
+### Task 16: Cover signed and unsigned data descriptors
+- [x] Preserve valid signed descriptors and add a valid unsigned-descriptor fixture.
+- [x] Validate descriptor CRC, compressed size and uncompressed size independently.
+- [x] Reject truncated or mismatched descriptor layouts.
+- [ ] Run the expanded native descriptor matrix in Windows CI.

@@ -399,11 +399,37 @@ Test-authoring corrections recorded for transparency:
 - These changes have not yet been published. Next: create a commit parented to exactly `18e0c92` and update only `codex/beta-hardening-2026-11-04` with an expected-head guard. Then verify lockfile sync, npm audit, frontend tests/build and Windows Rust formatting/Clippy/tests. Request a fresh reviewer pass against the exact new SHA.
 - Packaged Windows Tauri WebView smoke test remains outstanding. `Beta` and `main` were not modified; do not merge the PR on this report alone.
 
+## 14. Persistent memory, divergent-branch reconciliation and expanded ZIP validation (2026-11-04)
 
-## 13. Windows CI follow-up — Unicode key ownership fix (2026-11-04)
+### Persistent working memory
 
-- Lockfile sync succeeded and resolved the unicase requirement 2.8.1 to locked version 2.10.0; npm lockfile includes unicode-case-folding 1.1.2.
-- Workflow 41802915430 passed lockfile sync and frontend tests/build, and passed Rust formatting. Windows Clippy failed at src-tauri/src/hwpx_package.rs:458 with E0382 because UniCase::new(name) moved the String before required-part name checks reused it; Rust tests were skipped after Clippy failed.
-- Fix: construct the duplicate-key wrapper from name.clone() so the original entry name remains available for required-part detection. No dependency change is required.
-- Fresh Windows Clippy and Rust tests must pass on the next PR head before claiming this cycle is validated.
-- Agent review also identified one medium structural concern for the next loop: local ZIP record ranges are bounded individually but are not yet checked for mutual overlap. Existing data-descriptor tests cover the signed form and corrupted CRC; a valid unsigned descriptor fixture and size-field corruption tests are still missing.
+- Created `TEMP_MEMORY.md` at the repository root to preserve PR/base/main refs, API-provider precedence, local-vs-remote branch divergence, current working changes, verified test evidence, known gaps and next actions.
+- Published the memory file to PR #1 as commit `e7d3a385e766a4c699a858b54ccf9a4e1264b87f`, parented to remote head `2407072f96b2a9415be638a96bce055a7d7b0792`.
+- Actions run `41806776539` on the memory-only commit completed successfully in all three jobs (lockfile sync, Windows Rust tests, frontend tests/build). This does not validate the subsequent local-only source changes.
+
+### Reconciliation of the diverged local checkout
+
+- Local resume branch HEAD was `699af2903b70ce20c3d855c8306e2a97d92036ed`; remote PR head was `2407072f96b2a9415be638a96bce055a7d7b0792`. Both descended from `7be157a`, but local had 6 unique commits and remote had 8 unique commits. Directly pushing the local branch would have been unsafe.
+- Created a disposable worktree at remote PR head `2407072` and applied the local working diff with Git's three-way apply.
+- Resolved conflicts by retaining remote `Cargo.lock` version `unicase 2.10.0`, aligning `Cargo.toml` to 2.10.0, and integrating the local range-returning verifier and regression fixtures. The npm and Cargo lockfiles already matched the remote and were preserved.
+- The resulting detached worktree is based on remote `2407072`; the merged source patch is staged locally and is not yet published. No local commit/force push was made.
+
+### New local test evidence after reconciliation
+
+- Focused HWPX suite: **24/24 passed**.
+- Full Vitest: **32 files, 227/227 tests passed**.
+- TypeScript compile: passed.
+- Vite production build: passed in 24.54 seconds. Existing warnings remain: `/theme-init.js` is a non-module script, RHWP browser bundle externalizes Node core modules, Tauri imports are mixed static/dynamic, and the main JS chunk exceeds 500 kB.
+- `npm ci --no-audit --no-fund`: passed after a single sequential install; `esbuild --version` returned 0.25.12.
+- `npm audit --audit-level=high`: **0 vulnerabilities**.
+- `git diff --check` and `git diff --cached --check`: passed after conflict resolution.
+- The overlap fixture now proves an ordinary ZIP reader can extract both the embedded metadata entry and the 512-byte section payload, while the HWPX validator rejects the package because the two local-record ranges intersect.
+- The Rust overlap test performs the same `ZipArchive` extraction assertions before requiring the native HWPX validator to reject the archive. This native assertion has not run locally; it must be confirmed by the next Windows CI.
+
+### Exact current publication boundary
+
+- Remote PR head remains `e7d3a385e766a4c699a858b54ccf9a4e1264b87f` (memory commit), base `Beta` at `e46f7230074cab63362f41d46cc1d1153085f745`.
+- `Beta` was last checked at `e46f7230074cab63362f41d46cc1d1153085f745`; `main` at `0c23baaf63a49e75fd176a8b18d182acfa91546e`.
+- Current merged source patch is prepared for one parent-checked commit on detached worktree `[local path redacted]
+- After publication, verify the returned commit SHA and require fresh Windows rustfmt, Clippy and `cargo test --locked`, plus frontend CI on that exact code head.
+- Spawn fresh read-only Rust and TS review workers against the newly published exact head. Keep the packaged Windows Tauri WebView smoke test outstanding. Do not modify `Beta`/`main` or merge PR #1.
