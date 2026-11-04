@@ -3,11 +3,11 @@ pub mod font_catalog;
 pub mod hwpx_package;
 pub mod state;
 
+use commands::attachment::*;
 use commands::claw_bridge::*;
 use commands::document::*;
 use commands::fonts::*;
 use commands::llm_proxy::*;
-use commands::attachment::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
