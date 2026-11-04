@@ -228,7 +228,7 @@ async function loadDesktopFontFace(entry: LocalFontEntry, bytes: Uint8Array): Pr
   const descriptors: FontFaceDescriptors = { style: entry.style || 'normal' };
   if (entry.weight) descriptors.weight = String(entry.weight);
 
-  if (/\\.(?:ttc|otc)$/i.test(entry.path ?? '')) {
+  if (/\.(?:ttc|otc)$/i.test(entry.path ?? '')) {
     const objectUrl = URL.createObjectURL(new Blob([bytes.slice()], { type: 'font/collection' }));
     try {
       const source = `url("${objectUrl}#${encodeURIComponent(entry.postScriptName)}") format("collection")`;
