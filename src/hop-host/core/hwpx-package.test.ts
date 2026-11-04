@@ -185,6 +185,27 @@ function renameMimetypeLocalHeaderOnly(zip: Uint8Array): Uint8Array {
   return output;
 }
 
+function corruptMimetypeCrc(zip: Uint8Array): Uint8Array {
+  const output = zip.slice();
+  const view = new DataView(output.buffer, output.byteOffset, output.byteLength);
+  let eocdOffset = -1;
+  for (let offset = output.byteLength - 22; offset >= Math.max(0, output.byteLength - 22 - 0xffff); offset -= 1) {
+    if (view.getUint32(offset, true) === 0x06054b50) {
+      eocdOffset = offset;
+      break;
+    }
+  }
+  if (eocdOffset < 0) throw new Error('ZIP EOCD not found');
+
+  const centralOffset = view.getUint32(eocdOffset + 16, true);
+  if (view.getUint32(centralOffset, true) !== 0x02014b50) throw new Error('Invalid first central entry');
+  const localOffset = view.getUint32(centralOffset + 42, true);
+  const incorrectCrc = view.getUint32(centralOffset + 16, true) ^ 1;
+  view.setUint32(centralOffset + 16, incorrectCrc, true);
+  view.setUint32(localOffset + 14, incorrectCrc, true);
+  return output;
+}
+
 function addZip64EndRecords(zip: Uint8Array): Uint8Array {
   const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
   let eocdOffset = -1;
@@ -394,6 +415,11 @@ describe('HWPX package validation', () => {
 
   it('rejects a mimetype local name that differs from its central directory name', () => {
     const archive = renameMimetypeLocalHeaderOnly(zipSync(makeValidEntries()));
+    expect(isValidHwpxPackage(archive)).toBe(false);
+  });
+
+  it('rejects a mimetype whose CRC does not match its payload', () => {
+    const archive = corruptMimetypeCrc(zipSync(makeValidEntries()));
     expect(isValidHwpxPackage(archive)).toBe(false);
   });
 

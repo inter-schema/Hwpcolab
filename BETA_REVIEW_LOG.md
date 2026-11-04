@@ -347,7 +347,19 @@ Test-authoring corrections recorded for transparency:
 
 ### Publication and remaining gates
 
-- The two TypeScript files and this log/plan update are local working-tree changes on the resume branch only. They have not yet been committed or pushed.
-- Next: commit the tested patch, recheck the exact remote PR head, then fast-forward only `codex/beta-hardening-2026-11-04` to publish the four existing commits plus this patch. This should trigger Windows Rust CI.
+- The initial five-file snapshot was published to PR branch `codex/beta-hardening-2026-11-04` as commit `b64630e`, parented to `7be157a`, after all five remote blob SHAs matched the local snapshot.
+- The workflow's lockfile-sync job subsequently created `23b269b` as a child of `b64630e`. Its compare result changed only `src-tauri/src/hwpx_package.rs` (+75/-48); that remote version is the base for the next update and must be preserved.
+- The current CRC parity fix, Rust test and two Rust compile corrections are local working-tree changes on the resume branch. They have not yet been published; the next update must be parented to the current PR head `23b269b` with an expected-head guard.
 - After publication: inspect fresh PR checks and the complete diff; run Rust formatting/Clippy/tests through Windows CI; keep the independent reviewer and packaged Windows WebView smoke test as explicit gates.
 - `Beta` and `main` remain unchanged. Do not merge the PR without a separate integration decision.
+
+### Follow-up: mimetype CRC parity and first Windows CI result
+
+- Added a generated HWPX regression fixture that preserves the `application/hwp+zip` bytes but changes the CRC in both the local and central headers. Before the fix, TypeScript accepted it (`expected false, received true`).
+- TypeScript now computes CRC-32 over the actual MIME payload and compares it with the central-directory CRC.
+- Added the corresponding native test. It changes both stored CRC fields and expects `ZipArchive`'s full `read_to_string()` of the MIME entry to reject the checksum mismatch.
+- Full Vitest after this fix: **32 files, 220 tests passed**. TypeScript compilation passed. Vite build was rerun and its final result is recorded in the continuation output.
+- The first Windows CI run for commit `b64630e` passed lockfile sync, frontend tests/build and Rust formatting, but Clippy failed compilation at `src-tauri/src/hwpx_package.rs:46` and `:154`: each expression applied `?` to `bytes.get(...)` and then compared the unwrapped slice to `Some(...)`. Removed the two `?` operators; a new Windows CI run is required to verify compilation, Clippy and Rust tests.
+- The first Windows CI run for `b64630e` failed in Clippy compilation. A later workflow run on the bot-created `23b269b` commit finished as `action_required`; no Rust tests ran for that run. Current PR head is `23b269b1fddece62d179def136eb82adddf464af`.
+- The CRC and compile fixes are local-only until the next parent-checked PR update. The next publication must preserve the `23b269b` Rust-source diff and use that exact SHA as parent/expected head.
+- `main` and `Beta` were not modified. No merge was performed.

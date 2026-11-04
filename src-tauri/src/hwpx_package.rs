@@ -43,7 +43,7 @@ fn find_end_of_central_directory(bytes: &[u8]) -> Option<usize> {
         .saturating_sub(ZIP_EOCD_MIN_LENGTH + ZIP_MAX_COMMENT_LENGTH);
 
     for offset in (first_possible_offset..=last_possible_offset).rev() {
-        if bytes.get(offset..offset + 4)? != Some(END_OF_CENTRAL_DIRECTORY_SIGNATURE.as_slice()) {
+        if bytes.get(offset..offset + 4) != Some(END_OF_CENTRAL_DIRECTORY_SIGNATURE.as_slice()) {
             continue;
         }
         let comment_length = read_u16(bytes, offset + 20)? as usize;
@@ -158,7 +158,7 @@ fn inspect_classic_zip_directory(bytes: &[u8]) -> Option<ClassicZipDirectory> {
     for _ in 0..total_entries {
         let fixed_header_end = cursor.checked_add(46)?;
         if fixed_header_end > central_directory_end
-            || bytes.get(cursor..cursor + 4)? != Some(CENTRAL_DIRECTORY_HEADER_SIGNATURE.as_slice())
+            || bytes.get(cursor..cursor + 4) != Some(CENTRAL_DIRECTORY_HEADER_SIGNATURE.as_slice())
         {
             return None;
         }
@@ -655,6 +655,27 @@ mod tests {
         bytes
     }
 
+    fn corrupt_mimetype_crc(mut bytes: Vec<u8>) -> Vec<u8> {
+        let eocd = find_eocd_offset(&bytes);
+        let central_offset =
+            u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
+        assert_eq!(
+            &bytes[central_offset..central_offset + 4],
+            &[0x50, 0x4b, 0x01, 0x02]
+        );
+        let local_offset =
+            u32::from_le_bytes(bytes[central_offset + 42..central_offset + 46].try_into().unwrap())
+                as usize;
+        let incorrect_crc =
+            u32::from_le_bytes(bytes[central_offset + 16..central_offset + 20].try_into().unwrap())
+                ^ 1;
+        bytes[central_offset + 16..central_offset + 20]
+            .copy_from_slice(&incorrect_crc.to_le_bytes());
+        bytes[local_offset + 14..local_offset + 18]
+            .copy_from_slice(&incorrect_crc.to_le_bytes());
+        bytes
+    }
+
     fn add_data_descriptor_to_last_entry(mut bytes: Vec<u8>) -> Vec<u8> {
         let eocd = find_eocd_offset(&bytes);
         let entry_count = u16::from_le_bytes(bytes[eocd + 10..eocd + 12].try_into().unwrap());
@@ -998,6 +1019,13 @@ mod tests {
         let bytes = build_archive(&valid_entries());
         let mismatched = rename_mimetype_local_header_only(bytes);
         assert!(!is_valid_hwpx_package(&mismatched));
+    }
+
+    #[test]
+    fn rejects_mimetype_when_crc_does_not_match_payload() {
+        let bytes = build_archive(&valid_entries());
+        let corrupted = corrupt_mimetype_crc(bytes);
+        assert!(!is_valid_hwpx_package(&corrupted));
     }
 
     #[test]

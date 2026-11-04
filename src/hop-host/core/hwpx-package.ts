@@ -18,6 +18,17 @@ function readUint32(view: DataView, offset: number): number {
   return view.getUint32(offset, true);
 }
 
+function calculateCrc32(bytes: Uint8Array): number {
+  let checksum = 0xffff_ffff;
+  for (const byte of bytes) {
+    checksum ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) {
+      checksum = (checksum >>> 1) ^ ((checksum & 1) === 0 ? 0 : 0xedb8_8320);
+    }
+  }
+  return (checksum ^ 0xffff_ffff) >>> 0;
+}
+
 function findEndOfCentralDirectory(view: DataView, bytesLength: number): number {
   const minimumOffset = Math.max(0, bytesLength - 22 - MAX_ZIP_COMMENT_LENGTH);
   for (let offset = bytesLength - 22; offset >= minimumOffset; offset -= 1) {
@@ -203,7 +214,12 @@ export function isValidHwpxPackage(bytes: Uint8Array): boolean {
     }
 
     const mimeBytes = bytes.subarray(localDataStart, localDataEnd);
-    if (mimeBytes.byteLength !== HWPX_MIME_TYPE.length) return false;
+    if (
+      mimeBytes.byteLength !== HWPX_MIME_TYPE.length
+      || calculateCrc32(mimeBytes) !== firstCentralEntry.crc32
+    ) {
+      return false;
+    }
     for (let index = 0; index < mimeBytes.length; index += 1) {
       if (mimeBytes[index] !== HWPX_MIME_TYPE.charCodeAt(index)) return false;
     }
