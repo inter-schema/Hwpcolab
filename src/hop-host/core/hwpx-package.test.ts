@@ -113,6 +113,7 @@ function makeValidEntries(): Zippable {
     'Contents/content.hpf': strToU8('<opf:package/>'),
     'Contents/header.xml': strToU8('<hh:head/>'),
     'Contents/section0.xml': strToU8('<hs:sec/>'),
+    'Contents/metadata.xml': strToU8('<meta/>'),
   };
 }
 
@@ -165,7 +166,7 @@ describe('HWPX package validation', () => {
   it('rejects duplicate package part names instead of accepting ambiguous ZIP entries', () => {
     const archive = renameZipEntry(
       zipSync(makeValidEntries()),
-      'META-INF/manifest.xml',
+      'Contents/metadata.xml',
       'Contents/section0.xml',
     );
     expect(isValidHwpxPackage(archive)).toBe(false);
