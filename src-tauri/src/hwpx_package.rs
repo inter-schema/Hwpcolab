@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::io::{Cursor, Read};
 
 const HWPX_MIME_TYPE: &str = "application/hwp+zip";
@@ -42,12 +43,16 @@ pub fn is_valid_hwpx_package(bytes: &[u8]) -> bool {
     let mut has_content_package = false;
     let mut has_header = false;
     let mut has_section = false;
+    let mut seen_names = HashSet::with_capacity(archive.len());
 
     for index in 0..archive.len() {
         let Ok(entry) = archive.by_index(index) else {
             return false;
         };
-        let name = entry.name();
+        let name = entry.name().to_owned();
+        if !seen_names.insert(name.to_ascii_lowercase()) {
+            return false;
+        }
         has_content_package |= name == "Contents/content.hpf";
         has_header |= name == "Contents/header.xml";
         has_section |= is_section_part(name);
