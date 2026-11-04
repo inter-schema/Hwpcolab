@@ -78,6 +78,25 @@ mod tests {
     use zip::write::SimpleFileOptions;
     use zip::{CompressionMethod, ZipWriter};
 
+
+    fn find_eocd_offset(bytes: &[u8]) -> usize {
+        assert!(bytes.len() >= 22, "ZIP is too short for EOCD");
+        let start = bytes.len().saturating_sub(22 + u16::MAX as usize);
+        let end = bytes.len() - 22;
+        (start..=end)
+            .rev()
+            .find(|offset| {
+                if &bytes[*offset..*offset + 4] != [0x50, 0x4b, 0x05, 0x06] {
+                    return false;
+                }
+                let comment_length =
+                    u16::from_le_bytes(bytes[*offset + 20..*offset + 22].try_into().unwrap())
+                        as usize;
+                *offset + 22 + comment_length == bytes.len()
+            })
+            .expect("EOCD signature")
+    }
+
     fn build_archive(entries: &[(&str, &str, CompressionMethod)]) -> Vec<u8> {
         let mut writer = ZipWriter::new(Cursor::new(Vec::new()));
         for (name, content, method) in entries {
@@ -89,10 +108,7 @@ mod tests {
     }
 
     fn mark_entry_encrypted(mut bytes: Vec<u8>, target: &str) -> Vec<u8> {
-        let eocd = bytes
-            .windows(4)
-            .rposition(|window| window == [0x50, 0x4b, 0x05, 0x06])
-            .expect("EOCD signature");
+        let eocd = find_eocd_offset(&bytes);
         let entry_count = u16::from_le_bytes(bytes[eocd + 10..eocd + 12].try_into().unwrap());
         let mut cursor =
             u32::from_le_bytes(bytes[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
@@ -328,10 +344,7 @@ mod tests {
     fn rejects_duplicate_package_part_names() {
         let bytes = build_archive(&valid_entries());
         let duplicated = rename_entry(bytes, "Contents/metadata.xml", "Contents/section0.xml");
-        let eocd = duplicated
-            .windows(4)
-            .rposition(|window| window == [0x50, 0x4b, 0x05, 0x06])
-            .expect("EOCD signature");
+        let eocd = find_eocd_offset(&duplicated);
         let entry_count = u16::from_le_bytes(duplicated[eocd + 10..eocd + 12].try_into().unwrap());
         let mut cursor =
             u32::from_le_bytes(duplicated[eocd + 16..eocd + 20].try_into().unwrap()) as usize;
