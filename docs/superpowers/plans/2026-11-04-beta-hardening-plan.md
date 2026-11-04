@@ -1,86 +1,98 @@
 # Beta Hardening Implementation Plan
 
-> **For agentic workers:** Execute task-by-task in the current isolated GitHub branch. Keep all integration changes out of main. Use TDD and record results in BETA_REVIEW_LOG.md.
+> Living plan for the Beta-only hardening workstream. Implementation and CI run directly through GitHub; COS is not part of this continuation.
 
-**Goal:** Harden Hwpcolab's font, HWPX, save, DOCX and Vite font-serving paths while adding repeatable CI.
+**Goal:** Improve the whole Hwpcolab Beta workstream's font handling, document-format validation, safe saves, imports, local development bridge, and repeatable verification.
 
-**Architecture:** Keep Tauri 2 + Vite + RHWP. Add focused native/TypeScript helpers and regression fixtures. Use GitHub Actions for Linux frontend validation and Windows Rust validation.
+**Baseline:** `e46f7230074cab63362f41d46cc1d1153085f745`  
+**Implementation branch:** `codex/beta-hardening-2026-11-04`  
+**Integration target:** `origin/Beta` only. Never modify `main`.  
+**PR:** #1
 
-**Tech Stack:** Rust/Tauri 2, fontdb, zip, TypeScript, Vite 6.4.5, Vitest, happy-dom, fflate.
+## Guardrails
 
-**Spec:** `docs/superpowers/specs/2026-11-04-beta-hardening-design.md`
+- Keep the existing Tauri 2 + Vite + RHWP architecture.
+- Preserve frontend command names and payload shapes.
+- Behavior changes require a regression test that fails for the intended reason before implementation.
+- Do not blindly upgrade HOP/RHWP or replace vendored code.
+- Commit both JavaScript and Rust lockfiles; verify with locked installs.
+- Do not claim a platform-specific runtime check from unit-test evidence alone.
 
-## Global Constraints
+## Completed work
 
-- Baseline: `e46f7230074cab63362f41d46cc1d1153085f745`.
-- Branch: `codex/beta-hardening-2026-11-04`; integration: `Beta` only.
-- Keep main untouched.
-- Behavior fixes require a RED -> GREEN regression test.
-- No blanket dependency changes or undocumented upstream ports.
-- Preserve command names `list_local_fonts` and `read_local_font`.
+### Task 1: Test harness and runtime detection
+- [x] Add Vitest and happy-dom.
+- [x] Add deterministic frontend test command and CI.
+- [x] Cover Tauri internal marker, tauri: protocol, browser, and absent-window cases.
+- [x] Restore desktop runtime detection without invoking Tauri commands in a normal browser.
 
-## Review Focus
+### Task 2: Native local-font catalog
+- [x] Port the relevant HOP v0.4.5 fontdb catalog behavior into Hwpcolab's Tauri structure.
+- [x] Add OS-specific extra user-font directories.
+- [x] Register list_local_fonts and read_local_font.
+- [x] Canonicalize requested paths and enforce approved-root/extension checks.
+- [x] Add runtime and native path regression tests.
 
-- Browser runtime must never invoke Tauri-only commands.
-- Font path checks must reject traversal, sibling prefixes, symlink escapes and non-font files.
-- HWPX must check first/stored `mimetype`, exact media type and essential OWPML parts.
-- DOCX must support alternate namespace prefixes, XML entities, preserved whitespace, tabs, breaks and tables.
-- Failed save operations must leave existing target bytes unchanged.
+### Task 3: HWPX package validation and safe saves
+- [x] Validate ZIP structure, first/stored mimetype, exact OWPML media type and required document parts.
+- [x] Reject generic ZIPs, malformed packages and encrypted OWPML parts.
+- [x] Recognize the binary ZIP local-file-header signature in native document routing.
+- [x] Allow valid data descriptors on ordinary ZIP entries while keeping mimetype strict.
+- [x] Add generated and repository HWPX fixtures.
+- [x] Replace direct destination overwrites with same-directory temporary-file replacement, sync and cleanup in Rust and Vite paths.
+- [x] Test successful overwrite and preservation of existing targets on failure.
 
----
+### Task 4: DOCX import
+- [x] Replace regex-only XML extraction with namespace-aware DOM parsing.
+- [x] Preserve paragraph boundaries, text/entities, xml:space, tabs, breaks and table structure.
+- [x] Add generated regression fixtures and repository DOCX/XLSX sample coverage.
+- [x] Bound attachment and ZIP expansion sizes.
 
-### Task 1: Test harness and native runtime regression
+### Task 5: Vite font serving and path security
+- [x] Add canonical path containment, extension checks, malformed-encoding handling and symlink escape tests.
+- [x] Ensure rejected font paths terminate with 404 rather than falling through to general Vite static middleware.
+- [x] Verify valid WOFF2 retrieval and production build.
 
-**Files:** `package.json`, `package-lock.json`, `.github/workflows/beta-validation.yml`, `src/hop-host/core/desktop-local-fonts-runtime.test.ts`.
+### Task 6: LLM request lifecycle and development-bridge parity
+- [x] Add deterministic test for native stale-cancellation cleanup.
+- [x] Scope native cleanup to a unique AtomicU64 registration token.
+- [x] Reject duplicate active request IDs.
+- [x] Add identity-safe ActiveHttpRequests for the Vite bridge.
+- [x] Align Vite bridge URL validation, timeout clamp, request/response byte limits, redirect policy and response-body cancellation with native behavior.
+- [x] Keep timeout active until response body reading completes.
+- [x] Add regression tests for duplicate IDs, ID reuse, URL schemes/userinfo, UTF-8 byte limits, timeout bounds, streaming response limits and BOM handling.
 
-- [ ] Add Vitest and happy-dom test dependencies; align Vite to 6.4.5.
-- [ ] Add `npm test` and CI jobs for frontend and Windows Rust tests. Initially use setup installs so the generated lockfiles can be captured as artifacts.
-- [ ] Add tests for `__TAURI_INTERNALS__`, `tauri:` protocol, ordinary browser, and absent window.
-- [ ] Run PR CI and verify the two Tauri-positive cases fail because the current implementation returns false.
-- [ ] Record exact RED run and artifact IDs.
+### Task 7: Lockfiles, dependency audit and CI
+- [x] Commit package-lock.json and src-tauri/Cargo.lock.
+- [x] Add a scoped lockfile-sync job for the same-repository Beta workstream.
+- [x] Use npm ci and cargo test --locked for the same-repository PR and Beta push paths.
+- [x] Add npm audit --audit-level=high; the latest completed frontend run passed.
+- [x] Update actions/checkout to v7.0.1 and actions/setup-node to v7.1.0 to avoid the Node 20 runtime deprecation warning.
+- [x] Run frontend tests/build on Ubuntu and Rust tests on Windows.
 
-### Task 2: Restore native font catalog
+## Current verification evidence
 
-**Files:** `desktop-local-fonts.ts`, `src-tauri/src/font_catalog.rs`, `src-tauri/src/commands/fonts.rs`, `commands/mod.rs`, `lib.rs`, Cargo manifest/lock.
+- Frontend: 209 tests pass; production build passes.
+- Windows Rust: 25 tests pass.
+- Locked frontend install: npm ci passes.
+- Dependency audit: npm audit --audit-level=high passes.
+- The most recent completed integrated checkpoint is workflow run 41743372019: lockfiles were already up to date, npm ci/audit/tests/build passed, and Windows cargo test --locked was still running at log time.
+- Workflow run 41743558019 validates the updated Node 24 GitHub Actions releases.
+- The latest BETA_REVIEW_LOG.md update and this plan update trigger subsequent runs; their current-head results must be checked before integration.
 
-- [ ] Implement runtime detection minimally and verify focused RED -> GREEN.
-- [ ] Add the fontdb catalog and OS-specific extra user directories.
-- [ ] Register `list_local_fonts` and `read_local_font`.
-- [ ] Add canonical-path, extension, sibling-prefix and symlink escape tests.
-- [ ] Run all frontend tests and Windows `cargo test`.
+## Remaining work
 
-### Task 3: HWPX validation and safe saves
+### Task 8: Upstream comparison and final integration
+- [x] Compare HOP and RHWP release versions against the reviewed upstream state.
+- [x] Port only the relevant HOP native font catalog behavior.
+- [x] Confirm RHWP v0.8.7 is already current; no blind engine replacement.
+- [ ] Obtain the final current-head Windows cargo test --locked result and latest Actions run.
+- [ ] Re-read the complete PR diff, including command registration, font allow-list, save parity, HWPX parity, DOCX import and LLM lifecycle.
+- [ ] Record remaining platform-specific limitations. Packaged Tauri WebView smoke testing remains distinct from Rust unit tests.
+- [ ] Confirm Beta has not moved behind the work branch.
+- [ ] Integrate the reviewed result into Beta only; do not merge to main.
 
-**Files:** `document.rs`, `vite.config.ts`, new shared/test helpers, Cargo manifest/lock.
+## References
 
-- [ ] Inventory repository HWPX fixtures and actual package members.
-- [ ] Add failing generic-ZIP/malformed-package and valid-package tests.
-- [ ] Add failing save tests for missing staging input, successful overwrite and preservation of old target on failure.
-- [ ] Implement OWPML structural validation and same-directory durable replacement for both native and development bridge.
-- [ ] Run fixture and Windows save tests.
-
-### Task 4: DOCX XML parser
-
-**Files:** `src/core/multiFileParser.ts`, new DOCX helper/test files, `package.json`/lock if parser dependency is required.
-
-- [ ] Add fixture ZIPs with alternate prefixes, entities, xml:space, tabs, line breaks and tables.
-- [ ] Verify current parser fails at least one intended assertion.
-- [ ] Implement namespace-aware extraction and stable Markdown representation.
-- [ ] Run DOCX tests and full frontend suite.
-
-### Task 5: Vite font path security
-
-**Files:** `vite.config.ts`, new path helper and tests.
-
-- [ ] Add tests for valid retrieval, encoded traversal, sibling-prefix, symlink escape, malformed encoding and unsupported extension.
-- [ ] Implement canonical path containment and not-found handling.
-- [ ] Run the focused middleware tests and production build.
-
-### Task 6: Locks, upstream review and finish
-
-- [ ] Retrieve CI-generated npm and Cargo locks, commit them, then switch CI to `npm ci` and `cargo test --locked`.
-- [ ] Compare current HOP/RHWP upstream fixes and port only relevant changes with regression tests.
-- [ ] Review dependency versions and security advisories; avoid unrelated upgrades.
-- [ ] Run complete test/build/Windows validation and inspect the whole PR diff.
-- [ ] Update BETA_REVIEW_LOG.md with exact run URLs, commit IDs, results and residual risks.
-- [ ] Merge the clean PR into Beta only.
+- Design: `docs/superpowers/specs/2026-11-04-beta-hardening-design.md`
+- Evidence and running history: `BETA_REVIEW_LOG.md`
