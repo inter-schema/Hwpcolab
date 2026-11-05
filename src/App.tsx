@@ -39,12 +39,27 @@ export const App: React.FC = () => {
       const savedEndpoint =
         savedProvider === "baze"
           ? localStorage.getItem("hop_endpoint_baze") || "https://api.baze.co/v1/gateway/chat/completions"
+          : savedProvider === "custom"
+          ? localStorage.getItem("hop_endpoint_custom") || ""
+          : savedProvider === "openai"
+          ? localStorage.getItem("hop_endpoint_openai") || "https://api.openai.com/v1/chat/completions"
+          : savedProvider === "gemini"
+          ? localStorage.getItem("hop_endpoint_gemini") || "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
           : localStorage.getItem("hop_endpoint_ollama") || "http://127.0.0.1:11434/v1/chat/completions";
+      const savedCustomName = localStorage.getItem("hop_custom_name") || "사용자 지정";
+      const savedCustomSupportsTools = localStorage.getItem("hop_custom_supports_tools") !== "false";
+      const savedCustomSendReasoning = localStorage.getItem("hop_custom_send_reasoning") === "true";
+      const savedLoopMode = (localStorage.getItem("hop_agent_loop_mode") as any) || "legacy";
+
       setProviderSettings({
         provider: savedProvider,
         ...(savedKey ? { apiKey: savedKey } : {}),
         ...(savedModel ? { model: savedModel } : {}),
         customEndpoint: savedEndpoint,
+        customName: savedCustomName,
+        customSupportsTools: savedCustomSupportsTools,
+        customSendReasoning: savedCustomSendReasoning,
+        agentLoopMode: savedLoopMode,
       });
     }
 

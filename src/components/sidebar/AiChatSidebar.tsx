@@ -71,6 +71,7 @@ export const AiChatSidebar: React.FC = () => {
   const [liveSteps, setLiveSteps] = useState<string[]>([]);
   const currentRequestIdRef = useRef<string | null>(null);
   const isCancelledRef = useRef<boolean>(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [expandedLogs, setExpandedLogs] = useState<Record<string, boolean>>({});
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -89,6 +90,9 @@ export const AiChatSidebar: React.FC = () => {
 
   const handleCancel = async () => {
     isCancelledRef.current = true;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     const reqId = currentRequestIdRef.current;
     if (reqId) {
       try {
@@ -117,6 +121,8 @@ export const AiChatSidebar: React.FC = () => {
     isCancelledRef.current = false;
     const requestId = crypto.randomUUID();
     currentRequestIdRef.current = requestId;
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     try {
       // First sync any direct human typing/formatting in HOP to the staging file
@@ -162,6 +168,10 @@ export const AiChatSidebar: React.FC = () => {
         apiKey: latestState.apiKey,
         model: latestState.model,
         customEndpoint: latestState.customEndpoint,
+        loopMode: latestState.agentLoopMode,
+        customSupportsTools: latestState.customSupportsTools,
+        customSendReasoning: latestState.customSendReasoning,
+        customName: latestState.customName,
         docMarkdown: latestState.docMarkdown,
         tablesMeta: latestState.tablesMeta,
         selection: latestState.selection,
@@ -176,6 +186,7 @@ export const AiChatSidebar: React.FC = () => {
         fileBytes: latestState.fileBytes,
         chatHistory,
         sessionMasker: latestState.sessionMasker,
+        signal: abortController.signal,
         requestId,
         onStep,
       } as any);
@@ -244,7 +255,18 @@ export const AiChatSidebar: React.FC = () => {
         await addProposedDiffs(diffItems);
       }
     } catch (err: any) {
-      if (isCancelledRef.current) return;
+      const isAbort =
+        isCancelledRef.current ||
+        err?.name === "AbortError" ||
+        abortController.signal.aborted ||
+        (typeof err?.message === "string" && err.message.toLowerCase().includes("aborted"));
+      if (isAbort) {
+        if (!isCancelledRef.current) {
+          isCancelledRef.current = true;
+          setLiveSteps((prev) => [...prev, "🛑 사용자에 의해 작업이 중단되었습니다."]);
+        }
+        return;
+      }
       const errorMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: "assistant",
@@ -252,6 +274,7 @@ export const AiChatSidebar: React.FC = () => {
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
+      abortControllerRef.current = null;
       setLoading(false);
     }
   };
@@ -299,7 +322,7 @@ export const AiChatSidebar: React.FC = () => {
           >
             <div className="flex items-center gap-1 min-w-0">
               <Bot className="w-3.5 h-3.5 text-teal-700 shrink-0" />
-              <span className="shrink-0">{provider === "baze" ? "BAZE" : provider.toUpperCase()}</span>
+              <span className="shrink-0">{provider === "baze" ? "BAZE" : provider === "custom" ? "사용자 지정" : provider.toUpperCase()}</span>
               <span className="text-[10px] text-slate-400 font-mono truncate">({model})</span>
             </div>
             <SlidersHorizontal className="w-2.5 h-2.5 text-slate-400 shrink-0" />
