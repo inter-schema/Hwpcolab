@@ -18,6 +18,17 @@ export type UnifiedOp =
     }
   // 3. 표 구조 제어
   | { type: "insert_table"; afterParaIndex?: number; headers: string[]; rows: string[][] }
+  | {
+      type: "insert_nested_table";
+      tableIndex: number;
+      row: number;
+      col: number;
+      rows: number;
+      cols: number;
+      data?: string[][];
+      headerRow?: boolean;
+      widthMode?: "fit_cell";
+    }
   | { type: "insert_table_row"; tableIndex: number; row: number; position: "above" | "below"; cells?: string[] }
   | { type: "delete_table_row"; tableIndex: number; row: number }
   | { type: "insert_table_col"; tableIndex: number; col: number; position: "left" | "right"; cells?: string[] }

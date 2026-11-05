@@ -6,6 +6,7 @@ import type { TableCoordinateMeta } from "../types/hwp.ts";
 export interface PolicyGuardContext {
   userPrompt: string;
   isNewDocument?: boolean;
+  isHwpx?: boolean;
   excludedRegions?: ExcludedRegion[];
   layoutReport?: LayoutReport | null;
   tablesMeta?: TableCoordinateMeta[];
@@ -151,6 +152,70 @@ export function lintOps(
       continue;
     }
 
+    // insert_nested_table 정책 검사
+    if (op.type === "insert_nested_table") {
+      // 1) .hwp 문서 거부 사유 메시지
+      if (context.isHwpx === false) {
+        rejectedOps.push({
+          op,
+          reason: "HWP 바이너리는 중첩 표 미지원 — HWPX로 저장 후 시도",
+        });
+        continue;
+      }
+
+      // 2) 행/열 크기 제한 (최대 8x8)
+      if (op.rows > 8 || op.cols > 8 || op.rows < 1 || op.cols < 1) {
+        rejectedOps.push({
+          op,
+          reason: `중첩 표 크기 제한 위반: 행과 열은 각각 1 이상 8 이하이어야 합니다 (요청: ${op.rows}×${op.cols}).`,
+        });
+        continue;
+      }
+
+      // 3) widthMode 검증
+      if (op.widthMode && op.widthMode !== "fit_cell") {
+        rejectedOps.push({
+          op,
+          reason: `지원되지 않는 widthMode입니다 ('fit_cell'만 허용됨, 요청: ${op.widthMode}).`,
+        });
+        continue;
+      }
+
+      // 4) 대상 표 및 셀 존재/깊이 확인
+      if (context.tablesMeta && context.tablesMeta.length > 0) {
+        const targetTable = context.tablesMeta.find((t) => t.tableIndex === op.tableIndex);
+        if (!targetTable) {
+          rejectedOps.push({
+            op,
+            reason: `대상 표를 찾을 수 없습니다 (tableIndex: ${op.tableIndex}).`,
+          });
+          continue;
+        }
+
+        const currentDepth = targetTable.depth ?? 0;
+        if (currentDepth >= 2) {
+          rejectedOps.push({
+            op,
+            reason: `중첩 깊이 초과: 최대 중첩 깊이는 2단계까지만 허용됩니다 (현재 표 depth=${currentDepth}).`,
+          });
+          continue;
+        }
+
+        if (
+          op.row < 0 ||
+          op.row >= targetTable.rowCount ||
+          op.col < 0 ||
+          op.col >= targetTable.colCount
+        ) {
+          rejectedOps.push({
+            op,
+            reason: `대상 셀이 표 범위를 벗어납니다 (tableIndex: ${op.tableIndex}, 요청: [${op.row}, ${op.col}], 표 크기: ${targetTable.rowCount}×${targetTable.colCount}).`,
+          });
+          continue;
+        }
+      }
+    }
+
     // G1: 오버플로 악화 방지 (Anti-Worsening Overflow)
     if (op.type === "apply_text_style") {
       const increasesFont = (op.sizePt !== undefined && op.sizePt > 11) || op.bold === true;
@@ -197,6 +262,11 @@ export function lintOps(
     }
     if ("rows" in op && Array.isArray(op.rows)) {
       op.rows = op.rows.map((row: string[]) => row.map((c: string) => sanitizeMarkdown(c)));
+    }
+    if ("data" in op && Array.isArray((op as any).data)) {
+      (op as any).data = (op as any).data.map((row: string[]) =>
+        Array.isArray(row) ? row.map((c: string) => sanitizeMarkdown(c)) : row
+      );
     }
     if ("cells" in op && Array.isArray(op.cells)) {
       op.cells = op.cells.map((c: string) => sanitizeMarkdown(c));

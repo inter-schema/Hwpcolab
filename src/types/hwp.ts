@@ -18,6 +18,9 @@ export interface TableCoordinateMeta {
   ctrl: number;       // for create.js (.hwp)
   rowCount: number;
   colCount: number;
+  parentTableIndex?: number;
+  parentCell?: { row: number; col: number };
+  depth?: number;
   cells: Array<{
     idx: number;
     row: number;

@@ -1,4 +1,5 @@
 import type { CellBBox, TableCoordinateMeta } from "../types/hwp.ts";
+import { syncHwpxTableIndex } from "./hwpxTableIndex.ts";
 
 export interface PageGeometry {
   width: number;
@@ -115,7 +116,18 @@ export class RhwpDocumentWrapper {
     }
 
     // Sweep 3: Index tables & cell bboxes
-    wrapper.tablesMeta = wrapper.indexAllTables();
+    const topTables = wrapper.indexAllTables();
+    const isHwpx = fileBytes.length >= 2 && fileBytes[0] === 0x50 && fileBytes[1] === 0x4b;
+    if (isHwpx) {
+      try {
+        wrapper.tablesMeta = syncHwpxTableIndex(fileBytes, topTables);
+      } catch (e) {
+        console.warn("[rhwpEngine] Failed to sync HWPX table index:", e);
+        wrapper.tablesMeta = topTables.map((t) => ({ ...t, depth: 0 }));
+      }
+    } else {
+      wrapper.tablesMeta = topTables.map((t) => ({ ...t, depth: 0 }));
+    }
 
     return wrapper;
   }

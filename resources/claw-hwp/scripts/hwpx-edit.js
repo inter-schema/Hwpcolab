@@ -1149,10 +1149,7 @@ const FALLBACK_TBL_META = `<hp:sz width="42520" widthRelTo="ABSOLUTE" height="41
 const FALLBACK_CELL_ATTRS = ` name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="1"`;
 const FALLBACK_CELL_INNER = `<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0"><hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="0"><hp:t></hp:t></hp:run></hp:p></hp:subList><hp:cellAddr colAddr="0" rowAddr="0"/><hp:cellSpan colSpan="1" rowSpan="1"/><hp:cellSz width="5155" height="2075"/><hp:cellMargin left="0" right="0" top="0" bottom="0"/>`;
 
-function opInsertTable(doc, index, rows, cols, cells) {
-  if (!Number.isInteger(rows) || rows < 1) throw new Error('insert_table: rows must be a positive integer');
-  if (!Number.isInteger(cols) || cols < 1) throw new Error('insert_table: cols must be a positive integer');
-
+function buildTableXml(doc, rows, cols, cells, options = {}) {
   const tables = doc.tables();
   const hasSource = tables.length > 0;
 
@@ -1217,18 +1214,18 @@ function opInsertTable(doc, index, rows, cols, cells) {
     tblMeta = FALLBACK_TBL_META;
   }
 
-  // Size the new table to fit the page. Cloning a source table inherits its
-  // per-cell width, which OVERFLOWS when the new table has more columns than the
-  // source (GT 2026-06-18: a 4-col table cloning a 3-col table's 56mm cells →
-  // 4×56 = 224mm cellSz-sum vs a 168mm <hp:sz> → inconsistent, so Hancom uses the
-  // sum and runs off the page). Rescale every column to an equal width that fits
-  // min(source table width, page text width), and make <hp:sz> match the sum so
-  // column widths and table width stay consistent.
+  // Size the new table to fit the page or cell.
   {
-    const pageW = pageTextWidth(doc, srcSection);
-    const szM = tblMeta.match(/<hp:sz\b[^>]*\bwidth="(\d+)"/);
-    const srcTableW = szM && Number(szM[1]) > 0 ? Number(szM[1]) : pageW;
-    const cellW = Math.max(1, Math.round(Math.min(srcTableW, pageW) / cols));
+    let targetW;
+    if (options.totalWidth != null && options.totalWidth > 0) {
+      targetW = options.totalWidth;
+    } else {
+      const pageW = pageTextWidth(doc, srcSection);
+      const szM = tblMeta.match(/<hp:sz\b[^>]*\bwidth="(\d+)"/);
+      const srcTableW = szM && Number(szM[1]) > 0 ? Number(szM[1]) : pageW;
+      targetW = Math.min(srcTableW, pageW);
+    }
+    const cellW = Math.max(1, Math.round(targetW / cols));
     cellTemplateInner = cellTemplateInner.replace(/(<hp:cellSz\b[^>]*\bwidth=")\d+(")/, `$1${cellW}$2`);
     tblMeta = tblMeta.replace(/(<hp:sz\b[^>]*\bwidth=")\d+(")/, `$1${cellW * cols}$2`);
   }
@@ -1247,11 +1244,19 @@ function opInsertTable(doc, index, rows, cols, cells) {
       if (/<hp:cellAddr\b/.test(cellInner)) {
         cellInner = cellInner.replace(/<hp:cellAddr\s+[^>]*\/?>/, `<hp:cellAddr colAddr="${c}" rowAddr="${r}"/>`);
       } else {
-        cellInner = cellInner.replace(/<\/hp:subList>/, `</hp:subList><hp:cellAddr colAddr="${c}" rowAddr="${r}"/>`);
+        cellInner = cellInner.replace(/<\/hp:subList>/, `<\/hp:subList><hp:cellAddr colAddr="${c}" rowAddr="${r}"/>`);
       }
       // cellSpan → 1×1 (drop any inherited merge)
       if (/<hp:cellSpan\b/.test(cellInner)) {
         cellInner = cellInner.replace(/<hp:cellSpan\s+[^>]*\/?>/, '<hp:cellSpan colSpan="1" rowSpan="1"/>');
+      }
+      let cellAttrs = cellTemplate.attrs;
+      if (options.headerRow !== undefined) {
+        if (r === 0 && options.headerRow) {
+          cellAttrs = setOrAddAttr(cellAttrs, 'header', '1');
+        } else if (r === 0 && !options.headerRow) {
+          cellAttrs = setOrAddAttr(cellAttrs, 'header', '0');
+        }
       }
       let tc = `<hp:tc${cellTemplate.attrs}>${cellInner}</hp:tc>`;
       tc = freshenIds(tc);
@@ -1261,19 +1266,33 @@ function opInsertTable(doc, index, rows, cols, cells) {
   }
 
   let newTblAttrs = srcTblAttrs;
+  if (options.freshenTableId) {
+    if (/\sid="\d+"/.test(newTblAttrs)) {
+      newTblAttrs = newTblAttrs.replace(/\sid="\d+"/, ` id="${freshId()}"`);
+    } else if (/id="\d+"/.test(newTblAttrs)) {
+      newTblAttrs = newTblAttrs.replace(/id="\d+"/, `id="${freshId()}"`);
+    } else {
+      newTblAttrs = ` id="${freshId()}"` + newTblAttrs;
+    }
+  }
   if (/rowCnt="\d+"/.test(newTblAttrs)) newTblAttrs = newTblAttrs.replace(/rowCnt="\d+"/, `rowCnt="${rows}"`);
   else newTblAttrs = ` rowCnt="${rows}"` + newTblAttrs;
   if (/colCnt="\d+"/.test(newTblAttrs)) newTblAttrs = newTblAttrs.replace(/colCnt="\d+"/, `colCnt="${cols}"`);
   else newTblAttrs = ` colCnt="${cols}"` + newTblAttrs;
 
   const newTbl = `<hp:tbl${newTblAttrs}>${tblMeta}${builtRows.join('')}</hp:tbl>`;
+  return { tblXml: newTbl, srcPara, srcParaAttrs, srcSection };
+}
 
-  // Build the wrapper paragraph holding the new table. When we have a source
-  // paragraph, clone its run/ctrl wrapping (which Hancom requires for body
-  // tables). When we don't (fallback path), wrap the table in a minimal run
-  // with a textWrap-friendly ctrl env.
+function opInsertTable(doc, index, rows, cols, cells) {
+  if (!Number.isInteger(rows) || rows < 1) throw new Error('insert_table: rows must be a positive integer');
+  if (!Number.isInteger(cols) || cols < 1) throw new Error('insert_table: cols must be a positive integer');
+
+  const { tblXml: newTbl, srcPara, srcParaAttrs } = buildTableXml(doc, rows, cols, cells);
+
   let newPara;
   if (srcPara) {
+    const tables = doc.tables();
     const tblOffsetInPara = tables[0].el.start - srcPara.openEnd;
     const tblLen = tables[0].el.end - tables[0].el.start;
     const paraInnerWithNewTbl =
@@ -1281,10 +1300,6 @@ function opInsertTable(doc, index, rows, cols, cells) {
     const newParaAttrs = srcParaAttrs.replace(/\sid="\d+"/, ` id="${freshId()}"`);
     newPara = `<hp:p${newParaAttrs}>${dropLinesegs(paraInnerWithNewTbl)}</hp:p>`;
   } else {
-    // Hancom's own table-bearing paragraphs put <hp:tbl> DIRECTLY inside
-    // <hp:run> — wrapping it in <hp:ctrl> here (which is what we used to
-    // do) made the file unopenable in 한컴독스, even though the table XML
-    // looked structurally fine.
     const wrapperPAttrs = ` id="${freshId()}" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"`;
     const wrapperRun = `<hp:run charPrIDRef="0">${newTbl}</hp:run>`;
     newPara = `<hp:p${wrapperPAttrs}>${wrapperRun}</hp:p>`;
@@ -1309,6 +1324,127 @@ function opInsertTable(doc, index, rows, cols, cells) {
     doc.write(target.section, xml.slice(0, target.el.end) + newPara + xml.slice(target.el.end));
   }
   return { inserted: true, rows, cols, afterIndex: index };
+}
+
+function getTableDepth(doc, tableIndex) {
+  let targetDepth = 0;
+  let currentIdx = 0;
+  for (const name of doc.sectionNames()) {
+    const xml = doc.read(name);
+    const walk = (s, depth) => {
+      for (const el of scanTopLevel(s, 'hp:tbl')) {
+        if (currentIdx === tableIndex) {
+          targetDepth = depth;
+        }
+        currentIdx++;
+        walk(el.inner, depth + 1);
+      }
+    };
+    walk(xml, 0);
+  }
+  return targetDepth;
+}
+
+function opInsertNestedTable(doc, opts) {
+  if (!opts || typeof opts !== 'object') throw new Error('insert_nested_table: options object required');
+  const tableIndex = opts.table !== undefined ? opts.table : opts.tableIndex;
+  if (!Number.isInteger(tableIndex) || tableIndex < 0) {
+    throw new Error('insert_nested_table: table must be a non-negative integer');
+  }
+
+  const allTables = doc.tablesDeep();
+  if (tableIndex >= allTables.length) {
+    throw new Error(`insert_nested_table: table index ${tableIndex} out of range (found ${allTables.length})`);
+  }
+
+  // Check nesting depth limit (depth <= 2; reject if target table depth >= 2)
+  const targetDepth = getTableDepth(doc, tableIndex);
+  if (targetDepth >= 2) {
+    throw new Error(`insert_nested_table: nesting depth limit exceeded (current depth is ${targetDepth}, max allowed parent depth is 1)`);
+  }
+
+  const rows = opts.rows;
+  const cols = opts.cols;
+  if (!Number.isInteger(rows) || rows < 1 || rows > 8) {
+    throw new Error(`insert_nested_table: rows must be an integer between 1 and 8 (got ${rows})`);
+  }
+  if (!Number.isInteger(cols) || cols < 1 || cols > 8) {
+    throw new Error(`insert_nested_table: cols must be an integer between 1 and 8 (got ${cols})`);
+  }
+
+  const row = opts.row;
+  const col = opts.col;
+  if (!Number.isInteger(row) || row < 0) throw new Error('insert_nested_table: row must be a non-negative integer');
+  if (!Number.isInteger(col) || col < 0) throw new Error('insert_nested_table: col must be a non-negative integer');
+
+  const { section, el } = allTables[tableIndex];
+  const trList = scanTopLevel(el.inner, 'hp:tr');
+  if (row >= trList.length) throw new Error(`insert_nested_table: row ${row} out of range (table has ${trList.length} rows)`);
+  const tcList = scanTopLevel(trList[row].inner, 'hp:tc');
+  if (col >= tcList.length) throw new Error(`insert_nested_table: col ${col} out of range (row has ${tcList.length} cells)`);
+
+  const tc = tcList[col];
+  const subs = scanTopLevel(tc.inner, 'hp:subList');
+  if (!subs.length) throw new Error('insert_nested_table: target cell has no <hp:subList>');
+  const sub = subs[0];
+
+  const widthMode = opts.widthMode || 'fit_cell';
+  let targetWidth = null;
+  if (widthMode === 'fit_cell') {
+    const cw = cellContentWidth(doc, tableIndex, row, col);
+    if (cw && cw > 100) {
+      targetWidth = cw;
+    }
+  }
+
+  const cellsData = opts.cells || opts.data;
+  const { tblXml: nestedTblXml } = buildTableXml(doc, rows, cols, cellsData, {
+    totalWidth: targetWidth,
+    freshenTableId: true,
+    headerRow: opts.headerRow,
+  });
+
+  const ps = scanTopLevel(sub.inner, 'hp:p');
+  let newSubInner;
+
+  if (ps.length === 0) {
+    const wrapperP = `<hp:p id="${freshId()}" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="0">${nestedTblXml}</hp:run></hp:p>`;
+    newSubInner = wrapperP;
+  } else {
+    const lastP = ps[ps.length - 1];
+    const textNodes = (lastP.inner.match(/<hp:t>([\s\S]*?)<\/hp:t>/g) || []).map((x) => x.replace(/<\/?hp:t>/g, ''));
+    const hasText = textNodes.some((t) => t.trim().length > 0);
+    const hasOtherCtrl = /<hp:(?:tbl|pic|drawText|chart|shape)\b/.test(lastP.inner);
+
+    const charPrId = (lastP.inner.match(/charPrIDRef="(\d+)"/) || [, '0'])[1];
+    const paraPrId = (lastP.inner.match(/paraPrIDRef="(\d+)"/) || [, '0'])[1];
+
+    if (!hasText && !hasOtherCtrl) {
+      // Empty paragraph: place nested table in this paragraph's run
+      const newRun = `<hp:run charPrIDRef="${charPrId}">${nestedTblXml}</hp:run>`;
+      let newPInner;
+      if (/<hp:run\b/.test(lastP.inner)) {
+        newPInner = lastP.inner.replace(/<hp:run\b[\s\S]*?<\/hp:run>/, newRun);
+      } else {
+        newPInner = newRun;
+      }
+      const newP = `<hp:p${lastP.attrs}>${dropLinesegs(newPInner)}</hp:p>`;
+      newSubInner = spliceEl(sub.inner, lastP, newP);
+    } else {
+      // Cell already has text or elements: append a new paragraph holding the nested table
+      const newP = `<hp:p id="${freshId()}" paraPrIDRef="${paraPrId}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0"><hp:run charPrIDRef="${charPrId}">${nestedTblXml}</hp:run></hp:p>`;
+      newSubInner = sub.inner + newP;
+    }
+  }
+
+  newSubInner = dropLinesegs(newSubInner);
+  const newSub = `<hp:subList${sub.attrs}>${newSubInner}</hp:subList>`;
+  const newTc = `<hp:tc${tc.attrs}>${spliceEl(tc.inner, sub, newSub)}</hp:tc>`;
+  const newRow = `<hp:tr${trList[row].attrs}>${spliceEl(trList[row].inner, tc, newTc)}</hp:tr>`;
+  const newTbl = `<hp:tbl${el.attrs}>${spliceEl(el.inner, trList[row], newRow)}</hp:tbl>`;
+
+  doc.write(section, spliceEl(doc.read(section), el, newTbl));
+  return { inserted: true, table: tableIndex, row, col, rows, cols };
 }
 
 // ── cell-level styling ──────────────────────────────────────────────────────
@@ -4861,6 +4997,7 @@ function applyOp(doc, op) {
     case 'merge_cells': return opMergeCells(doc, op.table, op.mode, op);
     case 'unmerge_cells': return opUnmergeCells(doc, op.table, op.row, op.col);
     case 'insert_table': return opInsertTable(doc, op.index, op.rows, op.cols, op.cells);
+    case 'insert_nested_table': return opInsertNestedTable(doc, op);
     case 'set_cell_background': return opSetCellBackground(doc, op.table, op.row, op.col, op.color);
     case 'set_cell_border': return opSetCellBorder(doc, op.table, op.row, op.col, op.color, op.width, op.sides);
     case 'set_cell_diagonal': return opSetCellDiagonal(doc, op.table, op.row, op.col, op.direction, op.color, op.width);
