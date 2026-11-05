@@ -265,7 +265,7 @@ export const HeaderToolbar: React.FC = () => {
           id="header-ai-settings-btn"
           onClick={() => setSettingsModalOpen(true)}
           className="p-1.5 text-slate-500 hover:bg-slate-100 rounded"
-          title="AI 프로바이더(BAZE / Claude / OpenAI / Gemini / Ollama) 및 프라이버시 설정"
+          title="AI 프로바이더(BAZE / Claude / OpenAI / Gemini / Ollama / 사용자 지정) 및 프라이버시 설정"
         >
           <Settings className="w-4 h-4" />
         </button>

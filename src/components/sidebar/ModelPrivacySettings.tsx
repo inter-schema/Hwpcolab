@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useDocStore } from "../../store/useDocStore";
 import { X, Check, ShieldCheck, Key, Cpu, Globe, Brain } from "lucide-react";
+import { validateCustomEndpoint } from "../../services/agent/endpointPolicy";
+import type { ProviderId, AgentLoopMode } from "../../services/agent/types";
 
 export const ModelPrivacySettings: React.FC = () => {
   const {
@@ -13,9 +15,14 @@ export const ModelPrivacySettings: React.FC = () => {
     customEndpoint,
     autoMaskPii,
     reasoningEffort,
+    agentLoopMode,
+    customName,
+    customSupportsTools,
+    customSendReasoning,
     setProviderSettings,
     setAutoMaskPii,
     setReasoningEffort,
+    setAgentLoopMode,
   } = useDocStore();
 
   const [localProvider, setLocalProvider] = useState(provider);
@@ -24,19 +31,37 @@ export const ModelPrivacySettings: React.FC = () => {
   const [localEndpoint, setLocalEndpoint] = useState(customEndpoint);
   const [localMaskPii, setLocalMaskPii] = useState(autoMaskPii);
   const [localReasoningEffort, setLocalReasoningEffort] = useState(reasoningEffort);
+  const [localLoopMode, setLocalLoopMode] = useState<AgentLoopMode>(agentLoopMode || "legacy");
+  const [localCustomName, setLocalCustomName] = useState(customName || "사용자 지정");
+  const [localCustomSupportsTools, setLocalCustomSupportsTools] = useState(customSupportsTools);
+  const [localCustomSendReasoning, setLocalCustomSendReasoning] = useState(customSendReasoning);
+  const [endpointError, setEndpointError] = useState<string | null>(null);
 
   // Sync state when modal opens
   useEffect(() => {
     if (settingsModalOpen) {
       // Load saved settings from localStorage if available
-      const savedProvider = (localStorage.getItem("hop_provider") as any) || provider;
-      const savedKey = localStorage.getItem(`hop_key_${savedProvider}`) || apiKey;
-      const savedModel = localStorage.getItem(`hop_model_${savedProvider}`) || model;
-      const savedEndpoint =
-        savedProvider === "baze"
-          ? localStorage.getItem("hop_endpoint_baze") || customEndpoint || "https://api.baze.co/v1/gateway/chat/completions"
-          : localStorage.getItem("hop_endpoint_ollama") || customEndpoint;
+      const savedProvider = (localStorage.getItem("hop_provider") as ProviderId) || provider;
+      const savedKey = localStorage.getItem(`hop_key_${savedProvider}`) || (savedProvider === provider ? apiKey : "");
+      const savedModel = localStorage.getItem(`hop_model_${savedProvider}`) || (savedProvider === provider ? model : "");
+      let savedEndpoint = localStorage.getItem(`hop_endpoint_${savedProvider}`) || (savedProvider === provider ? customEndpoint : "");
+      if (!savedEndpoint) {
+        if (savedProvider === "baze") savedEndpoint = "https://api.baze.co/v1/gateway/chat/completions";
+        else if (savedProvider === "ollama") savedEndpoint = "http://127.0.0.1:11434/v1/chat/completions";
+        else if (savedProvider === "openai") savedEndpoint = "https://api.openai.com/v1/chat/completions";
+        else if (savedProvider === "gemini") savedEndpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+      }
       const savedReasoning = (localStorage.getItem("hop_reasoning_effort") as any) || reasoningEffort;
+      const savedLoopMode = (localStorage.getItem("hop_agent_loop_mode") as AgentLoopMode) || agentLoopMode || "legacy";
+      const savedCustomName = localStorage.getItem("hop_custom_name") || customName || "사용자 지정";
+      const savedCustomSupportsTools =
+        localStorage.getItem("hop_custom_supports_tools") !== null
+          ? localStorage.getItem("hop_custom_supports_tools") !== "false"
+          : customSupportsTools;
+      const savedCustomSendReasoning =
+        localStorage.getItem("hop_custom_send_reasoning") !== null
+          ? localStorage.getItem("hop_custom_send_reasoning") === "true"
+          : customSendReasoning;
 
       setLocalProvider(savedProvider);
       setLocalApiKey(savedKey);
@@ -44,6 +69,11 @@ export const ModelPrivacySettings: React.FC = () => {
       setLocalEndpoint(savedEndpoint);
       setLocalMaskPii(autoMaskPii);
       setLocalReasoningEffort(savedReasoning);
+      setLocalLoopMode(savedLoopMode);
+      setLocalCustomName(savedCustomName);
+      setLocalCustomSupportsTools(savedCustomSupportsTools);
+      setLocalCustomSendReasoning(savedCustomSendReasoning);
+      setEndpointError(null);
     }
   }, [settingsModalOpen]);
 
@@ -61,33 +91,69 @@ export const ModelPrivacySettings: React.FC = () => {
     if (p === "openai") defaultModel = "gpt-4o";
     if (p === "gemini") defaultModel = "gemini-2.5-pro";
     if (p === "ollama") defaultModel = "qwen2.5:14b";
+    if (p === "custom") defaultModel = "custom-model";
     setLocalModel(localStorage.getItem(`hop_model_${p}`) || defaultModel);
 
     if (p === "baze") {
       setLocalEndpoint(localStorage.getItem("hop_endpoint_baze") || "https://api.baze.co/v1/gateway/chat/completions");
     } else if (p === "ollama") {
       setLocalEndpoint(localStorage.getItem("hop_endpoint_ollama") || "http://127.0.0.1:11434/v1/chat/completions");
+    } else if (p === "custom") {
+      setLocalEndpoint(localStorage.getItem("hop_endpoint_custom") || "http://127.0.0.1:8000/v1/chat/completions");
+      setLocalCustomName(localStorage.getItem("hop_custom_name") || "사용자 지정");
     }
+    setEndpointError(null);
   };
 
   const handleSave = () => {
+    if (localProvider === "custom") {
+      if (!localEndpoint.trim()) {
+        setEndpointError("엔드포인트 URL을 입력해주세요.");
+        return;
+      }
+      const val = validateCustomEndpoint(localEndpoint);
+      if (!val.ok) {
+        setEndpointError(val.reason);
+        return;
+      }
+      if (!localModel.trim()) {
+        setEndpointError("모델 ID를 입력해주세요.");
+        return;
+      }
+    }
+
     localStorage.setItem("hop_provider", localProvider);
     localStorage.setItem(`hop_key_${localProvider}`, localApiKey);
     localStorage.setItem(`hop_model_${localProvider}`, localModel);
     localStorage.setItem("hop_reasoning_effort", localReasoningEffort);
+    localStorage.setItem("hop_agent_loop_mode", localLoopMode);
+
+    let finalEndpoint = localEndpoint;
     if (localProvider === "ollama") {
       localStorage.setItem("hop_endpoint_ollama", localEndpoint);
     } else if (localProvider === "baze") {
       localStorage.setItem("hop_endpoint_baze", localEndpoint);
+    } else if (localProvider === "custom") {
+      const val = validateCustomEndpoint(localEndpoint);
+      finalEndpoint = val.ok ? val.normalized : localEndpoint;
+      localStorage.setItem("hop_endpoint_custom", finalEndpoint);
+      localStorage.setItem("hop_custom_name", localCustomName);
+      localStorage.setItem("hop_custom_supports_tools", String(localCustomSupportsTools));
+      localStorage.setItem("hop_custom_send_reasoning", String(localCustomSendReasoning));
     }
 
     setProviderSettings({
       provider: localProvider,
       apiKey: localApiKey,
       model: localModel,
-      customEndpoint: localEndpoint,
+      customEndpoint: finalEndpoint,
+      customName: localCustomName,
+      customSupportsTools: localCustomSupportsTools,
+      customSendReasoning: localCustomSendReasoning,
+      agentLoopMode: localLoopMode,
     });
     setReasoningEffort(localReasoningEffort);
+    setAgentLoopMode(localLoopMode);
     setAutoMaskPii(localMaskPii);
     setSettingsModalOpen(false);
   };
@@ -99,7 +165,10 @@ export const ModelPrivacySettings: React.FC = () => {
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-2">
             <Cpu className="w-5 h-5 text-indigo-600" />
-            <h2 className="font-bold text-slate-800 text-sm">AI 모델 및 프라이버시 설정</h2>
+            <div>
+              <h2 className="font-bold text-slate-800 text-sm">AI 모델 및 프라이버시 설정</h2>
+              <p className="text-[10px] text-slate-500">BAZE, Claude, OpenAI, Gemini, Ollama 및 OpenAI 호환(사용자 지정) 공급자 지원</p>
+            </div>
           </div>
           <button
             onClick={() => setSettingsModalOpen(false)}
@@ -114,77 +183,168 @@ export const ModelPrivacySettings: React.FC = () => {
           {/* Provider Selection */}
           <div className="flex flex-col gap-1.5">
             <label className="font-semibold text-slate-700">AI 프로바이더 선택</label>
-            <div className="grid grid-cols-5 gap-1 bg-slate-100 p-1 rounded-xl text-center">
-              {(["baze", "claude", "openai", "gemini", "ollama"] as const).map((p) => (
+            <div className="grid grid-cols-6 gap-1 bg-slate-100 p-1 rounded-xl text-center">
+              {(["baze", "claude", "openai", "gemini", "ollama", "custom"] as const).map((p) => (
                 <button
                   key={p}
+                  type="button"
                   onClick={() => handleProviderChange(p)}
-                  className={`py-1.5 px-0.5 rounded-lg font-semibold text-[11px] capitalize transition-all ${
+                  className={`py-1.5 px-0.5 rounded-lg font-semibold text-[10px] capitalize transition-all ${
                     localProvider === p
                       ? "bg-white text-indigo-700 shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  {p === "baze" ? "BAZE" : p === "ollama" ? "Ollama" : p}
+                  {p === "baze" ? "BAZE" : p === "ollama" ? "Ollama" : p === "custom" ? "사용자 지정" : p}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* API Key Input (except for Ollama) */}
-          {localProvider !== "ollama" ? (
-            <div className="flex flex-col gap-1.5">
-              <label className="font-semibold text-slate-700 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <Key className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{localProvider === "baze" ? "BAZE Gateway" : localProvider.toUpperCase()} API 키</span>
-                </span>
-                {localProvider === "baze" && (
-                  <span className="text-[10px] text-indigo-600 font-normal">마인드로직 FactChat/BAZE 전용</span>
+          {/* Custom Provider specific fields */}
+          {localProvider === "custom" ? (
+            <div className="flex flex-col gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-slate-700">공급자 표시명</label>
+                <input
+                  type="text"
+                  value={localCustomName}
+                  onChange={(e) => setLocalCustomName(e.target.value)}
+                  placeholder="예: 사내 vLLM 서버"
+                  className="w-full px-3 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 bg-white"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-slate-700 flex items-center gap-1">
+                  <Globe className="w-3.5 h-3.5 text-slate-500" />
+                  <span>엔드포인트 URL (필수)</span>
+                </label>
+                <input
+                  type="text"
+                  value={localEndpoint}
+                  onChange={(e) => {
+                    setLocalEndpoint(e.target.value);
+                    setEndpointError(null);
+                  }}
+                  placeholder="http://127.0.0.1:8000/v1/chat/completions"
+                  className={`w-full px-3 py-1.5 border rounded-lg focus:outline-none text-slate-800 font-mono text-[11px] bg-white ${
+                    endpointError
+                      ? "border-rose-400 focus:ring-1 focus:ring-rose-500"
+                      : "border-slate-200 focus:ring-1 focus:ring-indigo-500"
+                  }`}
+                />
+                {endpointError && (
+                  <span className="text-[11px] text-rose-600 font-medium">{endpointError}</span>
                 )}
-              </label>
-              <input
-                type="password"
-                value={localApiKey}
-                onChange={(e) => setLocalApiKey(e.target.value)}
-                placeholder={localProvider === "baze" ? "baze_..." : "sk-..."}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800"
-              />
-              <span className="text-[10px] text-slate-400">
-                API 키는 로컬 PC에만 안전하게 저장되며 외부로 유출되지 않습니다.
-              </span>
+                <span className="text-[10px] text-slate-400">
+                  https:// 또는 루프백/사설망(127.0.0.1, ::1, 10.x, 192.168.x 등) http:// 만 허용됩니다. (/chat/completions 자동 보정)
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-slate-700 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Key className="w-3.5 h-3.5 text-slate-500" />
+                    <span>API 키 (선택 사항)</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-normal">인증 불필요 시 비워두세요</span>
+                </label>
+                <input
+                  type="password"
+                  value={localApiKey}
+                  onChange={(e) => setLocalApiKey(e.target.value)}
+                  placeholder="선택 사항 (Bearer 토큰)"
+                  className="w-full px-3 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 bg-white"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 pt-1 border-t border-slate-200">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={localCustomSupportsTools}
+                    onChange={(e) => setLocalCustomSupportsTools(e.target.checked)}
+                    className="w-4 h-4 accent-indigo-600 cursor-pointer"
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-slate-800 text-[11px]">도구 호출(Tool Calling) 지원</span>
+                    <span className="text-[10px] text-slate-500">미지원 시 단일 샷(Single-shot) 모드로 실행됩니다.</span>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={localCustomSendReasoning}
+                    onChange={(e) => setLocalCustomSendReasoning(e.target.checked)}
+                    className="w-4 h-4 accent-indigo-600 cursor-pointer"
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-slate-800 text-[11px]">reasoning_effort 파라미터 전송</span>
+                    <span className="text-[10px] text-slate-500">서버가 reasoning_effort 미지원 시 400 방지를 위해 해제하세요.</span>
+                  </div>
+                </label>
+              </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-1.5">
-              <label className="font-semibold text-slate-700 flex items-center gap-1">
-                <Globe className="w-3.5 h-3.5 text-slate-500" />
-                <span>Ollama 엔드포인트 URL</span>
-              </label>
-              <input
-                type="text"
-                value={localEndpoint}
-                onChange={(e) => setLocalEndpoint(e.target.value)}
-                placeholder="http://127.0.0.1:11434/v1/chat/completions"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800"
-              />
-            </div>
-          )}
+            <>
+              {/* API Key Input (except for Ollama) */}
+              {localProvider !== "ollama" ? (
+                <div className="flex flex-col gap-1.5">
+                  <label className="font-semibold text-slate-700 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <Key className="w-3.5 h-3.5 text-slate-500" />
+                      <span>{localProvider === "baze" ? "BAZE Gateway" : localProvider.toUpperCase()} API 키</span>
+                    </span>
+                    {localProvider === "baze" && (
+                      <span className="text-[10px] text-indigo-600 font-normal">마인드로직 FactChat/BAZE 전용</span>
+                    )}
+                  </label>
+                  <input
+                    type="password"
+                    value={localApiKey}
+                    onChange={(e) => setLocalApiKey(e.target.value)}
+                    placeholder={localProvider === "baze" ? "baze_..." : "sk-..."}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800"
+                  />
+                  <span className="text-[10px] text-slate-400">
+                    API 키는 로컬 PC에만 안전하게 저장되며 외부로 유출되지 않습니다.
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <label className="font-semibold text-slate-700 flex items-center gap-1">
+                    <Globe className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Ollama 엔드포인트 URL</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={localEndpoint}
+                    onChange={(e) => setLocalEndpoint(e.target.value)}
+                    placeholder="http://127.0.0.1:11434/v1/chat/completions"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800"
+                  />
+                </div>
+              )}
 
-          {/* BAZE Custom Endpoint */}
-          {localProvider === "baze" && (
-            <div className="flex flex-col gap-1.5">
-              <label className="font-semibold text-slate-700 flex items-center gap-1">
-                <Globe className="w-3.5 h-3.5 text-slate-500" />
-                <span>게이트웨이 엔드포인트 URL</span>
-              </label>
-              <input
-                type="text"
-                value={localEndpoint}
-                onChange={(e) => setLocalEndpoint(e.target.value)}
-                placeholder="https://api.baze.co/v1/gateway/chat/completions"
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 font-mono text-[11px]"
-              />
-            </div>
+              {/* BAZE Custom Endpoint */}
+              {localProvider === "baze" && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="font-semibold text-slate-700 flex items-center gap-1">
+                    <Globe className="w-3.5 h-3.5 text-slate-500" />
+                    <span>게이트웨이 엔드포인트 URL</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={localEndpoint}
+                    onChange={(e) => setLocalEndpoint(e.target.value)}
+                    placeholder="https://api.baze.co/v1/gateway/chat/completions"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 font-mono text-[11px]"
+                  />
+                </div>
+              )}
+            </>
           )}
 
           {/* Model Name */}
@@ -217,6 +377,59 @@ export const ModelPrivacySettings: React.FC = () => {
               placeholder="모델 식별자"
               className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800"
             />
+          </div>
+
+          {/* Agent Loop Mode Radio */}
+          <div className="flex flex-col gap-1.5 p-3 bg-indigo-50/40 border border-indigo-100 rounded-xl">
+            <label className="font-semibold text-slate-800 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Cpu className="w-4 h-4 text-indigo-600" />
+                <span>에이전트 루프 방식</span>
+              </span>
+              <span className="text-[10px] text-indigo-600 font-medium">
+                {localLoopMode === "v2" ? "개선 루프 (베타)" : "기존 루프"}
+              </span>
+            </label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <label
+                className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
+                  localLoopMode === "legacy"
+                    ? "bg-white border-indigo-500 shadow-xs text-indigo-900 font-semibold"
+                    : "bg-white/60 border-slate-200 text-slate-600 hover:bg-white"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="agentLoopMode"
+                  value="legacy"
+                  checked={localLoopMode === "legacy"}
+                  onChange={() => setLocalLoopMode("legacy")}
+                  className="accent-indigo-600 cursor-pointer"
+                />
+                <span className="text-[11px]">기존 루프 (기본·검증됨)</span>
+              </label>
+
+              <label
+                className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
+                  localLoopMode === "v2"
+                    ? "bg-white border-indigo-500 shadow-xs text-indigo-900 font-semibold"
+                    : "bg-white/60 border-slate-200 text-slate-600 hover:bg-white"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="agentLoopMode"
+                  value="v2"
+                  checked={localLoopMode === "v2"}
+                  onChange={() => setLocalLoopMode("v2")}
+                  className="accent-indigo-600 cursor-pointer"
+                />
+                <span className="text-[11px]">개선 루프 (베타)</span>
+              </label>
+            </div>
+            <span className="text-[10px] text-slate-500 mt-0.5">
+              베타 기능입니다. 문제가 생기면 기존 루프로 되돌리세요.
+            </span>
           </div>
 
           {/* Reasoning Effort Selector */}

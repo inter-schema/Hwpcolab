@@ -5,8 +5,10 @@ import { UnifiedOp, DiffItem } from "../types/operations";
 import { SelectionTarget, TableCoordinateMeta, OpenedDocSession, DirectEditingTarget } from "../types/hwp";
 import { ExcludedRegion } from "../types/privacy";
 import { OpTranslator } from "../core/opTranslator";
+import { buildTablesMetaForHwpx, mapInspectedTables } from "../core/hwpxTableIndex";
 import { ParsedAttachment } from "../core/multiFileParser";
 import { PrivacySessionMasker } from "../core/privacyMasker";
+import type { ProviderId, AgentLoopMode } from "../services/agent/types";
 
 export { type DiffItem };
 
@@ -43,12 +45,16 @@ interface DocState {
   licenseModalOpen: boolean;
   aiApplyMode: "diff_review" | "immediate";
   settingsModalOpen: boolean;
-  provider: "claude" | "openai" | "gemini" | "ollama" | "baze";
+  provider: ProviderId;
   apiKey: string;
   model: string;
   customEndpoint: string;
   reasoningEffort: "none" | "low" | "medium" | "high" | "xhigh";
   sessionMasker: PrivacySessionMasker;
+  agentLoopMode: AgentLoopMode;
+  customName: string;
+  customSupportsTools: boolean;
+  customSendReasoning: boolean;
 
   // Actions
   setSidebarOpen: (open: boolean) => void;
@@ -60,11 +66,16 @@ interface DocState {
   setAiApplyMode: (mode: "diff_review" | "immediate") => void;
   setSettingsModalOpen: (open: boolean) => void;
   setReasoningEffort: (effort: "none" | "low" | "medium" | "high" | "xhigh") => void;
+  setAgentLoopMode: (mode: AgentLoopMode) => void;
   setProviderSettings: (settings: {
-    provider?: "claude" | "openai" | "gemini" | "ollama" | "baze";
+    provider?: ProviderId;
     apiKey?: string;
     model?: string;
     customEndpoint?: string;
+    customName?: string;
+    customSupportsTools?: boolean;
+    customSendReasoning?: boolean;
+    agentLoopMode?: AgentLoopMode;
   }) => void;
   setZoom: (zoom: number) => void;
   setCurrentPage: (page: number) => void;
@@ -149,6 +160,20 @@ export const useDocStore = create<DocState>((set, get) => ({
       (localStorage.getItem("hop_reasoning_effort") as any)) ||
     "high",
   sessionMasker: new PrivacySessionMasker(),
+  agentLoopMode:
+    (typeof localStorage !== "undefined" && (localStorage.getItem("hop_agent_loop_mode") as AgentLoopMode)) ||
+    "legacy",
+  customName:
+    (typeof localStorage !== "undefined" && localStorage.getItem("hop_custom_name")) ||
+    "사용자 지정",
+  customSupportsTools:
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem("hop_custom_supports_tools") !== "false"
+      : true,
+  customSendReasoning:
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem("hop_custom_send_reasoning") === "true"
+      : false,
 
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
@@ -170,6 +195,12 @@ export const useDocStore = create<DocState>((set, get) => ({
       localStorage.setItem("hop_reasoning_effort", reasoningEffort);
     }
     set({ reasoningEffort });
+  },
+  setAgentLoopMode: (agentLoopMode) => {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("hop_agent_loop_mode", agentLoopMode);
+    }
+    set({ agentLoopMode });
   },
   setProviderSettings: (settings) => set((s) => ({ ...s, ...settings })),
   setZoom: (zoom) => {
@@ -225,6 +256,8 @@ export const useDocStore = create<DocState>((set, get) => ({
       pendingDiffs: [],
       selection: null,
       excludedRegions: [],
+      docMarkdown: "",
+      tablesMeta: [],
       sessionMasker: new PrivacySessionMasker(),
     });
     await hopBridge.loadDocumentIntoHop(bytes, session.file_name);
@@ -264,6 +297,8 @@ export const useDocStore = create<DocState>((set, get) => ({
       pendingDiffs: [],
       selection: null,
       excludedRegions: [],
+      docMarkdown: "",
+      tablesMeta: [],
       sessionMasker: new PrivacySessionMasker(),
     });
     await hopBridge.loadDocumentIntoHop(bytes, fileName);
@@ -350,45 +385,48 @@ export const useDocStore = create<DocState>((set, get) => ({
   },
 
   refreshDocMarkdown: async () => {
-    const { stagingPath } = get();
+    const { stagingPath, isHwpx, fileBytes } = get();
     if (!stagingPath) return;
     try {
       const md = await invoke<string>("extract_markdown", { filePath: stagingPath });
       set({ docMarkdown: md });
     } catch {}
-    try {
-      const inspected = await invoke<any>("inspect_document", { filePath: stagingPath });
-      if (inspected && Array.isArray(inspected.tables)) {
-        const existingMeta = get().tablesMeta;
-        const merged: TableCoordinateMeta[] = inspected.tables.map((t: any, idx: number) => {
-          const prevTable = existingMeta[idx];
-          return {
-            tableIndex: idx,
-            sec: t.sec ?? prevTable?.sec ?? 0,
-            para: t.para ?? prevTable?.para ?? 0,
-            ctrl: t.ctrl ?? prevTable?.ctrl ?? 0,
-            rowCount: t.rowCount ?? prevTable?.rowCount ?? 0,
-            colCount: t.colCount ?? prevTable?.colCount ?? 0,
-            cells: Array.isArray(t.cells)
-              ? t.cells.map((c: any) => {
-                  const prevCell = prevTable?.cells.find((pc) => pc.row === c.row && pc.col === c.col);
-                  return {
-                    idx: c.idx ?? prevCell?.idx ?? 0,
-                    row: c.row,
-                    col: c.col,
-                    rowSpan: c.rowSpan ?? 1,
-                    colSpan: c.colSpan ?? 1,
-                    text: c.text ?? prevCell?.text ?? "",
-                    bbox: prevCell?.bbox,
-                  };
-                })
-              : prevTable?.cells || [],
-          };
-        });
-        const enriched = hopBridge.enrichTablesMetaWithBboxes(merged);
-        set({ tablesMeta: enriched });
+
+    const isHwpxDoc = isHwpx ?? /\.hwpx$/i.test(stagingPath);
+    if (isHwpxDoc) {
+      try {
+        let bytes = fileBytes;
+        if (!bytes || bytes.byteLength === 0) {
+          try {
+            const arr = await invoke<number[]>("read_file_bytes", { filePath: stagingPath });
+            bytes = new Uint8Array(arr);
+            set({ fileBytes: bytes });
+          } catch (e) {
+            console.warn("[DocStore] Failed to read bytes from stagingPath:", e);
+          }
+        }
+        if (bytes && bytes.byteLength > 0) {
+          const existingMeta = get().tablesMeta;
+          const parsed = buildTablesMetaForHwpx(bytes, existingMeta);
+          const enriched = hopBridge.enrichTablesMetaWithBboxes(parsed);
+          set({ tablesMeta: enriched });
+        }
+      } catch (err) {
+        console.warn("[DocStore] Failed to build tablesMeta for HWPX:", err);
       }
-    } catch {}
+    } else {
+      try {
+        const inspected = await invoke<any>("inspect_document", { filePath: stagingPath });
+        if (inspected && Array.isArray(inspected.tables)) {
+          const existingMeta = get().tablesMeta;
+          const merged = mapInspectedTables(inspected.tables, existingMeta);
+          const enriched = hopBridge.enrichTablesMetaWithBboxes(merged);
+          set({ tablesMeta: enriched });
+        }
+      } catch (err) {
+        console.warn("[DocStore] Failed to refresh tablesMeta for HWP:", err);
+      }
+    }
   },
 
   toggleExcludeSelection: () => {
