@@ -709,3 +709,66 @@ Test-authoring corrections recorded for transparency:
 - The hidden editor textarea is off-screen, so UIA `set-value` is rejected; typing after focusing the canvas works. This is a test-tooling constraint, not an app defect.
 - No product defect was found, so no application code was changed by this smoke run.
 - Still not covered: an installed MSVC/NSIS/MSI bundle, file-association launch from Explorer, real provider credentials, and sustained/long-document behavior.
+
+
+## 25. Resolution of 3 user-reported defects & desktop packaging verification — 2026-11-05
+
+### Defects addressed
+
+1. **Defect 1: HWP font language automatic resolution and multi-slot display (`rhwp#8140`)**:
+   - *Problem*: In `대표` (`all`) mode, changing font family only affected the primary slot or failed to propagate across all 7 HWP language tables (`hangul`, `latin`, `hanja`, `japanese`, `other`, `symbol`, `user`), causing script-specific font mismatches. Furthermore, the toolbar font selector did not automatically reflect the font of the character under the collapsed cursor when moving between scripts.
+   - *Fix*:
+     - Created `third_party/rhwp/rhwp-studio/src/core/font-ids.ts` and `src/hop-host/core/font-ids.test.ts` to compute font IDs across all 7 language tables.
+     - Updated `input-handler.ts` and `input-handler-text.ts` to classify the character script at the cursor and attach `activeFontLang` to cursor formatting state.
+     - Updated `src/hop-host/ui/toolbar.ts` to dynamically resolve the displayed font family from `fontFamilies[activeFontLang]` when `fontLang` is set to `'all'` (`대표`).
+     - Added NanumGothic Bold/ExtraBold WOFF2 font assets to `assets/fonts/`.
+
+2. **Defect 2: File opening routing failures across UI surfaces**:
+   - *Problem*: Clicking header `열기`, pressing `Ctrl+O` in browser mode, or selecting HOP Menu `파일 > 열기` failed with missing event bindings or `"Unknown command: pick_local_file"` errors.
+   - *Fix*:
+     - In `src/hop-host/command/commands/file.ts`, added runtime-aware routing (`isDesktopTauriRuntime()`) for file open commands.
+     - Browser mode now triggers the native file picker directly or dispatches `#header-hwp-file-input` click without throwing.
+     - In `HopEditorHost.tsx` and `useDocStore.ts`, added unified `open-document-bytes` event handling to sync file metadata (`#header-doc-filename`, staging paths) between HOP WASM runtime and React host.
+
+3. **Defect 3: Toolbar dropdown menu clipping, focus loss, and empty paragraph IME regression**:
+   - *Problem*:
+     - Dropdown menus (`#font-name`, `#font-lang`, `#style-name`, `#linespacing-select`) were clipped by `.sb-font { overflow: hidden }` in the toolbar layout.
+     - Selecting a font in an empty paragraph lost focus from `textarea[aria-label="문서 편집 입력"]`.
+     - Korean multi-jamo IME composition (`ㅎ` -> `하` -> `한`) in an empty paragraph reverted the font back to `함초롬바탕` on the second stroke.
+   - *Fix*:
+     - In `custom-select.ts` and `custom-select.css`, converted dropdown menus to fixed-position floating overlays rendered via portals, preventing CSS clipping from parent containers while keeping proper bounding box hit-testing.
+     - Ensured custom-select option click restores editor textarea focus immediately.
+     - In `src/hop-host/ui/pending-char-shape-ime.test.ts` and `input-handler-text.ts`, preserved pending character formatting across active IME compositions until composition commits.
+
+### Verification evidence
+
+- **Vitest Unit Tests**: **34 files, 242/242 tests passed** (0 failures).
+  - `src/hop-host/core/font-ids.test.ts`: 3/3 passed.
+  - `src/hop-host/ui/pending-char-shape-ime.test.ts`: 1/1 passed.
+  - `src/hop-host/ui/toolbar.test.ts`: 9/9 passed.
+  - `src/hop-host/ui/custom-select.test.ts`: 10/10 passed.
+  - `src/hop-host/command/commands/file.test.ts`: 17/17 passed.
+- **TypeScript & Build**: `tsc && vite build` clean with **0 errors**.
+- **Playwright E2E Verification (`verify_all_3_fixes.mjs`)**: **17/17 passed (100%)**.
+  - Bug 2.1: Header `#header-hwp-file-input` loads sample HWP (`demo_official_report.hwp`), canvas count = 1, doc filename updated.
+  - Bug 2.1b: 0 console/page errors.
+  - Bug 2.2: `Ctrl+O` in browser mode triggers file open without `pick_local_file` error.
+  - Bug 2.3: HOP Menu `파일 > 열기` with `window.showOpenFilePicker` mock updates both document content and title (`menu_open_check.hwp`).
+  - Bug 2.4: HOP `#file-input` fallback loads HWPX cleanly.
+  - Bug 3.1: `#font-name` custom-select opens visible, unclipped menu (width: 136px, height: 260px; `elementFromPoint` hit-test verified).
+  - Bug 3.1b: `#font-lang`, `#style-name`, `#linespacing-select` open visible, unclipped menus.
+  - Bug 3.2: Selected text font change applies `맑은 고딕` across all 7 language slots (`'가'`, `'A'`, `'1'`).
+  - Bug 3.2b: Line spacing dropdown updates paragraph line spacing to 200%.
+  - Bug 3.3a: Empty paragraph collapsed cursor preserves textarea focus and updates trigger label to `나눔고딕`.
+  - Bug 3.3b: Multi-jamo Korean IME composition (`ㅎ->하->한`, `ㄱ->그->글` + `' Test 99'`) retains `나눔고딕` on all characters with zero reverts.
+  - Bug 1.1: `#font-lang` is `'all'` (`대표`) by default.
+  - Bug 1.2: Moving collapsed cursor to Korean character automatically displays `바탕` in `#font-name` while `#font-lang` remains `'all'`.
+  - Bug 1.3: Moving collapsed cursor to English character automatically displays `궁서` in `#font-name` while `#font-lang` remains `'all'`.
+  - Bug 1.4: Mixed Korean+English selection applies `돋움` across all 7 language slots.
+- **Regression Playwright Suite (`verify_ui_and_gpl.mjs`)**: **23/23 passed (100%)**.
+- **Desktop Packaging & Installers (`npx tauri build` / `npx tauri bundle`)**:
+  - Configured MinGW toolchain (`[local path redacted]
+  - Configured `src-tauri/tauri.conf.json` bundle icons (`icon.ico`, `icon.png`, `icon.icns`).
+  - Generated standalone executable: `src-tauri/target/release/hop-claw.exe` (52,978,999 bytes, valid PE x86_64).
+  - Generated WiX MSI installer: `src-tauri/target/release/bundle/msi/HOP-Claw_0.1.0_x64_en-US.msi` (35,237,888 bytes).
+  - Generated NSIS setup installer: `src-tauri/target/release/bundle/nsis/HOP-Claw_0.1.0_x64-setup.exe` (31,944,950 bytes).

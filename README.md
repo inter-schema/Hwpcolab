@@ -5,6 +5,21 @@ HOP-Claw는 외부 서버에 한글 문서를 업로드하지 않고, 로컬 환
 
 ---
 
+## 📊 현재 프로젝트 상태 (Project Status: 2026-11-05)
+
+- **활성 브랜치**: `codex/beta-hardening-2026-11-05`
+- **통합 대상**: `Beta`
+- **단위 테스트**: **34개 파일, 242개 테스트 전원 통과 (100% Pass, 0 Fail)** (`npm test`)
+- **E2E 및 회귀 검증**:
+  - `verify_all_3_fixes.mjs`: **17/17 통과** (대표 글꼴 자동화, 파일 열기 라우팅, 드롭다운 팝업/IME 조합 유지)
+  - `verify_ui_and_gpl.mjs`: **23/23 통과** (UI 레이아웃, 크기 조절 분할바, GPL v3 모달)
+- **데스크톱 패키징**:
+  - `hop-claw.exe` (x86_64 단독 바이너리, ~50.5 MiB)
+  - `HOP-Claw_0.1.0_x64_en-US.msi` (WiX MSI 인스톨러, ~33.6 MiB)
+  - `HOP-Claw_0.1.0_x64-setup.exe` (NSIS 셋업 인스톨러, ~30.5 MiB)
+
+---
+
 ## 🌟 주요 기능 (Key Features)
 
 1. **오프라인 우선 & 데이터 프라이버시 보호 (Privacy-First)**:
@@ -17,6 +32,7 @@ HOP-Claw는 외부 서버에 한글 문서를 업로드하지 않고, 로컬 환
    - AI가 제안한 변경 사항을 단락/셀 단위로 시각적 비교(Visual Diff)하고 원하는 항목만 선별 반영.
 4. **.hwp & .hwpx 완벽 지원 (Dual-Engine Mutation)**:
    - `@rhwp/core` WASM 기반 렌더링 및 `claw-hwp` 기반 바이트 레벨/OWPML XML 패치.
+   - 7개 HWP 언어 슬롯(한글/영문/한자/일어/기타/기호/사용자) 자동 글꼴 ID 매핑 (`rhwp#8140`).
 5. **다양한 AI 프로바이더 지원**:
    - OpenAI, Anthropic Claude, Google Gemini, BAZE API Gateway, 로컬 Ollama (`127.0.0.1:11434`) 지원.
 
@@ -26,7 +42,7 @@ HOP-Claw는 외부 서버에 한글 문서를 업로드하지 않고, 로컬 환
 
 ### 필수 요구 사항
 - Node.js 20+
-- Rust (Cargo) 및 Tauri v2 환경
+- Rust (Cargo) 및 Tauri v2 환경 (Windows MinGW/GNU 또는 MSVC)
 
 ### 설치 및 개발 실행
 ```bash
@@ -40,14 +56,42 @@ npm install
 # 프론트엔드 개발 서버 실행
 npm run dev
 
-# Tauri 데스크톱 앱 실행
+# Tauri 데스크톱 앱 실행 (개발 모드)
 npm run tauri dev
 ```
 
-### 프로덕션 빌드
+---
+
+## 🧪 테스트 및 품질 검증 가이드 (Testing Guide)
+
 ```bash
-# 데스크톱 바이너리 빌드 (.exe / installer)
-npm run tauri build
+# 1. 단위 테스트 실행 (Vitest)
+npm test
+
+# 2. 타입 검사 및 프론트엔드 빌드 검증
+npm run build
+
+# 3. Playwright E2E 전체 회귀 테스트 실행
+node tests/verify_ui_and_gpl.mjs
+```
+
+---
+
+## 📦 데스크톱 프로덕션 패키징 (Packaging Guide)
+
+Windows 환경에서 MinGW-w64 툴체인을 사용하여 릴리스 실행 파일 및 MSI/NSIS 인스톨러를 생성하는 방법입니다:
+
+```powershell
+# 1. 환경 변수 설정 (Cargo 및 MinGW bin 경로가 PATH에 포함되어야 함)
+. [local path redacted]
+
+# 2. Tauri 릴리스 빌드 및 번들 생성
+npx tauri build
+
+# 생성되는 패키지 아티팩트 위치:
+# - 단독 실행 바이너리: src-tauri/target/release/hop-claw.exe
+# - MSI 인스톨러: src-tauri/target/release/bundle/msi/HOP-Claw_0.1.0_x64_en-US.msi
+# - NSIS 셋업 설치 파일: src-tauri/target/release/bundle/nsis/HOP-Claw_0.1.0_x64-setup.exe
 ```
 
 ---
