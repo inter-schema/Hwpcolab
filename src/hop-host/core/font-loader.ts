@@ -7,6 +7,19 @@ export { REGISTERED_FONTS } from './font-catalog';
 export type { CanvasKitBundledFontSource } from '@/upstream/core';
 
 const CRITICAL_FONTS = new Set(['함초롬바탕', '함초롬돋움']);
+const FACE_LOAD_TIMEOUT_MS = 3000;
+
+function loadFontFaceBounded(face: FontFace): Promise<FontFace> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    face.load(),
+    new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`Font load timeout: ${face.family}`)), FACE_LOAD_TIMEOUT_MS);
+    }),
+  ]).finally(() => {
+    if (timer !== undefined) clearTimeout(timer);
+  });
+}
 const OS_FONT_CANDIDATES = [
   '맑은 고딕', 'Malgun Gothic', '바탕', 'Batang', '돋움', 'Dotum',
   '굴림', 'Gulim', '굴림체', 'GulimChe', '바탕체', 'BatangChe', '궁서', 'Gungsuh',
@@ -56,7 +69,7 @@ export async function loadWebFonts(
           `url("${font.file}") format("${font.format ?? 'woff2'}")`,
           font.unicodeRange ? { unicodeRange: font.unicodeRange } : undefined,
         );
-        document.fonts.add(await face.load());
+        document.fonts.add(await loadFontFaceBounded(face));
       }
       loadedFiles.add(font.file);
     } catch {

@@ -484,8 +484,15 @@ export function onCompositionStart(this: any): void {
       ? { ...this.cursor.getPosition(), charOffset: this.cursor.fnCharOffset }
       : this.cursor.getPosition();
   if (!this.cursor.isInHeaderFooter() && !this.cursor.isInFootnote()) {
+    const pendingBeforeGuide = this.getPendingCharShape?.();
     basePos = this.prepareClickHereInputPosition?.() ?? basePos;
+    if (pendingBeforeGuide) {
+      this.pendingCharShapeAnchor = { ...basePos };
+    }
   }
+  this._compositionPendingCharShape = !this.cursor.isInHeaderFooter() && !this.cursor.isInFootnote()
+    ? (this.getPendingCharShape?.() ? { ...this.getPendingCharShape() } : undefined)
+    : undefined;
   if (!this.canInsertTextInFormMode?.(basePos)) {
     this.textarea.value = '';
     this.isComposing = false;
@@ -518,8 +525,10 @@ export function onCompositionEnd(this: any): void {
   const headerFooterSelectionComposition = this.headerFooterSelectionComposition === true;
   const covered: string = this._compositionCovered || '';
   const fragmentId: number | null = this._compositionFragment;
+  const composedCharShape = this._compositionPendingCharShape;
   this._compositionCovered = '';
   this._compositionFragment = null;
+  this._compositionPendingCharShape = undefined;
 
   this.isComposing = false;
   this.compositionAnchor = null;
@@ -583,7 +592,7 @@ export function onCompositionEnd(this: any): void {
         this.executeOperation({
           kind: 'record',
           command: new InsertTextCommand(
-            anchor, insertedText, undefined, undefined, covered, fragmentId === null ? [] : [fragmentId],
+            anchor, insertedText, undefined, composedCharShape, covered, fragmentId === null ? [] : [fragmentId],
           ),
         });
       } else if (fragmentId !== null) {
@@ -752,6 +761,7 @@ export function onInput(this: any, e?: InputEvent): void {
 
     this.replaceTextAtRaw(this._iosAnchor, this._iosLength, text);
     this._iosLength = charCount(text);
+    this.applyPendingCharShapeToRange?.(this._iosAnchor, this._iosLength);
 
     const boundaryHandled = this.consumeRawTextMutationBeforeCursor();
     this._iosRequiresFullRefresh = this._iosRequiresFullRefresh || boundaryHandled;
@@ -842,10 +852,14 @@ export function onInput(this: any, e?: InputEvent): void {
   }
 
   // 선택 영역이 있으면 먼저 삭제
+  const hadSelection = this.cursor.hasSelection();
+  const pendingBeforeGuide = !hadSelection ? this.getPendingCharShape?.() : undefined;
   let insertPos = this.prepareClickHereInputPosition?.() ?? this.cursor.getPosition();
+  if (pendingBeforeGuide) {
+    this.pendingCharShapeAnchor = { ...insertPos };
+  }
   let refreshClickHereGuide = this.isClickHereGuidePosition?.(insertPos) === true;
   // 선택 영역은 삽입 모드와 똑같이 입력으로 바뀌고, 뒤 글자를 더 덮어쓰지 않는다.
-  const hadSelection = this.cursor.hasSelection();
   if (hadSelection) {
     if (!this.canDeleteSelectionInFormMode?.()) {
       this.textarea.value = '';

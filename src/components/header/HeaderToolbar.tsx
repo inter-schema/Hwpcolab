@@ -77,11 +77,18 @@ export const HeaderToolbar: React.FC = () => {
         accept=".hwp,.hwpx"
         className="hidden"
         onChange={async (e) => {
-          const f = e.target.files?.[0];
+          const input = e.target;
+          const f = input.files?.[0];
           if (!f) return;
-          const bytes = new Uint8Array(await f.arrayBuffer());
-          await openDocumentBytes(bytes, f.name);
-          e.target.value = "";
+          try {
+            const bytes = new Uint8Array(await f.arrayBuffer());
+            await openDocumentBytes(bytes, f.name);
+          } catch (err: any) {
+            console.error("[HeaderToolbar] 파일 열기 실패:", err);
+            alert(`파일 열기에 실패했습니다:\n${err?.message || err}`);
+          } finally {
+            input.value = "";
+          }
         }}
       />
 

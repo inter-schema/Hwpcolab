@@ -1,6 +1,12 @@
 import { isBodyControl } from './picture-hit-policy';
 import { WasmBridge } from '@/core/wasm-bridge';
 import { isCharFormatError, CharFormatRecoveryError } from '@/core/char-format-error';
+import {
+  classifyHwpFontLang,
+  lookupResolvedFontFamilies,
+  resolvePerLangFontIds,
+  resolveUniformFontIds,
+} from '@/core/font-ids';
 import type { DeferredFocusedPagePatch } from '@/core/wasm-bridge';
 import { EventBus } from '@/core/event-bus';
 import { CursorState } from './cursor';
@@ -2089,8 +2095,12 @@ export class InputHandler {
    * 새로 예약할 때 그대로 병합돼(굵게@A + 색@B) 요청한 적 없는 서식이 B 로 샌다. */
   private stagePendingCharShape(props: Partial<CharProperties>): void {
     this.getPendingCharShape();
-    this.pendingCharShape = { ...this.pendingCharShape, ...props };
+    const merged: Partial<CharProperties> = { ...this.pendingCharShape, ...props };
+    if (props.fontIds !== undefined) delete merged.fontId;
+    if (props.fontId !== undefined) delete merged.fontIds;
+    this.pendingCharShape = merged;
     this.pendingCharShapeAnchor = this.cursor.getPosition();
+    this.emitCursorFormatState();
   }
 
   /**
@@ -2124,7 +2134,10 @@ export class InputHandler {
     if (!props) return;
     const to = anchor.charOffset + count;
     applyCharShapeModsToRange(this.wasm, anchor, anchor.charOffset, to, props);
-    this.advancePendingCharShapeAnchor(anchor, { ...anchor, charOffset: to });
+    // IME 조합 중에는 anchor(조합 시작점)가 고정된 채 이전 조합 길이만큼 커서와
+    // pendingCharShapeAnchor가 함께 전진한다. getPendingCharShape()가 이미 현재 커서와
+    // pendingCharShapeAnchor의 일치를 검증했으므로 다음 커서 위치(to)로 정박점을 갱신한다.
+    this.pendingCharShapeAnchor = { ...anchor, charOffset: to };
   }
 
   /**
@@ -2288,6 +2301,7 @@ export class InputHandler {
     // 선택 시작 offset 은 그 자리 글자가 곧 선택 첫 글자다(offset-1 이면 선택 밖을 읽는다).
     // 선택이 없으면 offset이 0인 경우만 그 위치, 아니면 offset-1 위치(커서 앞 글자 기준).
     const queryOffset = sel ? pos.charOffset : (pos.charOffset > 0 ? pos.charOffset - 1 : 0);
+    let base: CharProperties;
     if (pos.parentParaIndex !== undefined) {
       // [#2756] 중첩 표는 최내곽 셀 대상 ...ByPath 로 조회한다. flat controlIndex/cellIndex/
       // cellParaIndex 는 hit-test 가 cellPath[0](최외곽)에서 채우므로 그대로 넘기면 **바깥
@@ -2295,16 +2309,40 @@ export class InputHandler {
       // 정하므로(그리고 실제 적용 ApplyCharFormatCommand 는 이미 ...ByPath 로 안쪽 셀에
       // 적용) 방향이 어긋나 Ctrl+B/I 가 거꾸로 동작하고 툴바 표시도 오답이 된다.
       if ((pos.cellPath?.length ?? 0) > 0) {
-        return this.wasm.getCellCharPropertiesAtByPath(
+        base = this.wasm.getCellCharPropertiesAtByPath(
           pos.sectionIndex, pos.parentParaIndex, JSON.stringify(pos.cellPath), queryOffset,
         );
+      } else {
+        base = this.wasm.getCellCharPropertiesAt(
+          pos.sectionIndex, pos.parentParaIndex, pos.controlIndex!,
+          pos.cellIndex!, pos.cellParaIndex!, queryOffset,
+        );
       }
-      return this.wasm.getCellCharPropertiesAt(
-        pos.sectionIndex, pos.parentParaIndex, pos.controlIndex!,
-        pos.cellIndex!, pos.cellParaIndex!, queryOffset,
-      );
+    } else {
+      base = this.wasm.getCharPropertiesAt(pos.sectionIndex, pos.paragraphIndex, queryOffset);
     }
-    return this.wasm.getCharPropertiesAt(pos.sectionIndex, pos.paragraphIndex, queryOffset);
+
+    const sampleChar = this.getTextAt({ ...pos, charOffset: queryOffset }, 1);
+    const activeFontLang = classifyHwpFontLang(sampleChar);
+    const result: CharProperties = {
+      ...base,
+      ...(activeFontLang !== undefined ? { activeFontLang } : {}),
+    };
+
+    if (!sel) {
+      const pending = this.getPendingCharShape();
+      if (pending) {
+        Object.assign(result, pending);
+        if (pending.fontIds) {
+          const resolvedFamilies = lookupResolvedFontFamilies(this.wasm, pending.fontIds);
+          if (resolvedFamilies) {
+            result.fontFamilies = resolvedFamilies;
+            result.fontFamily = resolvedFamilies[0];
+          }
+        }
+      }
+    }
+    return result;
   }
 
   /** 커서 위치 문단에 문단 서식을 적용한다 */
@@ -5669,10 +5707,12 @@ export class InputHandler {
     const currentCharProps = this.getCharProperties();
     const charProps = pickDefined(currentCharProps, FORMAT_COPY_CHAR_KEYS) as Partial<CharProperties>;
     if (charProps.fontIds === undefined && charProps.fontId === undefined) {
-      const fontFamily = currentCharProps.fontFamily;
-      if (fontFamily) {
-        const fontId = this.wasm.findOrCreateFontId(fontFamily);
-        if (fontId >= 0) charProps.fontId = fontId;
+      if (currentCharProps.fontFamilies?.length === 7) {
+        const fontIds = resolvePerLangFontIds(this.wasm, currentCharProps.fontFamilies);
+        if (fontIds) charProps.fontIds = fontIds;
+      } else if (currentCharProps.fontFamily) {
+        const fontIds = resolveUniformFontIds(this.wasm, currentCharProps.fontFamily);
+        if (fontIds) charProps.fontIds = fontIds;
       }
     }
     const paraProps = normalizeFormatCopyParaProps(

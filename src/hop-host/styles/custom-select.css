@@ -16,9 +16,14 @@
   align-items: stretch;
   min-width: 0;
   height: 22px;
+  overflow: visible;
   vertical-align: middle;
   font-size: var(--font-size-base);
   color: var(--color-text);
+}
+
+.custom-select.open {
+  z-index: 12000;
 }
 
 .custom-select.sb-combo,
@@ -29,6 +34,11 @@
   border: 0;
   background: transparent;
   outline: none;
+  overflow: visible !important;
+}
+
+#style-bar .sb-ls-group {
+  overflow: visible;
 }
 
 .custom-select-trigger {

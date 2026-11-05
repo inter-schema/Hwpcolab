@@ -10,7 +10,7 @@ HOP는 studio host에서 fallback으로 사용할 수 있는 재배포 가능 �
 | `Pretendard-*.woff2` | SIL OFL 1.1 | Pretendard |
 | `NotoSansKR-*.woff2` | SIL OFL 1.1 | Google Fonts |
 | `NotoSerifKR-*.woff2` | SIL OFL 1.1 | Google Fonts |
-| `NanumGothic-Regular.woff2` | SIL OFL 1.1 | Google Fonts |
+| `NanumGothic-*.woff2` | SIL OFL 1.1 | Google Fonts / Fontsource |
 | `NanumMyeongjo-Regular.woff2` | SIL OFL 1.1 | Google Fonts |
 | `NanumGothicCoding-Regular.woff2` | SIL OFL 1.1 | Google Fonts |
 | `GowunBatang-Regular.woff2` | SIL OFL 1.1 | Google Fonts |

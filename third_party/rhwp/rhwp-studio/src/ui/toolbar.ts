@@ -5,6 +5,7 @@ import type { CommandDispatcher } from '@/command/dispatcher';
 import { userSettings } from '@/core/user-settings';
 import type { FontSet } from '@/core/user-settings';
 import { getLocalFonts } from '@/core/local-fonts';
+import { HWP_FONT_LANG_COUNT, recordResolvedFontName, resolveUniformFontIds } from '@/core/font-ids';
 
 import { t } from '../i18n/index.ts';
 type FontMenuCategory = 'all' | 'current' | 'document' | 'fontSets' | 'system';
@@ -283,27 +284,39 @@ export class Toolbar {
 
       const langVal = this.fontLang.value;
       if (langVal === 'all') {
-        // 전체 언어 일괄 적용
-        const fontId = this.wasm.findOrCreateFontId(name);
-        if (fontId >= 0) {
-          this.eventBus.emit('format-char', { fontId } as CharProperties);
+        // [rhwp#8140] 대표 선택 시 7개 언어 테이블 각각에서 ID 확보
+        const fontIds = resolveUniformFontIds(this.wasm, name);
+        if (fontIds) {
+          this.lastFontFamilies = Array(HWP_FONT_LANG_COUNT).fill(name) as string[];
+          this.eventBus.emit('format-char', { fontIds } as CharProperties);
         }
       } else {
         // 특정 언어만 적용 (fontIds 배열)
         const langIdx = parseInt(langVal, 10);
+        if (isNaN(langIdx) || langIdx < 0 || langIdx >= HWP_FONT_LANG_COUNT) return;
         const fontId = this.wasm.findOrCreateFontIdForLang(langIdx, name);
-        if (fontId >= 0 && this.lastFontFamilies) {
-          // 현재 fontIds를 기반으로 해당 언어만 교체
+        if (fontId >= 0) {
+          recordResolvedFontName(this.wasm, langIdx, fontId, name);
+          const fallbackName = this.fontName?.value || '함초롬바탕';
+          const baseFamilies = this.lastFontFamilies?.length
+            ? this.lastFontFamilies
+            : (Array(HWP_FONT_LANG_COUNT).fill(fallbackName) as string[]);
           const ids: number[] = [];
-          for (let i = 0; i < 7; i++) {
+          const nextFamilies: string[] = [];
+          for (let i = 0; i < HWP_FONT_LANG_COUNT; i++) {
             if (i === langIdx) {
               ids.push(fontId);
+              nextFamilies.push(name);
             } else {
               // 다른 언어는 현재 글꼴 ID 유지 (기존 값 조회)
-              const existingName = this.lastFontFamilies[i] || this.lastFontFamilies[0];
-              ids.push(this.wasm.findOrCreateFontIdForLang(i, existingName));
+              const existingName = baseFamilies[i] || baseFamilies[0] || fallbackName;
+              const otherId = this.wasm.findOrCreateFontIdForLang(i, existingName);
+              recordResolvedFontName(this.wasm, i, otherId, existingName);
+              ids.push(otherId);
+              nextFamilies.push(existingName);
             }
           }
+          this.lastFontFamilies = nextFamilies;
           this.eventBus.emit('format-char', { fontIds: ids } as CharProperties);
         }
       }

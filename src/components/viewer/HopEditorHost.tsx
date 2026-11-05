@@ -304,6 +304,7 @@ const STUDIO_HTML = `
               <option value="함초롬돋움">함초롬돋움</option>
               <option value="맑은 고딕">맑은 고딕</option>
               <option value="나눔고딕">나눔고딕</option>
+              <option value="나눔고딕 Bold">나눔고딕 Bold</option>
               <option value="바탕">바탕</option>
               <option value="돋움">돋움</option>
               <option value="궁서">궁서</option>

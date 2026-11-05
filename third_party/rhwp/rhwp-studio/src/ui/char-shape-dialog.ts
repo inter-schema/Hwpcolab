@@ -345,6 +345,21 @@ export class CharShapeDialog {
       });
       this.fontSelect.appendChild(localGroup);
     }
+    this.fontSelect.addEventListener('change', () => {
+      if (!this.props || !this.fontSelect.value) return;
+      if (this.currentLang === 0) {
+        this.props.fontFamilies = Array(7).fill(this.fontSelect.value) as string[];
+      } else {
+        const idx = this.currentLang - 1;
+        const fallback = this.props.fontFamily || '함초롬바탕';
+        const base = this.props.fontFamilies?.length === 7
+          ? [...this.props.fontFamilies]
+          : Array.from({ length: 7 }, (_, i) => this.props?.fontFamilies?.[i] || fallback);
+        base[idx] = this.fontSelect.value;
+        this.props.fontFamilies = base;
+      }
+      this.updatePreview();
+    });
     langFontRow.appendChild(this.fontSelect);
     langSection.appendChild(langFontRow);
 
@@ -1025,11 +1040,28 @@ export class CharShapeDialog {
       }
     }
 
-    // 글꼴 변경
-    const arrIdx = this.currentLang === 0 ? 0 : this.currentLang - 1;
-    const origFont = (p.fontFamilies || [])[arrIdx] || '';
-    if (this.fontSelect.value && this.fontSelect.value !== origFont) {
-      mods.fontName = this.fontSelect.value;
+    // 글꼴 변경 ([rhwp#8140] 대표 및 언어별 7슬롯 글꼴 반영)
+    const fallbackOrigFont = p.fontFamily || '함초롬바탕';
+    const origFamilies = p.fontFamilies?.length === 7
+      ? p.fontFamilies
+      : Array.from({ length: 7 }, (_, i) => p.fontFamilies?.[i] || fallbackOrigFont);
+    const currFamilies = this.props?.fontFamilies?.length === 7
+      ? this.props.fontFamilies
+      : origFamilies;
+    if (JSON.stringify(currFamilies) !== JSON.stringify(origFamilies)) {
+      mods.fontFamilies = [...currFamilies];
+    } else {
+      const arrIdx = this.currentLang === 0 ? 0 : this.currentLang - 1;
+      const origFont = origFamilies[arrIdx] || '';
+      if (this.fontSelect.value && this.fontSelect.value !== origFont) {
+        if (this.currentLang === 0) {
+          mods.fontFamilies = Array(7).fill(this.fontSelect.value) as string[];
+        } else {
+          const updated = [...origFamilies];
+          updated[arrIdx] = this.fontSelect.value;
+          mods.fontFamilies = updated;
+        }
+      }
     }
 
     // 테두리/배경 탭
