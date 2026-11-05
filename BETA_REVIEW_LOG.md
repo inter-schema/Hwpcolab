@@ -681,3 +681,31 @@ Test-authoring corrections recorded for transparency:
 - Beta and main refs were not modified by this work; the PR was not merged.
 - Local frontend verification on the reconciled source snapshot also passed: focused HWPX tests **31/31**, full Vitest **234/234**, TypeScript `--noEmit`, Vite build, npm audit **0 vulnerabilities**, and diff checks.
 - The remaining product-level acceptance gate is the packaged Windows Tauri WebView smoke test: HWPX open/edit/save/reopen, installed-font enumeration/rendering, and LLM UI/request cancellation. CI success does not replace these manual packaged-app checks.
+
+## 24. Packaged Windows WebView smoke test - 2026-11-05
+
+### Build under test
+- Commit under test: `b5d70aa` (code identical to `d670b92`). Release exe built locally with `npx tauri build --no-bundle --target x86_64-pc-windows-gnu` (rustc/cargo 1.99.1, portable MinGW-w64 gcc 16.2.0; no admin rights, no MSVC available). This is **not** the MSVC binary produced by CI; an MSVC-built installer was not exercised.
+- Linker emitted one warning (`.rsrc merge failure: multiple non-default manifests`); no functional effect was observed in the smoke run (native open dialog and WebView rendered normally).
+- `resources/claw-hwp` was copied beside the exe for portable execution (the portable fallback in `claw_bridge.rs`).
+
+### Results (UI driven through Windows UI Automation; all work on copies in `%TEMP%\hopclaw-smoke`)
+
+| ID | Check | Result |
+|---|---|---|
+| S-01 | Launch, title, 20 s without crash, Responding | PASS |
+| S-02 | Open HWPX (ASCII and Korean file names) and native open dialog | PASS |
+| S-03 | Open HWP | PASS |
+| S-04 | Insert marker `SMOKE_0001` in body, dirty flag set | PASS |
+| S-05 | Save: mtime/SHA-256 changed, valid ZIP, marker in `Contents/section0.xml`, no leftover temp files | PASS |
+| S-06 | Reopen saved file, marker rendered | PASS |
+| S-07 | Local font enumeration (260 entries incl. Malgun Gothic, Batang, Arial) and selection | PASS |
+| S-08 | AI sidebar and model/privacy settings (5 providers) | PASS |
+| S-09 | LLM request to local mock server, cancel in flight, then immediate reply rendered | PASS (see note) |
+| S-10 | Normal close, no residual process | PASS |
+
+### Notes and caveats
+- S-09: the mock server held the response for 60 s; the client socket closed about 4.5 s after the request (at the time of the UI cancel), well before the 60 s hold, and the UI returned to idle. A second request answered immediately rendered correctly. The mock log did not show an `Authorization` header for the dummy key; this was not investigated (provider-specific header handling) and is not a regression claim.
+- The hidden editor textarea is off-screen, so UIA `set-value` is rejected; typing after focusing the canvas works. This is a test-tooling constraint, not an app defect.
+- No product defect was found, so no application code was changed by this smoke run.
+- Still not covered: an installed MSVC/NSIS/MSI bundle, file-association launch from Explorer, real provider credentials, and sustained/long-document behavior.
