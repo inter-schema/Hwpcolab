@@ -5,6 +5,8 @@ import { FileDropZone } from "./FileDropZone";
 import { orchestrateAiEdit } from "../../services/aiOrchestrator";
 import { buildOfficialDocStandardOps } from "../../core/officialDocRules";
 import { runtimeInvoke } from "../../core/runtimeInvoke";
+import { MemorySelectorBar } from "./MemorySelectorBar";
+import { createMemoryStore, buildMemoryContext, type MemoryDoc } from "../../memory/index.ts";
 import {
   Send,
   Loader2,
@@ -19,6 +21,7 @@ import {
   GitCompare,
   Square,
   Brain,
+  BookMarked,
 } from "lucide-react";
 
 interface AgentStepLog {
@@ -64,6 +67,7 @@ export const AiChatSidebar: React.FC = () => {
     setAiApplyMode,
     setSettingsModalOpen,
     syncHopToStaging,
+    openMemoryModal,
   } = useDocStore();
 
   const [inputMessage, setInputMessage] = useState("");
@@ -163,6 +167,30 @@ export const AiChatSidebar: React.FC = () => {
         }
       };
 
+      // Writing Memory injection (§3.5)
+      let memoryContext: string | undefined = undefined;
+      const loadedDocs: MemoryDoc[] = [];
+      if (latestState.activeMemoryIds && latestState.activeMemoryIds.length > 0) {
+        const memStore = createMemoryStore();
+        for (const id of latestState.activeMemoryIds) {
+          const doc = await memStore.get(id);
+          if (doc) {
+            loadedDocs.push(doc);
+          }
+        }
+        if (loadedDocs.length > 0) {
+          const builtMem = buildMemoryContext(loadedDocs);
+          if (builtMem.truncated) {
+            onStep({
+              type: "inspect",
+              message: "작성 선호사항 길이 상한 적용",
+              detail: builtMem.warnings.join("; "),
+            });
+          }
+          memoryContext = builtMem.text;
+        }
+      }
+
       const res: any = await orchestrateAiEdit({
         provider: latestState.provider,
         apiKey: latestState.apiKey,
@@ -179,6 +207,7 @@ export const AiChatSidebar: React.FC = () => {
         autoMaskPii: latestState.autoMaskPii,
         userPrompt: textToSend,
         attachmentsContext,
+        memoryContext,
         // Agentic Track 3 Options
         reasoningEffort: latestState.reasoningEffort,
         stagingPath: latestState.stagingPath,
@@ -207,6 +236,9 @@ export const AiChatSidebar: React.FC = () => {
           : []),
         ...latestState.attachments.map((a) => `첨부 문서 읽기: ${a.fileName}`),
         ...(latestState.selection ? ["선택 영역 읽기"] : []),
+        ...(loadedDocs.length > 0
+          ? [`작성 선호사항 적용 (${loadedDocs.map((d) => d.meta.name).join(", ")})`]
+          : []),
       ];
       const docChecksCount = typeof res.docChecks === "number" ? res.docChecks : readSteps.length;
 
@@ -397,6 +429,9 @@ export const AiChatSidebar: React.FC = () => {
             <span>가명화 {autoMaskPii ? "ON" : "OFF"}</span>
           </button>
         </div>
+
+        {/* Row 3 (Writing Memory Selector) */}
+        <MemorySelectorBar />
       </div>
 
       {/* Quick Macro Bar */}
@@ -409,6 +444,18 @@ export const AiChatSidebar: React.FC = () => {
         >
           <FileCheck2 className="w-3.5 h-3.5 text-teal-700" />
           <span>🏛️ 공문서 표준 규격 일괄 교정</span>
+        </button>
+
+        <button
+          id="sidebar-create-memory-from-doc-btn"
+          data-testid="sidebar-create-memory-from-doc-btn"
+          onClick={() => openMemoryModal("create_current")}
+          disabled={!docMarkdown || docMarkdown.trim().length === 0}
+          className="flex items-center gap-1 text-[11px] font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 py-1 px-2 rounded-lg shadow-2xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+          title="현재 열린 문서를 바탕으로 작성 선호사항(양식 메모리) 새로 만들기"
+        >
+          <BookMarked className="w-3.5 h-3.5 text-teal-600" />
+          <span>이 문서로 선호사항 생성</span>
         </button>
       </div>
 

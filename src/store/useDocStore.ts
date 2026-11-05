@@ -9,6 +9,8 @@ import { buildTablesMetaForHwpx, mapInspectedTables } from "../core/hwpxTableInd
 import { ParsedAttachment } from "../core/multiFileParser";
 import { PrivacySessionMasker } from "../core/privacyMasker";
 import type { ProviderId, AgentLoopMode } from "../services/agent/types";
+import type { MemoryMeta } from "../memory/index.ts";
+import { createMemoryStore } from "../memory/index.ts";
 
 export { type DiffItem };
 
@@ -55,6 +57,11 @@ interface DocState {
   customName: string;
   customSupportsTools: boolean;
   customSendReasoning: boolean;
+
+  memoryModalOpen: boolean;
+  memoryModalInitialTab: "list" | "create_multi" | "create_current";
+  memoriesIndex: MemoryMeta[];
+  activeMemoryIds: string[];
 
   // Actions
   setSidebarOpen: (open: boolean) => void;
@@ -105,6 +112,13 @@ interface DocState {
   rejectAllDiffs: () => void;
   undoLastChange: () => Promise<void>;
   saveToOriginalFile: () => Promise<void>;
+
+  openMemoryModal: (tab?: "list" | "create_multi" | "create_current") => void;
+  closeMemoryModal: () => void;
+  refreshMemoriesIndex: () => Promise<void>;
+  toggleActiveMemory: (id: string) => void;
+  moveActiveMemoryPriority: (id: string, direction: "up" | "down") => void;
+  clearActiveMemories: () => void;
 }
 
 export const useDocStore = create<DocState>((set, get) => ({
@@ -174,6 +188,10 @@ export const useDocStore = create<DocState>((set, get) => ({
     typeof localStorage !== "undefined"
       ? localStorage.getItem("hop_custom_send_reasoning") === "true"
       : false,
+  memoryModalOpen: false,
+  memoryModalInitialTab: "list",
+  memoriesIndex: [],
+  activeMemoryIds: [],
 
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
@@ -732,4 +750,37 @@ export const useDocStore = create<DocState>((set, get) => ({
     });
     set({ originalPath: finalPath, isDirty: false, isHopDirectDirty: false });
   },
+
+  openMemoryModal: (tab) => {
+    set({ memoryModalOpen: true, memoryModalInitialTab: tab ?? "list" });
+    void get().refreshMemoriesIndex();
+  },
+  closeMemoryModal: () => set({ memoryModalOpen: false }),
+  refreshMemoriesIndex: async () => {
+    const store = createMemoryStore();
+    const list = await store.list();
+    const currentActive = get().activeMemoryIds;
+    const validIds = currentActive.filter((id) => list.some((m) => m.id === id));
+    set({ memoriesIndex: list, activeMemoryIds: validIds });
+  },
+  toggleActiveMemory: (id) => {
+    const { activeMemoryIds } = get();
+    if (activeMemoryIds.includes(id)) {
+      set({ activeMemoryIds: activeMemoryIds.filter((x) => x !== id) });
+    } else {
+      set({ activeMemoryIds: [...activeMemoryIds, id] });
+    }
+  },
+  moveActiveMemoryPriority: (id, direction) => {
+    const { activeMemoryIds } = get();
+    const idx = activeMemoryIds.indexOf(id);
+    if (idx === -1) return;
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= activeMemoryIds.length) return;
+    const next = [...activeMemoryIds];
+    const [item] = next.splice(idx, 1);
+    next.splice(targetIdx, 0, item);
+    set({ activeMemoryIds: next });
+  },
+  clearActiveMemories: () => set({ activeMemoryIds: [] }),
 }));

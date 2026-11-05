@@ -4,6 +4,7 @@ import { HopEditorHost } from "./components/viewer/HopEditorHost";
 import { AiChatSidebar } from "./components/sidebar/AiChatSidebar";
 import { ModelPrivacySettings } from "./components/sidebar/ModelPrivacySettings";
 import { LicenseModal } from "./components/header/LicenseModal";
+import { WritingMemoryModal } from "./components/memory/WritingMemoryModal";
 import { useDocStore } from "./store/useDocStore";
 import { isTauriEnv, runtimeInvoke } from "./core/runtimeInvoke";
 
@@ -22,6 +23,7 @@ export const App: React.FC = () => {
     sidebarDock,
     sidebarWidth,
     setSidebarWidth,
+    refreshMemoriesIndex,
   } = useDocStore();
 
   const [isResizing, setIsResizing] = useState(false);
@@ -29,6 +31,19 @@ export const App: React.FC = () => {
   const dragStartRef = useRef<{ x: number; active: boolean }>({ x: 0, active: false });
 
   const pendingDiffsCount = pendingDiffs.filter((d) => d.status === "pending").length;
+
+  useEffect(() => {
+    void refreshMemoriesIndex();
+    const handleOpenWritingMemory = (e: Event) => {
+      const customEvent = e as CustomEvent<{ tab?: "list" | "create_multi" | "create_current" }>;
+      const tab = customEvent.detail?.tab;
+      useDocStore.getState().openMemoryModal(tab || "create_multi");
+    };
+    window.addEventListener("hop:open-writing-memory", handleOpenWritingMemory);
+    return () => {
+      window.removeEventListener("hop:open-writing-memory", handleOpenWritingMemory);
+    };
+  }, [refreshMemoriesIndex]);
 
   // Check startup file argument & restore saved LLM settings
   useEffect(() => {
@@ -278,6 +293,9 @@ export const App: React.FC = () => {
 
       {/* 4. License Modal */}
       <LicenseModal />
+
+      {/* 5. Writing Memory Modal */}
+      <WritingMemoryModal />
     </div>
   );
 };
