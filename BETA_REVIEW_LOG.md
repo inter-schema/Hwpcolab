@@ -772,3 +772,64 @@ Test-authoring corrections recorded for transparency:
   - Generated standalone executable: `src-tauri/target/release/hop-claw.exe` (52,978,999 bytes, valid PE x86_64).
   - Generated WiX MSI installer: `src-tauri/target/release/bundle/msi/HOP-Claw_0.1.0_x64_en-US.msi` (35,237,888 bytes).
   - Generated NSIS setup installer: `src-tauri/target/release/bundle/nsis/HOP-Claw_0.1.0_x64-setup.exe` (31,944,950 bytes).
+
+## 26. Beta (nested table, custom provider, agentic loop v2) & 11/05 writing preference memory — 2026-11-05
+
+### 1. 브랜치 경계 및 아키텍처 범위
+- **`Beta` 브랜치 (`3e67e14`)**:
+  - **기능 A (HWPX 중첩 표 — 표 안에 표)**:
+    - OWPML XML 및 ZIP 레벨에서 셀 내부 중첩 `<hp:tbl>` 삽입 (`insert_nested_table`).
+    - `src/core/hwpxTableIndex.ts`를 통한 문서 전수 깊이 우선 순회(Pre-order traversal) 기반 테이블 인덱싱 및 계층 트리(`tablesMeta`, `tablesDeep`, `depth`, `parentTableIndex`, `parentCell`) 동기화.
+    - 최대 중첩 깊이 2단계 제한 가드 및 `.hwp` 포맷 시도시 데이터 손상 방지 안내 에러 반환.
+  - **기능 B (사용자 지정 OpenAI 호환 공급자)**:
+    - `custom` 프로바이더 추가: 사용자 지정 기본 URL 엔드포인트 및 모델 ID 지원.
+    - `src/services/agent/endpointPolicy.ts`를 통한 SSRF 및 메타데이터 서비스 탈취 방어 정책 (공개 인터넷 호스트 HTTPS 강제, AWS/GCP/Azure 169.254.169.254 메타데이터 주소 완전 차단, 로컬호스트/루프백/RFC1918 사설망 한정 HTTP 허용).
+  - **기능 C (전 공급자 에이전틱 루프 & v2 상태머신)**:
+    - 6대 프로바이더 전수(`anthropic`, `openai`, `gemini`, `ollama`, `baze`, `custom`) 에이전틱 루프 확장.
+    - 레거시 도구 결과 및 대화 컨텍스트에 대한 PII 마스킹 보안 강화.
+    - 베터 개선 루프 `v2` 상태머신(`src/services/agent/loopV2.ts`) 도입 및 사용자 설정 모달 라디오 버튼을 통한 기존 루프 / v2 루프 동적 전환.
+- **`codex/beta-hardening-2026-11-05` 브랜치 (`Beta` + 기능 D)**:
+  - **기능 D (작성 선호사항 스타일 메모리 저장소)**:
+    - **수동 명시적 생성 전용**: 자동 저장 또는 백그라운드 추출 완전 배제, 사용자 클릭 기반 생성(시작화면 전용 버튼, 헤더 툴바 버튼, 사이드바 현재 문서 버튼).
+    - **12단계 단방향 영구 비식별화 (`src/memory/piiPatterns.ts`)**: 주민등록번호(하이픈/엔대시/공백/무하이픈 전 패턴), 운전면허, 여권, 사업자등록번호, 법인등록번호, 전화번호, 이메일, 주소, 계좌번호, 카드번호, 한국인 실명 및 기존 잔존 마스크 토큰 일방향 마스킹 (`<이름>`, `<주민번호>` 등 치환). unmask 경로 0건(복원 불가 설계).
+    - **고정 7개 규격 섹션 및 YAML Frontmatter (`src/memory/frontmatter.ts`)**: `## 문서 유형·양식`, `## 어투·문체`, `## 용어·표기`, `## 서식·표 규칙`, `## 구조(제목 체계)`, `## 금지·지양`, `## 예시 문구(일반화됨)`.
+    - **저장소 및 최대 5개 리비전 이력 (`src/memory/store.ts`)**: 스토리지 격리(`hop_mem_*`), 저장 전 2차 방어 비식별화, 최대 5개 리비전 보관 및 이전 리비전 원클릭 롤백.
+    - **섹션별 부분 수락/거절 다듬기 (`src/memory/refine.ts`, `MemoryDiffViewer.tsx`)**: 전체 덮어쓰기 방지, 섹션 단위 Diff 검토 및 선별 적용.
+    - **선택적 AI 컨텍스트 주입 (`src/memory/injection.ts`)**: 기본값 `꺼짐(OFF)`, 사용자가 사이드바(`MemorySelectorBar.tsx`)에서 명시적으로 체크한 메모리만 `<WRITING_MEMORY_DATA>` 블록으로 주입. 단일 메모리 4,000자, 총량 12,000자 안전 상한선 및 본문 태그 탈출 방지 이스케이프 적용.
+
+### 2. 검증 중 포착 및 해결한 결함 이력 (RED → GREEN)
+1. **`DEFECT-01` (v2 Loop 도구 미지원 모델 single-shot 폴백 결함)**:
+   - *문제*: `loopV2` 실행 시 도구 호출(Function calling)을 네이티브 지원하지 않는 소형 로컬 LLM이나 엔드포인트에서 `ToolsUnsupportedError`가 발생할 때 전체 요청이 에러로 중단됨.
+   - *해결*: `ToolsUnsupportedError` 감지 시 single-shot 마크다운/JSON 추출 경로로 우아하게 폴백하도록 복구 로직 추가.
+2. **`DEFECT-02` (`AiChatSidebar` AbortSignal 누락 결함)**:
+   - *문제*: 사이드바에서 사용자 요청 중단(취소) 버튼 클릭 시 `AbortController`의 `signal`이 `aiOrchestrator` 하위 어댑터 및 Tauri HTTP 브리지로 제대로 전파되지 않아 백그라운드 요청이 지속되던 결함.
+   - *해결*: `AiChatSidebar`의 `handleSubmit`에서 생성된 `AbortSignal`을 `aiOrchestrator` 호출 인자로 누락 없이 전달하고, 어댑터 파이프라인에서 즉시 중단되도록 연결.
+3. **`DEFECT-03` (HWPX 오픈 시 `tablesMeta` pre-order 계층 동기화 및 bbox 매핑 누락)**:
+   - *문제*: 중첩 표가 포함된 HWPX 문서를 열 때 `tablesMeta` 인덱싱이 최상위 표만 반영되거나 순서가 꼬여, 하위 중첩 표에 대한 Diff 오버레이 bbox 좌표 계산 및 셀 편집 타겟팅 실패 발생.
+   - *해결*: `useDocStore` 및 `hwpxTableIndex.ts`에서 문서 로드 시 DFS Pre-order 순회로 모든 중첩 표를 트리 계층(`depth`, `parentCell`)에 맞게 인덱싱하고, 하위 표 bbox를 최상위 부모 셀 기준으로 정밀 매핑하도록 보정.
+4. **`DEFECT-G2-01` (`<WRITING_MEMORY_DATA>` 본문 내 태그 탈출 인젝션 결함)**:
+   - *문제*: 사용자가 가져오거나 입력한 메모리 본문에 `</WRITING_MEMORY_DATA>` 및 여는 태그가 포함되어 있을 경우 컨텍스트 래퍼가 조기 종료되어 프롬프트 인젝션 공격 표면이 노출될 수 있음.
+   - *해결*: `src/memory/injection.ts`의 `buildMemoryContext`에서 비식별화 직후 `/<(\/?)\s*WRITING_MEMORY_DATA\b[^>]*>/gi` 정규식을 통해 본문 내 모든 일치 태그를 `&lt;$1WRITING_MEMORY_DATA&gt;`로 이스케이프하도록 수정.
+
+### 3. 최종 품질 검증 수치
+- **단위 테스트 (Vitest)**: **55개 파일, 420개 테스트 전원 통과 (100% PASS, 0 FAIL)**
+  - 신규 메모리 코어/PII/적대적 공격 방어 테스트 7개 파일, 51개 테스트 포함 (적대적 PII 레드팀 테스트 전원 PASS).
+- **정적 분석 및 프로덕션 빌드**:
+  - `npx.cmd tsc --noEmit`: Exit Code 0 (오류 0건).
+  - `npm.cmd run build` (`tsc && vite build`): Exit Code 0 (정상 번들 생성).
+- **Playwright 실브라우저 E2E 검증**:
+  - `tests/e2e_writing_memory.mjs`: **32/32 PASS (100%)**
+    - 시작화면/헤더 트리거, 다중 문서 생성 + 마스킹 + 사전 미리보기 확인 전 미저장, 열린 문서 독립 메모리 생성, AI 다듬기(섹션별 부분 수락/거절) 및 리비전 롤백, 사이드바 선택적 활성화 및 프롬프트 주입 PII 0건 검증 완료.
+  - `tests/e2e_providers_loops.mjs`: **26/26 PASS (100%)**
+    - 커스텀 공급자 엔드포인트 보안 검증, 루프 모드 라디오 상태 보존, Legacy/v2 루프 HWPX Diff 제안 및 PII 마스킹, UI 요청 취소(AbortSignal), 중첩 표(`insert_nested_table`) Diff 제안 및 적용 완료.
+  - `tests/verify_ui_and_gpl.mjs`: **23/23 PASS (100%)**
+    - 추론 레벨 셀렉터 레이아웃 겹침 0건, 스플릿바 마우스 드래그 리사이징, 불필요 헤더 아이콘 제거, GNU GPL v3.0 라이선스 검증 완료.
+- **스크린샷 시각 검증**:
+  - `02_writing_memory_diff_card.png`, `02_v2_diff_proposal.png`, `04_nested_table_applied.png` 등을 직접 열어 UI 요소 겹침 없음, 중첩 표 정상 렌더링, Diff 오버레이 및 메모리 셀렉터 바 정상 배치 확인 완료.
+
+### 4. 정직한 범위 고지 (Caveats & Limitations)
+1. **HWPX 중첩 표 렌더링 범위**:
+   - 본 구현의 HWPX 표 안에 표(`insert_nested_table`)는 KS X 6101 OWPML 표준 규격의 XML 및 ZIP 패키지 구조, WASM 에디터 내부 파싱, `tablesDeep` 메타데이터 및 E2E 실브라우저 검증을 완료하였습니다.
+   - 다만 상용 데스크톱 한컴오피스(한글 2020/2024 등) GUI에서의 열람 및 출력 호환성은 상용 소프트웨어의 자체 렌더러 특성에 따라 달라질 수 있으므로, 최종 배포 전 별도의 데스크톱 환경 실물 수동 확인을 권장합니다.
+2. **`.hwp` 바이너리 포맷 중첩 표 제한**:
+   - 5.0 레거시 바이너리 포맷(`.hwp`)은 셀 내부 중첩 테이블 레코드 구조의 불안정성으로 인해 파일 손상(Corruption) 위험이 존재합니다. 따라서 본 기능은 안전을 위해 `.hwp` 파일에 대한 중첩 표 생성을 차단하며, 사용자에게 명시적인 포맷 안내 에러 메시지를 반환합니다.

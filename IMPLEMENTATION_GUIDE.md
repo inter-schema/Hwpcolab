@@ -2176,3 +2176,76 @@ node tests/verify_ui_and_gpl.mjs
   - 단독 바이너리: `src-tauri/target/release/hop-claw.exe`
   - WiX MSI 설치 패키지: `src-tauri/target/release/bundle/msi/HOP-Claw_0.1.0_x64_en-US.msi`
   - NSIS 셋업 설치 패키지: `src-tauri/target/release/bundle/nsis/HOP-Claw_0.1.0_x64-setup.exe`
+
+---
+
+## 10. 2026-11-05 신규 기능 구현 명세 (Beta 및 11/05 브랜치)
+
+### 10.1 기능 A: HWPX 표 안에 표 (중첩 표 `insert_nested_table` & `src/core/hwpxTableIndex.ts`)
+- **개요 및 OWPML XML 구조**:
+  - HWPX 표의 특정 셀(`<hp:tc>`) 내부에 하위 표(`<hp:tbl>`)를 중첩 삽입하는 기능입니다.
+  - OWPML 표준 규격에 따라 셀 내부의 마지막 문단(`<hp:p>`) 뒤에 새로운 테이블 요소를 삽입하며, ZIP 패키지 내부 `Contents/section0.xml`을 안전하게 패치합니다 (`resources/claw-hwp/scripts/hwpx-edit.js`).
+- **테이블 인덱싱 및 계층 트리 동기화 (`src/core/hwpxTableIndex.ts`)**:
+  - HWPX 문서를 깊이 우선 순회(Pre-order DFS)하여 최상위 표 및 모든 중첩 표를 탐색하고 `tablesMeta` 및 `tablesDeep` 구조체로 동기화합니다.
+  - 각 테이블 메타는 `depth`(0: 최상위, 1: 1단계 중첩, 2: 2단계 중첩), `parentTableIndex`, `parentCell: { row, col }` 계층 정보를 포함합니다.
+- **안전 정책 가드 및 오류 처리**:
+  - `src/services/policyGuard.ts`: 최대 중첩 깊이를 2단계(`MAX_NESTED_TABLE_DEPTH = 2`)로 제한하여 무한 중첩이나 레이아웃 붕괴를 원천 차단합니다.
+  - `src/core/opTranslator.ts`: 5.0 레거시 바이너리(`.hwp`) 파일에 대한 `insert_nested_table` 요청 감지 시 파일 손상을 방지하기 위해 즉시 명시적인 포맷 안내 오류를 발생시킵니다.
+- **UI Bounding Box 좌표 매핑 (`src/components/viewer/hopBridge.ts`)**:
+  - 중첩 표의 Diff 오버레이 카드가 정확한 화면 위치에 표시되도록, 부모 셀의 bbox 좌표를 기준으로 상대 오프셋을 계산하여 화면에 안착시킵니다.
+
+### 10.2 기능 B: 사용자 지정 OpenAI 호환 공급자 (`custom` & `src/services/agent/endpointPolicy.ts`)
+- **개요**:
+  - 사설망, 로컬 호스트, 또는 사내 프라이빗 게이트웨이에 구축된 다양한 OpenAI 호환 API 서버를 직접 연동할 수 있도록 `custom` 프로바이더 타입을 도입했습니다.
+- **네트워크 보안 및 SSRF 방어 정책 (`src/services/agent/endpointPolicy.ts`)**:
+  - `validateEndpointPolicy(endpointUrl)` 함수를 통해 엔드포인트 URL을 검증합니다:
+    - **공개 인터넷 호스트**: 반드시 `https://` 프로토콜을 사용해야 합니다.
+    - **HTTP 허용 범위**: 개발 및 로컬 테스트 편의를 위해 `localhost`, 루프백 IP(`127.0.0.1`, `::1`), RFC1918 사설망 IP 대역(`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`)에 한해서만 `http://` 프로토콜을 허용합니다.
+    - **클라우드 메타데이터 주소 완전 차단**: AWS/GCP/Azure 등 클라우드 인스턴스 메타데이터 주소(`169.254.169.254`를 포함한 링크로컬 `169.254.0.0/16`)는 프로토콜에 관계없이 저장을 거절합니다.
+- **UI 설정 인터페이스 (`src/components/sidebar/ModelPrivacySettings.tsx`)**:
+  - AI 설정 모달의 공급자 드롭다운에 `사용자 지정 (OpenAI 호환)` 항목이 추가되며, 기본 URL 엔드포인트와 모델 ID를 저장 및 복원할 수 있습니다.
+
+### 10.3 기능 C: 6대 공급자 에이전틱 루프 & v2 상태머신 (`adapters/*`, `legacyBridge.ts`, `loopV2.ts`)
+- **표준화된 공급자 어댑터 아키텍처 (`src/services/agent/adapters/`)**:
+  - 6대 프로바이더 전수(`anthropic`, `openai`, `gemini`, `ollama`, `baze`, `custom`)에 대해 공통 인터페이스 `ProviderAdapter` (`turn(request)`)를 구현했습니다.
+  - 요청 헤더, 엔드포인트 포맷, 함수 호출(Tool calling) 스키마를 공급자별로 캡슐화하여 일관된 대화 턴을 제공합니다.
+- **기존 루프와 베타 개선 루프(v2) 선택 전환**:
+  - `legacyBridge.ts`: 기존 검증된 순차적 실행 경로를 지원하며, 레거시 도구 결과 및 컨텍스트에 대한 PII 마스킹 보안을 보강했습니다.
+  - `loopV2.ts`: 5단계 상태머신(`START` $\rightarrow$ `THINK` $\rightarrow$ `EXECUTE_TOOLS` $\rightarrow$ `SYNTHESIZE` $\rightarrow$ `DONE`) 기반 자율 에이전트 루프입니다.
+  - **결함 복구 메커니즘**:
+    - `DEFECT-01`: 도구 호출을 미지원하는 엔드포인트에서 `ToolsUnsupportedError` 감지 시 single-shot 마크다운/JSON 추출 경로로 자동 폴백합니다.
+    - `DEFECT-02`: UI 취소 버튼 클릭 시 `AbortSignal`이 어댑터 HTTP 파이프라인으로 정확히 전달되어 대기 중인 네트워크 요청을 즉시 중단합니다.
+- **UI 설정 연동**:
+  - AI 설정 모달에서 사용자가 라디오 버튼으로 `기존 루프 (legacy)` 또는 `베타 개선 루프 (v2)`를 선택할 수 있으며, 설정은 로컬 스토리지에 영구 보존됩니다.
+
+### 10.4 기능 D: 작성 선호사항 스타일 메모리 (`codex/beta-hardening-2026-11-05` 브랜치)
+- **개요 및 보안 원칙**:
+  - 사용자의 작성 문체, 공문서 표준 서식, 선호 용어, 지양 표현 등을 문서로부터 수동 구축하여 AI 교정 시 가이드로 주입하는 시스템입니다.
+  - **자동 수집 완전 배제**: 사용자의 명시적 클릭에 의해서만 메모리가 생성됩니다.
+  - **단방향 영구 비식별화 (`src/memory/piiPatterns.ts`)**:
+    - 12단계 정규식 패턴을 통해 주민등록번호(13자리 무하이픈, 엔대시, 공백 포함 전 패턴), 운전면허, 여권, 사업자등록번호, 법인등록번호, 전화번호, 이메일, 주소, 계좌번호, 카드번호, 한국인 실명 및 잔존 토큰을 단방향 마스킹합니다 (`<이름>`, `<주민번호>` 등으로 치환).
+    - 소스코드 전체에 `unmask` 함수 호출이 0건이며 원본 데이터 복원 경로가 존재하지 않습니다.
+- **고정 7대 규격 섹션 및 YAML Frontmatter (`src/memory/frontmatter.ts`)**:
+  - 메타데이터: `schemaVersion`, `id`, `name`, `description`, `revision`, `createdAt`, `updatedAt`, `sourceDocs`, `masked: true`.
+  - 본문 섹션:
+    1. `## 문서 유형·양식`
+    2. `## 어투·문체`
+    3. `## 용어·표기`
+    4. `## 서식·표 규칙`
+    5. `## 구조(제목 체계)`
+    6. `## 금지·지양`
+    7. `## 예시 문구(일반화됨)`
+- **저장소 및 최대 5리비전 관리 (`src/memory/store.ts`)**:
+  - `localStorage` 네임스페이스 격리(`hop_mem_*`)로 관리되며, 저장 시점에 2차 방어 비식별화 검증을 수행합니다.
+  - 최대 5개의 리비전 이력을 자동 보관하며, 변경 전 리비전으로 언제든 롤백할 수 있습니다.
+- **섹션별 부분 수락/거절 다듬기 (`src/memory/refine.ts`, `src/components/memory/MemoryDiffViewer.tsx`)**:
+  - AI에게 메모리 개선을 요청하면 7개 섹션 단위로 변경 제안(`SectionDiff`)을 생성합니다.
+  - 사용자는 전체 덮어쓰기 대신 원하는 섹션만 골라 `반영`하거나 `유지`할 수 있습니다.
+- **선택적 AI 컨텍스트 주입 (`src/memory/injection.ts`)**:
+  - 기본값은 `꺼짐(OFF)` 상태이며, AI 사이드바의 메모리 셀렉터 바(`MemorySelectorBar.tsx`)에서 명시적으로 체크한 메모리만 프롬프트에 주입됩니다.
+  - `<WRITING_MEMORY_DATA>` 태그로 래핑 주입되며, 본문 내 태그 탈출 시도를 이스케이프(`DEFECT-G2-01`)하고 단일 4,000자 / 총량 12,000자 상한을 적용합니다.
+- **UI 진입점**:
+  - 시작화면: `#home-writing-memory-btn` (홈 화면 전용 버튼)
+  - 헤더 툴바: `#header-writing-memory-btn` (상단 도구 모음의 작성 선호사항 버튼 및 활성 개수 배지)
+  - 사이드바: `#sidebar-create-memory-from-doc-btn` (현재 열린 문서로 즉시 선호사항 생성)
+  - 관리 모달: `WritingMemoryModal.tsx` (메모리 목록, 새 메모리 생성 탭 2종, 본문 편집, AI 다듬기 Diff 뷰어, 리비전 롤백, 내보내기/가져오기 통합 관리).
