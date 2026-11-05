@@ -10,6 +10,7 @@ const RECENT_DOCUMENTS_PER_PAGE = 5;
 interface HomeScreenActions {
   openFile(): void;
   createNewDocument(): void;
+  openWritingMemory?(): void;
   onDocumentLoaded(payload: unknown): void;
   setMessage(message: string): void;
 }
@@ -72,14 +73,18 @@ export class HomeScreen {
     subtitle.textContent = 'HWP/HWPX 문서를 열거나 새 문서를 만들고, 드래그 앤 드롭으로 바로 시작할 수 있습니다.';
     const actions = document.createElement('div');
     actions.className = 'home-actions';
-    actions.append(
-      this.createActionButton('문서 열기', '홈 화면에서 파일 선택', () => {
-        this.actions.openFile();
-      }),
-      this.createActionButton('새 문서', '빈 HWP 문서 만들기', () => {
-        this.actions.createNewDocument();
-      }),
-    );
+    const openBtn = this.createActionButton('문서 열기', '홈 화면에서 파일 선택', () => {
+      this.actions.openFile();
+    });
+    const newBtn = this.createActionButton('새 문서', '빈 HWP 문서 만들기', () => {
+      this.actions.createNewDocument();
+    });
+    const memoryBtn = this.createActionButton('작성 선호사항', '여러 문서를 넣어 양식 메모리 생성·관리', () => {
+      this.actions.openWritingMemory?.();
+    });
+    memoryBtn.id = 'home-writing-memory-btn';
+    memoryBtn.dataset.testid = 'home-writing-memory-btn';
+    actions.append(openBtn, newBtn, memoryBtn);
     hero.append(title, subtitle, actions);
     return hero;
   }

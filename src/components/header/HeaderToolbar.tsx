@@ -14,6 +14,7 @@ import {
   Scale,
   ArrowLeftRight,
   FilePlus2,
+  BookMarked,
 } from "lucide-react";
 
 export const HeaderToolbar: React.FC = () => {
@@ -34,6 +35,8 @@ export const HeaderToolbar: React.FC = () => {
     toggleSidebarDock,
     setSettingsModalOpen,
     setLicenseModalOpen,
+    openMemoryModal,
+    activeMemoryIds,
   } = useDocStore();
 
   const [sampleMenuOpen, setSampleMenuOpen] = useState(false);
@@ -259,6 +262,22 @@ export const HeaderToolbar: React.FC = () => {
           title="AI 사이드바 표시/숨기기 (Ctrl+B)"
         >
           <Sidebar className="w-4 h-4" />
+        </button>
+
+        <button
+          id="header-writing-memory-btn"
+          data-testid="header-writing-memory-btn"
+          onClick={() => openMemoryModal("list")}
+          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+          title="작성 선호사항 메모리 관리 및 다중 문서 학습"
+        >
+          <BookMarked className="w-3.5 h-3.5 text-teal-600" />
+          <span>작성 선호사항</span>
+          {activeMemoryIds.length > 0 && (
+            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-teal-100 text-teal-800">
+              {activeMemoryIds.length}
+            </span>
+          )}
         </button>
 
         <button

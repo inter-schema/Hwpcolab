@@ -103,6 +103,9 @@ async function initialize(): Promise<void> {
       createNewDocument: () => {
         dispatcher.dispatch('file:new-doc');
       },
+      openWritingMemory: () => {
+        window.dispatchEvent(new CustomEvent('hop:open-writing-memory', { detail: { tab: 'create_multi' } }));
+      },
       onDocumentLoaded: (payload) => {
         eventBus.emit('desktop-document-loaded', payload);
       },
