@@ -4,6 +4,11 @@ import type { CommandDispatcher } from '@/upstream/commands';
 import { loadWebFonts } from '@/core/font-loader';
 import { getLocalFonts } from '@/core/local-fonts';
 import { sanitizeAuthoringFontFamily } from '@/core/font-authoring-policy';
+import {
+  HWP_FONT_LANG_COUNT,
+  recordResolvedFontName,
+  resolveUniformFontIds,
+} from '@/core/font-ids';
 import { getCustomSelectRoot, syncCustomSelect } from './custom-select';
 
 /** 서식 도구 모음 (style-bar) 컨트롤러 */
@@ -39,6 +44,7 @@ export class Toolbar {
   private styleDropdownInitialized = false;
   /** 마지막으로 받은 fontFamilies (언어별 7개 배열) */
   private lastFontFamilies?: string[];
+  private lastActiveFontLang?: number;
 
   constructor(
     private container: HTMLElement,
@@ -262,6 +268,9 @@ export class Toolbar {
           const clampedPt = Math.min(4096, Math.max(1, pt));
           this.fontSize.value = String(clampedPt);
           this.eventBus.emit('format-char', { fontSize: Math.round(clampedPt * 100) } as CharProperties);
+          if (typeof document !== 'undefined') {
+            document.querySelector<HTMLElement>('[aria-label="문서 편집 입력"]')?.focus({ preventScroll: true });
+          }
         }
       }
     });
@@ -288,7 +297,7 @@ export class Toolbar {
   initFontDropdown(docFonts?: string[]): void {
     this.beginFontApplyRequest();
     this.lastFontFamilies = undefined;
-    const baseFonts = ['함초롬바탕', '함초롬돋움', '맑은 고딕', '나눔고딕', '바탕', '돋움', '궁서'];
+    const baseFonts = ['함초롬바탕', '함초롬돋움', '맑은 고딕', '나눔고딕', '나눔고딕 Bold', '바탕', '돋움', '궁서'];
     this.fontName.replaceChildren();
     const seen = new Set<string>();
     for (const name of [...baseFonts, ...(docFonts ?? [])]) {
@@ -508,7 +517,6 @@ export class Toolbar {
 
   /** 문서 로드 시 스타일 목록으로 드롭다운을 채운다 */
   initStyleDropdown(): void {
-    this.lastFontFamilies = undefined;
     try {
       const styles = this.wasm.getStyleList();
       this.styleName.replaceChildren();
@@ -576,6 +584,7 @@ export class Toolbar {
     if (props.fontFamilies) {
       this.lastFontFamilies = props.fontFamilies;
     }
+    this.lastActiveFontLang = props.activeFontLang;
 
     // 글꼴명 — 선택된 언어 카테고리에 따라 표시
     const displayFont = this.getDisplayFontFamily(props);
@@ -621,6 +630,15 @@ export class Toolbar {
         return props.fontFamilies[idx];
       }
     }
+    if (
+      langVal === 'all' &&
+      props.fontFamilies &&
+      props.activeFontLang !== undefined &&
+      props.activeFontLang >= 0 &&
+      props.activeFontLang < props.fontFamilies.length
+    ) {
+      return props.fontFamilies[props.activeFontLang] || props.fontFamily;
+    }
     return props.fontFamily;
   }
 
@@ -630,7 +648,13 @@ export class Toolbar {
     const langVal = this.fontLang.value;
     let displayFont: string | undefined;
     if (langVal === 'all') {
-      displayFont = this.lastFontFamilies[0]; // 한글 기준
+      const activeIdx =
+        this.lastActiveFontLang !== undefined &&
+        this.lastActiveFontLang >= 0 &&
+        this.lastActiveFontLang < this.lastFontFamilies.length
+          ? this.lastActiveFontLang
+          : 0;
+      displayFont = this.lastFontFamilies[activeIdx] || this.lastFontFamilies[0];
     } else {
       const idx = parseInt(langVal, 10);
       if (idx >= 0 && idx < this.lastFontFamilies.length) {
@@ -732,29 +756,41 @@ export class Toolbar {
 
     const langVal = this.fontLang.value;
     if (langVal === 'all') {
-      // 전체 언어 일괄 적용
-      const fontId = this.wasm.findOrCreateFontId(authoringName);
-      if (fontId >= 0) {
-        this.eventBus.emit('format-char', { fontId } as CharProperties);
+      // [rhwp#8140] 대표 선택 시 7개 언어 테이블(한글/영문/한자/일어/외국어/기호/사용자) 각각에서 ID 확보
+      const fontIds = resolveUniformFontIds(this.wasm, authoringName);
+      if (fontIds) {
+        this.lastFontFamilies = Array(HWP_FONT_LANG_COUNT).fill(authoringName) as string[];
+        this.eventBus.emit('format-char', { fontIds } as CharProperties);
       }
       return;
     }
 
     // 특정 언어만 적용 (fontIds 배열)
     const langIdx = parseInt(langVal, 10);
+    if (isNaN(langIdx) || langIdx < 0 || langIdx >= HWP_FONT_LANG_COUNT) return;
     const fontId = this.wasm.findOrCreateFontIdForLang(langIdx, authoringName);
-    if (fontId >= 0 && this.lastFontFamilies) {
-      // 현재 fontIds를 기반으로 해당 언어만 교체
+    if (fontId >= 0) {
+      recordResolvedFontName(this.wasm, langIdx, fontId, authoringName);
+      const fallbackName = sanitizeAuthoringFontFamily(this.fontName?.value || '함초롬바탕');
+      const baseFamilies = this.lastFontFamilies?.length
+        ? this.lastFontFamilies
+        : (Array(HWP_FONT_LANG_COUNT).fill(fallbackName) as string[]);
       const ids: number[] = [];
-      for (let i = 0; i < 7; i++) {
+      const nextFamilies: string[] = [];
+      for (let i = 0; i < HWP_FONT_LANG_COUNT; i++) {
         if (i === langIdx) {
           ids.push(fontId);
+          nextFamilies.push(authoringName);
         } else {
-          // 다른 언어는 현재 글꼴 ID 유지 (기존 값 조회)
-          const existingName = this.lastFontFamilies[i] || this.lastFontFamilies[0];
-          ids.push(this.wasm.findOrCreateFontIdForLang(i, existingName));
+          // 다른 언어는 현재 글꼴 ID 유지 (기존 값 조회, 없으면 현재 표시 글꼴 폴백)
+          const existingName = baseFamilies[i] || baseFamilies[0] || fallbackName;
+          const otherId = this.wasm.findOrCreateFontIdForLang(i, existingName);
+          recordResolvedFontName(this.wasm, i, otherId, existingName);
+          ids.push(otherId);
+          nextFamilies.push(existingName);
         }
       }
+      this.lastFontFamilies = nextFamilies;
       this.eventBus.emit('format-char', { fontIds: ids } as CharProperties);
     }
   }
@@ -768,10 +804,13 @@ export class Toolbar {
     await loadWebFonts(authoringFonts).catch(() => undefined);
     if (!this.isLatestFontApplyRequest(requestId)) return;
     const ids: number[] = [];
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < HWP_FONT_LANG_COUNT; i++) {
       const fontName = authoringFonts[i];
-      ids.push(this.wasm.findOrCreateFontIdForLang(i, fontName));
+      const id = this.wasm.findOrCreateFontIdForLang(i, fontName);
+      recordResolvedFontName(this.wasm, i, id, fontName);
+      ids.push(id);
     }
+    this.lastFontFamilies = authoringFonts;
     this.eventBus.emit('format-char', { fontIds: ids } as CharProperties);
   }
 }

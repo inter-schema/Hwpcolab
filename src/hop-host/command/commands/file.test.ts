@@ -8,8 +8,23 @@ const upstreamSaveAs = vi.hoisted(() => vi.fn());
 const upstreamSaveAsCanExecute = vi.hoisted(() => vi.fn(() => true));
 const openPrintDialog = vi.hoisted(() => vi.fn());
 const openRecentDocumentsDialog = vi.hoisted(() => vi.fn());
+const tauriInvokeMock = vi.hoisted(() => vi.fn());
+const openDocumentMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: tauriInvokeMock,
+}));
+
+vi.mock('../../../store/useDocStore', () => ({
+  useDocStore: {
+    getState: () => ({
+      openDocument: openDocumentMock,
+    }),
+  },
+}));
 
 vi.mock('@/upstream/commands', () => ({
+  confirmSaveBeforeReplacingDocument: vi.fn().mockResolvedValue(true),
   fileCommands: [
     { id: 'file:open', label: 'Open', execute: upstreamOpen },
     { id: 'file:open-recent', label: 'Open recent', execute: upstreamOpenRecent },
@@ -55,6 +70,24 @@ describe('file command desktop overrides', () => {
     await command('file:open').execute(services({ wasm: {} }) as never);
 
     expect(upstreamOpen).toHaveBeenCalled();
+  });
+
+  it('uses hop-claw pick_local_file and useDocStore.openDocument in Tauri runtime without HOP desktop bridge', async () => {
+    (globalThis as { window?: unknown }).window = {
+      __TAURI_INTERNALS__: {},
+      location: { href: 'http://localhost/' },
+      open: vi.fn(),
+    };
+    tauriInvokeMock.mockResolvedValue('C:/docs/report.hwp');
+    openDocumentMock.mockResolvedValue(undefined);
+
+    await command('file:open').execute(services({ wasm: {} }) as never);
+
+    expect(tauriInvokeMock).toHaveBeenCalledWith('pick_local_file', {
+      extensions: ['hwp', 'hwpx'],
+    });
+    expect(openDocumentMock).toHaveBeenCalledWith('C:/docs/report.hwp');
+    expect(upstreamOpen).not.toHaveBeenCalled();
   });
 
   it('falls back to upstream save when no desktop bridge is available', async () => {

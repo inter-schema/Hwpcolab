@@ -23,6 +23,7 @@
 import type { WasmBridge } from '@/core/wasm-bridge';
 import type { EventBus } from '@/core/event-bus';
 import type { CharProperties, ParaProperties } from '@/core/types';
+import { resolvePerLangFontIds, resolveUniformFontIds } from '@/core/font-ids';
 import type { CommandServices } from '@/command/types';
 import { ModalDialog } from './dialog';
 import { CharShapeDialog } from './char-shape-dialog';
@@ -254,9 +255,13 @@ export class StyleEditDialog extends ModalDialog {
     if (this.addMode && this.styleInfo.id < 0) {
       const dialog = new CharShapeDialog(this.wasm, this.eventBus);
       dialog.onApply = (mods) => {
-        if (mods.fontName) {
-          const fontId = this.wasm.findOrCreateFontId(mods.fontName);
-          if (fontId >= 0) mods.fontId = fontId;
+        if (mods.fontFamilies?.length === 7) {
+          const fontIds = resolvePerLangFontIds(this.wasm, mods.fontFamilies);
+          if (fontIds) mods.fontIds = fontIds;
+          delete mods.fontFamilies;
+        } else if (mods.fontName) {
+          const fontIds = resolveUniformFontIds(this.wasm, mods.fontName);
+          if (fontIds) mods.fontIds = fontIds;
           delete mods.fontName;
         }
         this.charModsJson = JSON.stringify(mods);
@@ -268,9 +273,13 @@ export class StyleEditDialog extends ModalDialog {
       const detail = this.wasm.getStyleDetail(this.styleInfo.id);
       const dialog = new CharShapeDialog(this.wasm, this.eventBus);
       dialog.onApply = (mods) => {
-        if (mods.fontName) {
-          const fontId = this.wasm.findOrCreateFontId(mods.fontName);
-          if (fontId >= 0) mods.fontId = fontId;
+        if (mods.fontFamilies?.length === 7) {
+          const fontIds = resolvePerLangFontIds(this.wasm, mods.fontFamilies);
+          if (fontIds) mods.fontIds = fontIds;
+          delete mods.fontFamilies;
+        } else if (mods.fontName) {
+          const fontIds = resolveUniformFontIds(this.wasm, mods.fontName);
+          if (fontIds) mods.fontIds = fontIds;
           delete mods.fontName;
         }
         this.charModsJson = JSON.stringify(mods);

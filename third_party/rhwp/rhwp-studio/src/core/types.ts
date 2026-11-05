@@ -370,6 +370,8 @@ export interface CharProperties {
   superscript?: boolean;
   // 언어별 배열 (7개: 한글/영문/한자/일어/외국어/기호/사용자)
   fontFamilies?: string[];
+  /** 커서/선택 시작 문자의 HWP 언어 슬롯 (0..6, '대표' 자동 표시용 UI 메타데이터) */
+  activeFontLang?: number;
   ratios?: number[];       // 장평
   spacings?: number[];     // 자간
   relativeSizes?: number[];// 상대크기

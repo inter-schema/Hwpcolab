@@ -78,13 +78,34 @@ function enhanceCustomSelect(select: HTMLSelectElement): void {
     else open();
   };
 
+  const isToolbarSelect =
+    select.classList.contains('sb-combo') || select.classList.contains('sb-ls-select');
+
+  const restoreEditorFocusIfToolbar = (): boolean => {
+    if (!isToolbarSelect) return false;
+    if (typeof document !== 'undefined' && typeof document.querySelector === 'function') {
+      const editorInput = document.querySelector<HTMLElement>('[aria-label="문서 편집 입력"]');
+      if (editorInput) {
+        editorInput.focus({ preventScroll: true });
+        return true;
+      }
+    }
+    return false;
+  };
+
   const commit = (option: HTMLOptionElement) => {
     if (option.disabled) return;
+    const options = Array.from(select.options);
+    const idx = options.indexOf(option);
+    if (idx >= 0) select.selectedIndex = idx;
+    option.selected = true;
     select.value = option.value;
     select.dispatchEvent(new Event('change', { bubbles: true }));
     sync();
     close();
-    root.focus();
+    if (!restoreEditorFocusIfToolbar() && !isToolbarSelect) {
+      root.focus();
+    }
   };
 
   const rebuildMenu = () => {
@@ -139,6 +160,7 @@ function enhanceCustomSelect(select: HTMLSelectElement): void {
     if (select.disabled) return;
     if (event.key === 'Escape') {
       close();
+      restoreEditorFocusIfToolbar();
       event.preventDefault();
       return;
     }

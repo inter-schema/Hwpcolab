@@ -576,36 +576,55 @@ async function canReplaceCurrentDocument(skipUnsavedGuard?: boolean): Promise<bo
 let documentReplacementPending = false;
 let pendingHopSource: { fileName: string; bytes: Uint8Array } | null = null;
 
-async function loadFile(file: File, options: { skipUnsavedGuard?: boolean } = {}): Promise<void> {
-  if (documentReplacementPending) return;
+async function loadBytes(
+  bytes: Uint8Array,
+  fileName: string,
+  fileHandle: typeof wasm.currentFileHandle = null,
+  options: { skipUnsavedGuard?: boolean; syncHopSource?: boolean } = {},
+): Promise<boolean> {
+  if (documentReplacementPending) return false;
   documentReplacementPending = true;
   const msg = sbMessage();
   const previousMessage = msg.textContent;
   try {
-    if (!await canReplaceCurrentDocument(options.skipUnsavedGuard)) return;
+    if (!await canReplaceCurrentDocument(options.skipUnsavedGuard)) return false;
 
     msg.textContent = '파일 로딩 중...';
     const startTime = performance.now();
-    const data = new Uint8Array(await file.arrayBuffer());
-    const docInfo = await loadDocumentForOpen(wasm, data, file.name);
+    const docInfo = await loadDocumentForOpen(wasm, bytes, fileName);
     if (!docInfo) {
       msg.textContent = previousMessage;
-      return;
+      return false;
     }
-    pendingHopSource = { fileName: file.name, bytes: data };
+    wasm.currentFileHandle = fileHandle ?? null;
+    eventBus.emit('document-swapped');
+    if (options.syncHopSource !== false) {
+      pendingHopSource = { fileName, bytes };
+    }
     const elapsed = performance.now() - startTime;
     await initializeDocument(
       docInfo,
-      `${file.name} — ${docInfo.pageCount}페이지 (${elapsed.toFixed(1)}ms)`,
+      `${fileName} — ${docInfo.pageCount}페이지 (${elapsed.toFixed(1)}ms)`,
     );
+    return true;
   } catch (error) {
-    const errMsg = `파일 로드 실패: ${error}`;
+    const detail = error instanceof Error ? error.message : String(error);
+    const errMsg = `파일 로드 실패: ${detail}`;
     msg.textContent = errMsg;
     console.error('[main] 파일 로드 실패:', error);
-    // 모바일에서 상태 메시지가 숨겨질 수 있으므로 alert으로도 표시
-    if (window.innerWidth < 768) alert(errMsg);
+    alert(`파일 열기에 실패했습니다:\n${detail}`);
+    throw error;
   } finally {
     documentReplacementPending = false;
+  }
+}
+
+async function loadFile(file: File, options: { skipUnsavedGuard?: boolean } = {}): Promise<void> {
+  try {
+    const data = new Uint8Array(await file.arrayBuffer());
+    await loadBytes(data, file.name, null, { skipUnsavedGuard: options.skipUnsavedGuard, syncHopSource: true });
+  } catch {
+    // loadBytes already logged and surfaced the error
   }
 }
 
@@ -623,6 +642,8 @@ async function createNewDocument(): Promise<void> {
     if (isTauriRuntime() || !await canReplaceCurrentDocument()) return;
 
     const docInfo = wasm.createNewDocument();
+    wasm.currentFileHandle = null;
+    eventBus.emit('document-swapped');
     await initializeDocument(docInfo, `새 문서.hwp — ${docInfo.pageCount}페이지`);
   } catch (error) {
     msg.textContent = `새 문서 생성 실패: ${error}`;
@@ -634,6 +655,33 @@ async function createNewDocument(): Promise<void> {
 
 // 커맨드에서 새 문서 생성 호출
 eventBus.on('create-new-document', () => { createNewDocument(); });
+eventBus.on('open-document-bytes', async (payload) => {
+  const data = payload as {
+    bytes: Uint8Array;
+    fileName: string;
+    fileHandle?: typeof wasm.currentFileHandle;
+    skipUnsavedGuard?: boolean;
+    requestId?: string;
+  };
+  const notifyDone = (ok: boolean, error?: string) => {
+    if (!data.requestId) return;
+    eventBus.emit('open-document-bytes:done', { requestId: data.requestId, ok, error });
+  };
+  try {
+    const opened = await loadBytes(data.bytes, data.fileName, data.fileHandle ?? null, {
+      skipUnsavedGuard: data.skipUnsavedGuard,
+      syncHopSource: true,
+    });
+    if (!opened) {
+      notifyDone(false, '문서 열기가 취소되었습니다.');
+      return;
+    }
+    notifyDone(true);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    notifyDone(false, msg);
+  }
+});
 eventBus.on('desktop-document-loaded', (payload) => {
   const p = payload as { docInfo: DocumentInfo; message: string };
   initializeDocument(p.docInfo, p.message);
@@ -650,6 +698,8 @@ async function openBytesInHop(bytes: Uint8Array, fileName: string): Promise<void
   const startTime = performance.now();
   const docInfo = await loadDocumentForOpen(wasm, bytes, fileName);
   if (!docInfo) return;
+  wasm.currentFileHandle = null;
+  eventBus.emit('document-swapped');
   const elapsed = performance.now() - startTime;
   await initializeDocument(
     docInfo,

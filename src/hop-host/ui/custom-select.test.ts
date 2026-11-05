@@ -363,4 +363,43 @@ describe('custom-select', () => {
     expect((menuRows[0] as FakeElement).classList.contains('selected')).toBe(false);
     expect((menuRows[1] as FakeElement).classList.contains('selected')).toBe(true);
   });
+
+  it('opens menu on trigger mousedown and restores editor focus without focusing root for toolbar combos', () => {
+    const container = new FakeElement('div');
+    const select = createFakeSelect('sb-combo sb-font', ['함초롬바탕', '맑은 고딕']);
+    container.appendChild(select);
+    fakeDocument.body.appendChild(container);
+
+    const editorFocus = vi.fn();
+    (fakeDocument as unknown as { querySelector: (sel: string) => unknown }).querySelector = (sel: string) =>
+      sel === '[aria-label="문서 편집 입력"]' ? { focus: editorFocus } : null;
+
+    enhanceCustomSelects(container as unknown as ParentNode);
+
+    const rootEl = getCustomSelectRoot(select as unknown as HTMLSelectElement) as unknown as FakeElement;
+    const rootFocusSpy = vi.spyOn(rootEl, 'focus');
+    const changeSpy = vi.fn();
+    select.addEventListener('change', changeSpy);
+
+    const trigger = rootEl.querySelector('.custom-select-trigger')!;
+    trigger.dispatchEvent({
+      type: 'mousedown',
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as { type: string });
+    expect(rootEl.classList.contains('open')).toBe(true);
+
+    const menuRows = rootEl.querySelectorAll('.custom-select-option');
+    menuRows[1].dispatchEvent({
+      type: 'mousedown',
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as { type: string });
+
+    expect(select.value).toBe('맑은 고딕');
+    expect(changeSpy).toHaveBeenCalledTimes(1);
+    expect(rootEl.classList.contains('open')).toBe(false);
+    expect(editorFocus).toHaveBeenCalledOnce();
+    expect(rootFocusSpy).not.toHaveBeenCalled();
+  });
 });

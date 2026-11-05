@@ -236,15 +236,25 @@ export const useDocStore = create<DocState>((set, get) => ({
   },
 
   openDocumentBytes: async (bytes: Uint8Array, fileName: string, originalPath?: string) => {
-    const isHwpx = bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4b;
-    const session = await invoke<OpenedDocSession>("create_blank_session", { isHwpx });
-    await invoke("write_file_bytes", {
-      filePath: session.staging_path,
-      bytes: Array.from(bytes),
-    });
+    const isHwpx = bytes.length >= 4
+      && bytes[0] === 0x50
+      && bytes[1] === 0x4b
+      && bytes[2] === 0x03
+      && bytes[3] === 0x04;
+    let stagingPath = "";
+    try {
+      const session = await invoke<OpenedDocSession>("create_blank_session", { isHwpx });
+      await invoke("write_file_bytes", {
+        filePath: session.staging_path,
+        bytes: Array.from(bytes),
+      });
+      stagingPath = session.staging_path;
+    } catch (err) {
+      console.warn("[DocStore] 스테이징 세션 생성 생략(정적 브라우저 모드):", err);
+    }
     set({
       originalPath: originalPath || null,
-      stagingPath: session.staging_path,
+      stagingPath: stagingPath || null,
       fileName,
       isHwpx,
       fileBytes: bytes,
@@ -261,7 +271,9 @@ export const useDocStore = create<DocState>((set, get) => ({
     if (rt) {
       set({ pageCount: Math.max(1, rt.wasm.pageCount) });
     }
-    await get().refreshDocMarkdown();
+    if (stagingPath) {
+      await get().refreshDocMarkdown();
+    }
   },
 
   /**
@@ -272,15 +284,25 @@ export const useDocStore = create<DocState>((set, get) => ({
     let bytes = sourceBytes;
     if (!bytes) bytes = hopBridge.exportHopBytes(/\.hwpx$/i.test(fileName));
     if (!bytes || bytes.byteLength === 0) return;
-    const isHwpx = bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4b;
-    const session = await invoke<OpenedDocSession>("create_blank_session", { isHwpx });
-    await invoke("write_file_bytes", {
-      filePath: session.staging_path,
-      bytes: Array.from(bytes),
-    });
+    const isHwpx = bytes.length >= 4
+      && bytes[0] === 0x50
+      && bytes[1] === 0x4b
+      && bytes[2] === 0x03
+      && bytes[3] === 0x04;
+    let stagingPath = "";
+    try {
+      const session = await invoke<OpenedDocSession>("create_blank_session", { isHwpx });
+      await invoke("write_file_bytes", {
+        filePath: session.staging_path,
+        bytes: Array.from(bytes),
+      });
+      stagingPath = session.staging_path;
+    } catch (err) {
+      console.warn("[DocStore] HOP 문서 스테이징 생략(정적 브라우저 모드):", err);
+    }
     set({
       originalPath: null,
-      stagingPath: session.staging_path,
+      stagingPath: stagingPath || null,
       fileName,
       isHwpx,
       fileBytes: bytes,

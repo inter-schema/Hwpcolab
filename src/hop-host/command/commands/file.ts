@@ -1,9 +1,12 @@
-import { fileCommands as upstreamFileCommands } from '@/upstream/commands';
+import * as upstreamCommandsModule from '@/upstream/commands';
 import type { CommandDef, CommandServices } from '@/upstream/commands';
 import type { DesktopBridgeApi } from '@/core/tauri-bridge';
 import { openPrintDialog } from '@/ui/print-dialog';
 import { openRecentDocumentsDialog } from '@/ui/recent-documents-dialog';
 import { replaceUpstreamCommands } from '../replace-upstream-commands';
+import { isTauriEnv, runtimeInvoke } from '../../../core/runtimeInvoke';
+
+const upstreamFileCommands = upstreamCommandsModule.fileCommands;
 
 type DesktopFileBridge = Pick<
   DesktopBridgeApi,
@@ -97,12 +100,31 @@ async function runDesktopAction(
 const desktopCommands = new Map<string, CommandDef>([
   ['file:open', withDesktopOverride('file:open', async (services) => {
     const desktop = desktopBridge(services.wasm);
-    if (!desktop) return upstream('file:open').execute(services);
+    if (desktop) {
+      await runDesktopAction(services, '파일 열기', async () => {
+        const payload = await desktop.openDocumentFromDialog();
+        if (payload) services.eventBus.emit('desktop-document-loaded', payload);
+      });
+      return;
+    }
 
-    await runDesktopAction(services, '파일 열기', async () => {
-      const payload = await desktop.openDocumentFromDialog();
-      if (payload) services.eventBus.emit('desktop-document-loaded', payload);
-    });
+    if (isTauriEnv()) {
+      await runDesktopAction(services, '파일 열기', async () => {
+        if (typeof upstreamCommandsModule.confirmSaveBeforeReplacingDocument === 'function') {
+          if (!await upstreamCommandsModule.confirmSaveBeforeReplacingDocument(services)) return;
+        }
+        const selected = await runtimeInvoke<string | null>('pick_local_file', {
+          extensions: ['hwp', 'hwpx'],
+        });
+        if (selected) {
+          const { useDocStore } = await import('../../../store/useDocStore');
+          await useDocStore.getState().openDocument(selected);
+        }
+      });
+      return;
+    }
+
+    return upstream('file:open').execute(services);
   })],
   ['file:open-recent', withDesktopOverride('file:open-recent', async (services) => {
     const desktop = recentBridge(services.wasm);

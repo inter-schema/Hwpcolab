@@ -108,10 +108,14 @@ describe('Toolbar font application sequencing', () => {
 
     expect(loadWebFontsMock).toHaveBeenNthCalledWith(1, ['Older']);
     expect(loadWebFontsMock).toHaveBeenNthCalledWith(2, ['Newest']);
-    expect(wasm.findOrCreateFontId).toHaveBeenCalledTimes(1);
-    expect(wasm.findOrCreateFontId).toHaveBeenCalledWith('Newest');
+    expect(wasm.findOrCreateFontIdForLang).toHaveBeenCalledTimes(7);
+    for (let lang = 0; lang < 7; lang++) {
+      expect(wasm.findOrCreateFontIdForLang).toHaveBeenNthCalledWith(lang + 1, lang, 'Newest');
+    }
     expect(emit).toHaveBeenCalledTimes(1);
-    expect(emit).toHaveBeenCalledWith('format-char', { fontId: 202 });
+    expect(emit).toHaveBeenCalledWith('format-char', {
+      fontIds: [1000, 1001, 1002, 1003, 1004, 1005, 1006],
+    });
   });
 
   it('prevents an older font-set apply from overwriting a newer single-font selection', async () => {
@@ -150,14 +154,17 @@ describe('Toolbar font application sequencing', () => {
 
     expect(loadWebFontsMock).toHaveBeenNthCalledWith(1, ['A', 'B', 'C', 'D', 'E', 'F', 'G']);
     expect(loadWebFontsMock).toHaveBeenNthCalledWith(2, ['Newest']);
-    expect(wasm.findOrCreateFontId).toHaveBeenCalledTimes(1);
-    expect(wasm.findOrCreateFontId).toHaveBeenCalledWith('Newest');
-    expect(wasm.findOrCreateFontIdForLang).not.toHaveBeenCalled();
+    expect(wasm.findOrCreateFontIdForLang).toHaveBeenCalledTimes(7);
+    for (let lang = 0; lang < 7; lang++) {
+      expect(wasm.findOrCreateFontIdForLang).toHaveBeenNthCalledWith(lang + 1, lang, 'Newest');
+    }
     expect(emit).toHaveBeenCalledTimes(1);
-    expect(emit).toHaveBeenCalledWith('format-char', { fontId: 202 });
+    expect(emit).toHaveBeenCalledWith('format-char', {
+      fontIds: [1000, 1001, 1002, 1003, 1004, 1005, 1006],
+    });
   });
 
-  it('sanitizes blocked single-font selections before applying them', async () => {
+  it('sanitizes blocked single-font selections before applying them across all 7 languages', async () => {
     loadWebFontsMock.mockResolvedValue(undefined);
     const { toolbar, emit, wasm } = createToolbarHarness();
     const applyFontSelection = (
@@ -167,8 +174,54 @@ describe('Toolbar font application sequencing', () => {
     await applyFontSelection.call(toolbar, 'HY헤드라인M');
 
     expect(loadWebFontsMock).toHaveBeenCalledWith(['함초롬돋움']);
-    expect(wasm.findOrCreateFontId).toHaveBeenCalledWith('함초롬돋움');
-    expect(emit).toHaveBeenCalledWith('format-char', { fontId: 101 });
+    expect(wasm.findOrCreateFontIdForLang).toHaveBeenCalledTimes(7);
+    expect(wasm.findOrCreateFontIdForLang).toHaveBeenNthCalledWith(1, 0, '함초롬돋움');
+    expect(wasm.findOrCreateFontIdForLang).toHaveBeenNthCalledWith(2, 1, '함초롬돋움');
+    expect(emit).toHaveBeenCalledWith('format-char', {
+      fontIds: [1000, 1001, 1002, 1003, 1004, 1005, 1006],
+    });
+  });
+
+  it('applies a per-language font even when lastFontFamilies was cleared after initFontDropdown', async () => {
+    loadWebFontsMock.mockResolvedValue(undefined);
+    const { toolbar, emit, wasm } = createToolbarHarness();
+    toolbar.fontLang.value = '1';
+    (toolbar as { lastFontFamilies?: string[] }).lastFontFamilies = undefined;
+    (toolbar as { fontName?: { value: string } }).fontName = { value: '맑은 고딕' };
+    const applyFontSelection = (
+      Toolbar.prototype as unknown as Record<string, (this: object, name: string) => Promise<void>>
+    ).applyFontSelection;
+
+    await applyFontSelection.call(toolbar, 'D2Coding');
+
+    expect(wasm.findOrCreateFontIdForLang).toHaveBeenNthCalledWith(1, 1, 'D2Coding');
+    expect(wasm.findOrCreateFontIdForLang).toHaveBeenNthCalledWith(2, 0, '맑은 고딕');
+    expect(emit).toHaveBeenCalledWith('format-char', {
+      fontIds: [1000, 1001, 1002, 1003, 1004, 1005, 1006],
+    });
+  });
+
+  it('automatically displays active script font when fontLang is all (대표)', () => {
+    const getDisplayFontFamily = (
+      Toolbar.prototype as unknown as Record<string, (this: object, props: Record<string, unknown>) => string | undefined>
+    ).getDisplayFontFamily;
+    const toolbar = { fontLang: { value: 'all' } };
+    const mixedFamilies = ['함초롬바탕', 'Times New Roman', '바탕', 'MS Mincho', '함초롬바탕', 'Wingdings', '함초롬바탕'];
+
+    expect(
+      getDisplayFontFamily.call(toolbar, {
+        fontFamily: '함초롬바탕',
+        fontFamilies: mixedFamilies,
+        activeFontLang: 1,
+      }),
+    ).toBe('Times New Roman');
+    expect(
+      getDisplayFontFamily.call(toolbar, {
+        fontFamily: '함초롬바탕',
+        fontFamilies: mixedFamilies,
+        activeFontLang: 0,
+      }),
+    ).toBe('함초롬바탕');
   });
 
   it('preserves existing non-selected language font names when applying one language', async () => {

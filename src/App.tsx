@@ -5,7 +5,7 @@ import { AiChatSidebar } from "./components/sidebar/AiChatSidebar";
 import { ModelPrivacySettings } from "./components/sidebar/ModelPrivacySettings";
 import { LicenseModal } from "./components/header/LicenseModal";
 import { useDocStore } from "./store/useDocStore";
-import { runtimeInvoke } from "./core/runtimeInvoke";
+import { isTauriEnv, runtimeInvoke } from "./core/runtimeInvoke";
 
 export const App: React.FC = () => {
   const {
@@ -71,15 +71,22 @@ export const App: React.FC = () => {
   // Global Keyboard Shortcuts (Section 7.7)
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+
       // Ctrl+O: Open document
-      if (e.ctrlKey && e.key.toLowerCase() === "o" && !e.altKey && !e.shiftKey) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o" && !e.altKey && !e.shiftKey) {
         e.preventDefault();
         try {
-          const selected = await runtimeInvoke<string | null>("pick_local_file", {
-            extensions: ["hwp", "hwpx"],
-          });
-          if (selected) {
-            await openDocument(selected);
+          if (isTauriEnv()) {
+            const selected = await runtimeInvoke<string | null>("pick_local_file", {
+              extensions: ["hwp", "hwpx"],
+            });
+            if (selected) {
+              await openDocument(selected);
+            }
+          } else {
+            const fileInput = document.getElementById("header-hwp-file-input") as HTMLInputElement | null;
+            fileInput?.click();
           }
         } catch (err) {
           console.error("Open shortcut error:", err);

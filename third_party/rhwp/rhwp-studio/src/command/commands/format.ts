@@ -7,6 +7,7 @@ import { StyleEditDialog } from '@/ui/style-edit-dialog';
 import { PicturePropsDialog } from '@/ui/picture-props-dialog';
 import { EquationPropertiesDialog } from '@/ui/equation-props-dialog';
 import { TableCellPropsDialog } from '@/ui/table-cell-props-dialog';
+import { resolvePerLangFontIds, resolveUniformFontIds } from '@/core/font-ids';
 
 import { t } from '../../i18n/index.ts';
 export const formatCommands: CommandDef[] = [
@@ -255,17 +256,25 @@ export const formatCommands: CommandDef[] = [
       if (!ih) return;
       const charProps = ih.getCharProperties();
       // 대화상자 열기 전 선택 범위를 저장 (대화상자 조작 중 선택이 풀릴 수 있음)
+      const hasRange = ih.hasSelection();
       const savedSel = ih.getSelection();
-      if (!savedSel) return;
       const dialog = new CharShapeDialog(services.wasm, services.eventBus);
       dialog.onApply = (mods) => {
-        // fontName → fontId 변환 (WASM parse_char_shape_mods는 fontId만 인식)
-        if (mods.fontName) {
-          const fontId = services.wasm.findOrCreateFontId(mods.fontName);
-          if (fontId >= 0) mods.fontId = fontId;
+        // [rhwp#8140] fontFamilies/fontName → 7개 언어별 fontIds 변환
+        if (mods.fontFamilies?.length === 7) {
+          const fontIds = resolvePerLangFontIds(services.wasm, mods.fontFamilies);
+          if (fontIds) mods.fontIds = fontIds;
+          delete mods.fontFamilies;
+        } else if (mods.fontName) {
+          const fontIds = resolveUniformFontIds(services.wasm, mods.fontName);
+          if (fontIds) mods.fontIds = fontIds;
           delete mods.fontName;
         }
-        ih.applyCharPropsToRange(savedSel.start, savedSel.end, mods);
+        if (hasRange && savedSel) {
+          ih.applyCharPropsToRange(savedSel.start, savedSel.end, mods);
+        } else {
+          services.eventBus.emit('format-char', mods);
+        }
       };
       dialog.onClose = () => ih.focus();
       dialog.show(charProps);
