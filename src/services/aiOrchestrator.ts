@@ -19,6 +19,11 @@ import {
 } from "./providers/openaiProvider.ts";
 import { callGeminiApi } from "./providers/geminiProvider.ts";
 import { callOllamaApi } from "./providers/ollamaProvider.ts";
+import type { ProviderId, AgentLoopMode, NeutralMessage } from "./agent/types.ts";
+import { ToolsUnsupportedError } from "./agent/types.ts";
+import { callLegacyTurn } from "./agent/legacyBridge.ts";
+import { createProviderAdapter } from "./agent/adapters/index.ts";
+import { runAgentLoopV2 } from "./agent/loopV2.ts";
 
 export type ReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh";
 
@@ -79,6 +84,7 @@ export const PROPOSE_HWP_EDITS_TOOL = {
                       "append_heading",
                       "set_cell_text",
                       "insert_table",
+                      "insert_nested_table",
                       "insert_table_row",
                       "delete_table_row",
                       "insert_table_col",
@@ -118,6 +124,14 @@ export const PROPOSE_HWP_EDITS_TOOL = {
                   col: { type: "number", description: "열 인덱스 (0-based)" },
                   fit: { type: "boolean", description: "서명란/공백 패딩 길이 유지 여부" },
                   headers: { type: "array", items: { type: "string" }, description: "insert_table 표 머리글 배열" },
+                  cols: { type: "number", description: "열 개수 (1~8)" },
+                  data: {
+                    type: "array",
+                    items: { type: "array", items: { type: "string" } },
+                    description: "insert_nested_table 2차원 셀 데이터 배열",
+                  },
+                  headerRow: { type: "boolean", description: "insert_nested_table 첫 행을 머리글 행으로 지정할지 여부" },
+                  widthMode: { type: "string", enum: ["fit_cell"], description: "insert_nested_table 너비 모드 ('fit_cell')" },
                   rows: {
                     type: "array",
                     items: { type: "array", items: { type: "string" } },
@@ -221,6 +235,7 @@ const SYSTEM_PROMPT = `당신은 대한민국 공문서 및 한컴오피스(HWP/
 - 제목 추가: { "type": "append_heading", "level": 1, "text": "제목 텍스트" }
 - 표 셀 값 설정: { "type": "set_cell_text", "tableIndex": 0, "row": 1, "col": 2, "text": "셀 값", "fit": false }
 - 표 생성: { "type": "insert_table", "headers": ["열1", "열2"], "rows": [["값1", "값2"]] }
+- 중첩 표 삽입 (HWPX 전용, 특정 셀 내부): { "type": "insert_nested_table", "tableIndex": 0, "row": 1, "col": 0, "rows": 2, "cols": 2, "data": [["항목", "내용"], ["A", "B"]], "headerRow": false, "widthMode": "fit_cell" } (제약: HWPX 전용, 최대 깊이 2단계, 최대 크기 8×8, 셀 기존 텍스트 보존)
 - 표 행/열 추가·삭제: { "type": "insert_table_row", "tableIndex": 0, "row": 1, "position": "below", "cells": ["a", "b"] }, { "type": "delete_table_row", "tableIndex": 0, "row": 1 }
 - 셀 병합/분할: { "type": "merge_cells", "tableIndex": 0, "fromRow": 0, "fromCol": 0, "toRow": 0, "toCol": 1 }, { "type": "split_cell", "tableIndex": 0, "row": 0, "col": 0, "intoRows": 2, "intoCols": 1 }
 - 셀 배경/테두리: { "type": "set_cell_background", "tableIndex": 0, "row": 0, "col": 0, "color": "#EAEAEA" }, { "type": "set_cell_border", "tableIndex": 0, "row": 0, "col": 0, "sides": "all", "color": "#000000", "widthMm": 0.4 }
@@ -228,10 +243,15 @@ const SYSTEM_PROMPT = `당신은 대한민국 공문서 및 한컴오피스(HWP/
 - 문단 서식: { "type": "apply_paragraph_style", "paraIndex": 0, "targetText": "문단 앞부분 텍스트", "align": "JUSTIFY", "indentHu": 1000, "lineSpacingPercent": 160 }`;
 
 export interface AiRequestOptions {
-  provider: "claude" | "openai" | "gemini" | "ollama" | "baze";
+  provider: ProviderId;
   apiKey: string;
   model: string;
   customEndpoint?: string;
+  loopMode?: AgentLoopMode;
+  customSupportsTools?: boolean;
+  customSendReasoning?: boolean;
+  customName?: string;
+  signal?: AbortSignal;
   docMarkdown: string;
   tablesMeta: TableCoordinateMeta[];
   selection: SelectionTarget | null;
@@ -308,6 +328,12 @@ const AGENT_TOOLS = [
 ];
 
 export async function orchestrateAiEdit(options: AiRequestOptions): Promise<OrchestrateAiEditResult> {
+  if (options.signal?.aborted) {
+    const err = new Error("Agent loop aborted by user");
+    err.name = "AbortError";
+    throw err;
+  }
+
   const masker = options.sessionMasker || options.masker || new PrivacySessionMasker();
   const recordedSteps: string[] = [];
   let trialsRun = 0;
@@ -424,23 +450,168 @@ export async function orchestrateAiEdit(options: AiRequestOptions): Promise<Orch
 
   messages.push({ role: "user", content: maskedPrompt });
 
-  let rawResult: { summary: string; diffItems: any[] } = { summary: "", diffItems: [] };
-  const isAgenticProvider = options.provider === "baze" || options.provider === "openai";
-  const maxIterations = Math.min(6, Math.max(1, options.maxIterations ?? 5));
-
-  if (isAgenticProvider) {
-    // --- Claude-CLI Style Multi-Turn Agentic Loop ---
-    let endpointUrl = options.customEndpoint;
-    if (options.provider === "baze" && !endpointUrl) {
-      endpointUrl = "https://api.baze.co/v1/gateway/chat/completions";
-    } else if (options.provider === "openai" && !endpointUrl) {
-      endpointUrl = "https://api.openai.com/v1/chat/completions";
+  const runSingleShotFallback = async () => {
+    if (options.signal?.aborted) {
+      const err = new Error("Agent loop aborted by user");
+      err.name = "AbortError";
+      throw err;
+    }
+    emitStep({
+      type: "thinking",
+      message: `도구 호출 미지원 공급자 감지: 단일 샷(Single-shot) 모드로 전환합니다.`,
+    });
+    let fallbackResult: { summary: string; diffItems: any[] };
+    switch (options.provider) {
+      case "claude":
+        fallbackResult = await callClaudeApi(options.apiKey, options.model, SYSTEM_PROMPT, messages as any);
+        break;
+      case "gemini":
+        fallbackResult = await callGeminiApi(options.apiKey, options.model, SYSTEM_PROMPT, messages as any);
+        break;
+      case "ollama":
+        fallbackResult = await callOllamaApi(options.customEndpoint || "", options.model, SYSTEM_PROMPT, messages as any);
+        break;
+      default:
+        fallbackResult = await callOpenAiCompatibleApi(
+          options.customEndpoint || "https://api.openai.com/v1/chat/completions",
+          options.apiKey,
+          options.model,
+          SYSTEM_PROMPT,
+          messages as any,
+          options.reasoningEffort as ReasoningEffortOption,
+          options.requestId,
+          options.timeoutMs
+        );
+        break;
     }
 
+    // Run Policy Guard & Trial Verification on result
+    const allOps = (fallbackResult.diffItems || []).flatMap((d: any) => d.unifiedOps || []);
+    const guardContext = {
+      userPrompt: options.userPrompt,
+      isNewDocument: false,
+      excludedRegions: options.excludedRegions,
+      layoutReport: initialReport,
+      tablesMeta: options.tablesMeta,
+    };
+    const guardRes = lintOps(allOps, guardContext);
+
+    if (baseBytes && options.stagingPath && allOps.length > 0) {
+      trialsRun += 1;
+      emitStep({ type: "trial", message: "제안된 연산 복사본 시험 적용 및 재측정 검증 중..." });
+      try {
+        const isHwpx = Boolean(options.isHwpx ?? (options.stagingPath.endsWith(".hwpx") || (baseBytes[0] === 0x50 && baseBytes[1] === 0x4b)));
+        const ext = isHwpx ? "hwpx" : "hwp";
+        const verifyPath = options.stagingPath.replace(/[^\\/]+$/, `trial_verify_${Date.now()}.${ext}`);
+
+        await runtimeInvoke("write_file_bytes", { filePath: verifyPath, bytes: Array.from(baseBytes) });
+        const unmaskedOps = masker.unmaskAndFilterOps(guardRes.sanitizedOps, options.excludedRegions);
+        const payload = OpTranslator.toEnginePayload(verifyPath, isHwpx, unmaskedOps, options.tablesMeta, false);
+        const clawRes = await runtimeInvoke<{ ok: boolean; stdout_json: any; stderr: string }>("execute_claw_ops", {
+          isHwpx,
+          payloadJson: payload.stdinJson,
+        });
+
+        if (clawRes.ok) {
+          const patchedBytesArr = await runtimeInvoke<number[]>("read_file_bytes", { filePath: verifyPath });
+          const afterReport = await inspectDocumentBytes(new Uint8Array(patchedBytesArr));
+          const comparison = compareLayoutReports(initialReport || afterReport, afterReport);
+          verificationPassed = comparison.ok;
+
+          for (const item of fallbackResult.diffItems) {
+            item.verificationStatus = comparison.ok ? "verified" : (comparison.newIssues.length > 0 ? "warning_new_issues" : "warning_unresolved");
+            item.warnings = [...(guardRes.warnings || [])];
+          }
+        }
+      } catch (err: any) {
+        console.warn("[aiOrchestrator] Verification error in fallback:", err);
+      }
+    }
+    return fallbackResult;
+  };
+
+  let rawResult: { summary: string; diffItems: any[] } = { summary: "", diffItems: [] };
+  if (options.loopMode === "v2") {
+    try {
+      const adapter = createProviderAdapter({
+        provider: options.provider,
+        apiKey: options.apiKey,
+        model: options.model,
+        endpoint: options.customEndpoint,
+        customName: options.customName,
+        customSupportsTools: options.customSupportsTools,
+        customSendReasoning: options.customSendReasoning,
+      });
+
+      const neutralMessages: NeutralMessage[] = messages.map((m) => {
+        if (m.role === "system" || m.role === "user") {
+          return { role: m.role, content: m.content || "" };
+        }
+        if (m.role === "assistant") {
+          const toolCalls = (m.tool_calls || []).map((tc) => ({
+            id: tc.id || "",
+            name: tc.function?.name || "",
+            argumentsJson: tc.function?.arguments || "{}",
+          }));
+          return {
+            role: "assistant",
+            content: m.content,
+            toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+          };
+        }
+        if (m.role === "tool") {
+          return {
+            role: "tool",
+            toolCallId: m.tool_call_id || "",
+            content: m.content || "",
+          };
+        }
+        return { role: "user", content: String(m.content || "") };
+      });
+
+      const v2Res = await runAgentLoopV2({
+        adapter,
+        systemPrompt: SYSTEM_PROMPT,
+        messages: neutralMessages,
+        options,
+        masker,
+        emitStep,
+        baseBytes,
+        initialReport,
+        getTools: () =>
+          AGENT_TOOLS.map((t) => ({
+            name: t.function.name,
+            description: t.function.description,
+            parameters: t.function.parameters,
+          })),
+      });
+
+      rawResult = {
+        summary: v2Res.summary,
+        diffItems: v2Res.diffItems,
+      };
+      verificationPassed = v2Res.verificationPassed;
+      trialsRun = v2Res.trialsRun;
+    } catch (err: any) {
+      if (err instanceof ToolsUnsupportedError) {
+        rawResult = await runSingleShotFallback();
+      } else {
+        throw err;
+      }
+    }
+  } else {
+    // --- Legacy Agentic Loop (Applies to all providers, with single-shot fallback) ---
+    const maxIterations = Math.min(6, Math.max(1, options.maxIterations ?? 5));
     let loopFinished = false;
 
-    for (let attempt = 0; attempt < maxIterations; attempt++) {
-      if (loopFinished) break;
+    try {
+      for (let attempt = 0; attempt < maxIterations; attempt++) {
+        if (options.signal?.aborted) {
+          const err = new Error("Agent loop aborted by user");
+          err.name = "AbortError";
+          throw err;
+        }
+        if (loopFinished) break;
 
       // Maintain high reasoning effort across turns (turn 1 may be inspect_layout, turn 2 deep editing)
       const currentEffort: ReasoningEffortOption =
@@ -451,17 +622,12 @@ export async function orchestrateAiEdit(options: AiRequestOptions): Promise<Orch
         message: `AI 추론 및 편집안 생성 중... (${attempt + 1}/${maxIterations}회차, effort: ${currentEffort})`,
       });
 
-      const turnResult = await callOpenAiAgentTurn({
-        endpointUrl: endpointUrl!,
-        apiKey: options.apiKey,
-        model: options.model || (options.provider === "baze" ? "gpt-6.1-terra" : "gpt-4o"),
-        systemPrompt: SYSTEM_PROMPT,
+      const turnResult = await callLegacyTurn({
+        options,
         messages,
+        systemPrompt: SYSTEM_PROMPT,
         tools: AGENT_TOOLS,
-        toolChoice: "auto",
-        reasoningEffort: currentEffort,
-        requestId: options.requestId,
-        timeoutMs: options.timeoutMs ?? 180_000,
+        currentEffort,
       });
 
       // Append assistant's turn to messages
@@ -527,7 +693,7 @@ export async function orchestrateAiEdit(options: AiRequestOptions): Promise<Orch
           messages.push({
             role: "tool",
             tool_call_id: call.id,
-            content: toolReply,
+            content: masker.maskTextForPrompt(toolReply, options.excludedRegions, options.autoMaskPii),
           });
         } else if (fnName === "apply_trial_edits") {
           trialsRun += 1;
@@ -549,11 +715,15 @@ export async function orchestrateAiEdit(options: AiRequestOptions): Promise<Orch
             messages.push({
               role: "tool",
               tool_call_id: call.id,
-              content: JSON.stringify({
-                ok: false,
-                guardRejected: guardRes.rejectedOps,
-                feedback: `정책 가드 위반으로 시험 적용이 취소되었습니다:\n${guardRes.rejectedOps.map((r) => r.reason).join("\n")}`,
-              }),
+              content: masker.maskTextForPrompt(
+                JSON.stringify({
+                  ok: false,
+                  guardRejected: guardRes.rejectedOps,
+                  feedback: `정책 가드 위반으로 시험 적용이 취소되었습니다:\n${guardRes.rejectedOps.map((r) => r.reason).join("\n")}`,
+                }),
+                options.excludedRegions,
+                options.autoMaskPii
+              ),
             });
             continue;
           }
@@ -583,34 +753,38 @@ export async function orchestrateAiEdit(options: AiRequestOptions): Promise<Orch
                 messages.push({
                   role: "tool",
                   tool_call_id: call.id,
-                  content: JSON.stringify({
-                    ok: true,
-                    summary: comp.summaryText,
-                    resolvedCount: comp.resolvedIssues.length,
-                    remainingCount: comp.remainingIssues.length,
-                    newCount: comp.newIssues.length,
-                    details: formatLayoutReportForPrompt(trialReport),
-                  }),
+                  content: masker.maskTextForPrompt(
+                    JSON.stringify({
+                      ok: true,
+                      summary: comp.summaryText,
+                      resolvedCount: comp.resolvedIssues.length,
+                      remainingCount: comp.remainingIssues.length,
+                      newCount: comp.newIssues.length,
+                      details: formatLayoutReportForPrompt(trialReport),
+                    }),
+                    options.excludedRegions,
+                    options.autoMaskPii
+                  ),
                 });
               } else {
                 messages.push({
                   role: "tool",
                   tool_call_id: call.id,
-                  content: JSON.stringify({ ok: false, error: clawRes.stderr || "Claw execution error" }),
+                  content: masker.maskTextForPrompt(JSON.stringify({ ok: false, error: clawRes.stderr || "Claw execution error" }), options.excludedRegions, options.autoMaskPii),
                 });
               }
             } catch (err: any) {
               messages.push({
                 role: "tool",
                 tool_call_id: call.id,
-                content: JSON.stringify({ ok: false, error: err.message }),
+                content: masker.maskTextForPrompt(JSON.stringify({ ok: false, error: err.message }), options.excludedRegions, options.autoMaskPii),
               });
             }
           } else {
             messages.push({
               role: "tool",
               tool_call_id: call.id,
-              content: JSON.stringify({ ok: true, note: "파일 바이너리 부재로 정적 가드만 통과했습니다." }),
+              content: masker.maskTextForPrompt(JSON.stringify({ ok: true, note: "파일 바이너리 부재로 정적 가드만 통과했습니다." }), options.excludedRegions, options.autoMaskPii),
             });
           }
         } else if (fnName === "propose_hwp_edits") {
@@ -638,7 +812,11 @@ export async function orchestrateAiEdit(options: AiRequestOptions): Promise<Orch
             messages.push({
               role: "tool",
               tool_call_id: call.id,
-              content: `정책 가드 검사 실패:\n${guardRes.rejectedOps.map((r) => r.reason).join("\n")}\n\n위반 사항을 교정(예: 폰트 확대 대신 set_row_height, set_col_width, fit_table_to_page 또는 shrink_cell_font 사용)하여 다시 propose_hwp_edits를 호출하세요.`,
+              content: masker.maskTextForPrompt(
+              `정책 가드 검사 실패:\n${guardRes.rejectedOps.map((r) => r.reason).join("\n")}\n\n위반 사항을 교정(예: 폰트 확대 대신 set_row_height, set_col_width, fit_table_to_page 또는 shrink_cell_font 사용)하여 다시 propose_hwp_edits를 호출하세요.`,
+              options.excludedRegions,
+              options.autoMaskPii
+            ),
             });
             continue; // Continue agent loop to let model self-correct
           }
@@ -680,7 +858,11 @@ export async function orchestrateAiEdit(options: AiRequestOptions): Promise<Orch
                   messages.push({
                     role: "tool",
                     tool_call_id: call.id,
-                    content: `시험 검증 결과: ${comparison.summaryText}\n잔여 이슈 목록:\n${comparison.remainingIssues.map((i) => i.message).join("\n")}\n\n행 높이나 열 너비를 더 확장하거나 셀 여백을 줄여 오버플로를 완전히 해소한 뒤 다시 propose_hwp_edits를 호출하세요.`,
+                    content: masker.maskTextForPrompt(
+                    `시험 검증 결과: ${comparison.summaryText}\n잔여 이슈 목록:\n${comparison.remainingIssues.map((i) => i.message).join("\n")}\n\n행 높이나 열 너비를 더 확장하거나 셀 여백을 줄여 오버플로를 완전히 해소한 뒤 다시 propose_hwp_edits를 호출하세요.`,
+                    options.excludedRegions,
+                    options.autoMaskPii
+                  ),
                   });
                   continue; // Continue loop to refine
                 }
@@ -728,70 +910,11 @@ export async function orchestrateAiEdit(options: AiRequestOptions): Promise<Orch
         }
       }
     }
-  } else {
-    // Other providers (Claude / Gemini / Ollama)
-    emitStep({ type: "thinking", message: `AI 모델(${options.provider}/${options.model}) 호출 중...` });
-    switch (options.provider) {
-      case "claude":
-        rawResult = await callClaudeApi(options.apiKey, options.model, SYSTEM_PROMPT, messages as any);
-        break;
-      case "gemini":
-        rawResult = await callGeminiApi(options.apiKey, options.model, SYSTEM_PROMPT, messages as any);
-        break;
-      case "ollama":
-        rawResult = await callOllamaApi(options.customEndpoint || "", options.model, SYSTEM_PROMPT, messages as any);
-        break;
-      default:
-        rawResult = await callOpenAiCompatibleApi(
-          options.customEndpoint || "https://api.openai.com/v1/chat/completions",
-          options.apiKey,
-          options.model,
-          SYSTEM_PROMPT,
-          messages as any
-        );
-        break;
-    }
-
-    // Run Policy Guard & Trial Verification on result
-    const allOps = (rawResult.diffItems || []).flatMap((d: any) => d.unifiedOps || []);
-    const guardContext = {
-      userPrompt: options.userPrompt,
-      isNewDocument: false,
-      excludedRegions: options.excludedRegions,
-      layoutReport: initialReport,
-      tablesMeta: options.tablesMeta,
-    };
-    const guardRes = lintOps(allOps, guardContext);
-
-    if (baseBytes && options.stagingPath && allOps.length > 0) {
-      trialsRun += 1;
-      emitStep({ type: "trial", message: "제안된 연산 복사본 시험 적용 및 재측정 검증 중..." });
-      try {
-        const isHwpx = Boolean(options.isHwpx ?? (options.stagingPath.endsWith(".hwpx") || (baseBytes[0] === 0x50 && baseBytes[1] === 0x4b)));
-        const ext = isHwpx ? "hwpx" : "hwp";
-        const verifyPath = options.stagingPath.replace(/[^\\/]+$/, `trial_verify_${Date.now()}.${ext}`);
-
-        await runtimeInvoke("write_file_bytes", { filePath: verifyPath, bytes: Array.from(baseBytes) });
-        const unmaskedOps = masker.unmaskAndFilterOps(guardRes.sanitizedOps, options.excludedRegions);
-        const payload = OpTranslator.toEnginePayload(verifyPath, isHwpx, unmaskedOps, options.tablesMeta, false);
-        const clawRes = await runtimeInvoke<{ ok: boolean; stdout_json: any; stderr: string }>("execute_claw_ops", {
-          isHwpx,
-          payloadJson: payload.stdinJson,
-        });
-
-        if (clawRes.ok) {
-          const patchedBytesArr = await runtimeInvoke<number[]>("read_file_bytes", { filePath: verifyPath });
-          const afterReport = await inspectDocumentBytes(new Uint8Array(patchedBytesArr));
-          const comparison = compareLayoutReports(initialReport || afterReport, afterReport);
-          verificationPassed = comparison.ok;
-
-          for (const item of rawResult.diffItems) {
-            item.verificationStatus = comparison.ok ? "verified" : (comparison.newIssues.length > 0 ? "warning_new_issues" : "warning_unresolved");
-            item.warnings = [...(guardRes.warnings || [])];
-          }
-        }
-      } catch (err: any) {
-        console.warn("[aiOrchestrator] Verification error:", err);
+  } catch (err: any) {
+      if (err instanceof ToolsUnsupportedError) {
+        rawResult = await runSingleShotFallback();
+      } else {
+        throw err;
       }
     }
   }
