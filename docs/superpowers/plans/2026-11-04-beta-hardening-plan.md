@@ -355,3 +355,33 @@ Beta, main, and PR merge state are outside this publication step. The packaged W
 The bot-triggered duplicate run `41826931257` is `action_required` with no jobs. It does not replace or negate the successful integrated run above, whose Windows and frontend jobs checked out and validated the exact `d670b92` PR head.
 
 PR #1 remains open against `Beta`; neither `Beta` nor `main` was modified or merged.
+
+
+## 26. User bug fixes, full test suites & desktop packaging complete — 2026-11-05
+
+### Task 26.1: Font language resolution and script sync (`rhwp#8140`)
+- [x] Resolve all 7 HWP language table font IDs when font-lang is 'all' ('대표').
+- [x] Auto-display font of script at cursor position in toolbar dropdown.
+- [x] Apply font changes across all 7 language slots on mixed Korean/English selections.
+- [x] Add NanumGothic Bold/ExtraBold WOFF2 font assets.
+
+### Task 26.2: Universal file opening routing
+- [x] Fix header '열기' input handling (`#header-hwp-file-input`).
+- [x] Fix `Ctrl+O` shortcut routing in browser mode without throwing `pick_local_file` command errors.
+- [x] Implement unified `open-document-bytes` event bridge across HOP WASM runtime and React host for HOP Menu `파일 > 열기`.
+- [x] Fallback file input verified for both HWP and HWPX files.
+
+### Task 26.3: Dropdown popups, textarea focus, and Korean IME composition
+- [x] Convert custom-select dropdowns (`#font-name`, `#font-lang`, `#style-name`, `#linespacing-select`) to floating portal overlays to avoid container overflow clipping.
+- [x] Restore and preserve editor textarea focus on option selection in empty paragraphs.
+- [x] Preserve pending character format across multi-stroke Korean IME composition in empty paragraphs without reversion.
+
+### Task 26.4: Verification and desktop installer packaging
+- [x] Unit test suite: 34 files, 242/242 tests passed.
+- [x] Production bundle build: `tsc && vite build` clean with 0 errors.
+- [x] Live Playwright E2E verification: 17/17 passed (`verify_all_3_fixes.mjs`).
+- [x] UI & GPL Playwright regression suite: 23/23 passed (`verify_ui_and_gpl.mjs`).
+- [x] Standalone executable built: `src-tauri/target/release/hop-claw.exe` (52.9 MB, valid PE x86_64).
+- [x] WiX MSI installer packaged: `HOP-Claw_0.1.0_x64_en-US.msi` (35.2 MB).
+- [x] NSIS setup installer packaged: `HOP-Claw_0.1.0_x64-setup.exe` (31.9 MB).
+- [x] Packaging environment documented via `C:\Users\jun\tools\env.ps1`.

@@ -2133,3 +2133,46 @@ pub async fn call_llm_http(req: LlmProxyRequest) -> Result<LlmProxyResponse, Str
    - 좌측 AI 패널에 참고 문서(예: `수학_약안.docx` 또는 `demo_budget_ref.xlsx`)를 첨부하여 파일 카드가 렌더링되고, 프롬프트 전송 후 에이전트 실행 요약 배지(`문서 확인 N회, 페이지 M개 읽음, 문서 편집 K건`)와 `SmartDiffOverlay`(`[✔ 적용]` / `[✖ 취소]`)가 표시되는지 이미지로 확인.
 5. **체크포인트 5 (`05_diff_accepted_and_saved.png`) — 변경 수락 후 HOP 캔버스 재렌더링 및 실제 파일(`extract_text.js --inspect`) 검증**:
    - `[✔ 적용]` 또는 `[모두 적용]` 클릭 후 HOP 캔버스에 변경된 텍스트가 실제로 렌더링된 모습을 스크린샷으로 시각 확인하고, 저장된 `.hwp`/`.hwpx` 파일을 `node resources/claw-hwp/scripts/extract_text.js --inspect --with-cell-text`로 검사하여 내부 레코드/XML까지 100% 일치하는지 검증.
+
+
+---
+
+## 9. 2026-11-05 최신 버그 수정 및 데스크톱 패키징 가이드
+
+### 9.1 최근 해결된 3대 결함 구현 명세
+
+1. **HWP 7대 언어 슬롯 글꼴 자동 동기화 (`rhwp#8140`)**:
+   - `third_party/rhwp/rhwp-studio/src/core/font-ids.ts`: 글꼴 선택 시 `hangul`, `latin`, `hanja`, `japanese`, `other`, `symbol`, `user` 총 7개 슬롯의 `fontId`를 동시 계산.
+   - `src/hop-host/ui/toolbar.ts`: `fontLang`이 `'all'` (`대표`)일 때 커서 위치의 실제 문자 스크립트(`activeFontLang`)를 감지하여 툴바에 해당 글꼴 자동 표출.
+   - 한글과 영문이 혼합된 영역 선택 시에도 모든 슬롯에 선택한 글꼴이 정상 적용되도록 일원화.
+   - `assets/fonts/`: 나눔고딕 굵은 글꼴(`NanumGothic-Bold.woff2`, `NanumGothic-ExtraBold.woff2`) 보강.
+
+2. **헤더 및 메뉴 파일 열기(`Ctrl+O`) 라우팅 일원화**:
+   - `src/hop-host/command/commands/file.ts`: `isDesktopTauriRuntime()` 감지를 통해 데스크톱(Tauri `pick_local_file`)과 웹 브라우저(`showOpenFilePicker` / `#header-hwp-file-input` 클릭 트리거) 실행 경로를 자동 분기.
+   - `src/components/viewer/HopEditorHost.tsx` & `src/store/useDocStore.ts`: `open-document-bytes` 커스텀 이벤트를 통해 HOP 에디터와 React 호스트 상단 바(`#header-doc-filename`, `.hop-staging` 경로) 간 동기화 완료.
+
+3. **툴바 커스텀 셀렉트 드롭다운 및 한글 IME 조합 서식 보존**:
+   - `src/hop-host/ui/custom-select.ts` & `src/hop-host/styles/custom-select.css`: 툴바 부모 컨테이너의 `.sb-font { overflow: hidden }`으로 인해 드롭다운 목록이 잘리던 현상을 `fixed` 플로팅 오버레이(포털) 구조로 변경하여 해결.
+   - 옵션 선택 직후 에디터 `textarea[aria-label="문서 편집 입력"]`에 포커스를 즉시 복원하여 타이핑 연속성 보장.
+   - `src/hop-host/ui/pending-char-shape-ime.test.ts` & `input-handler-text.ts`: 빈 문단에서 글꼴/크기 선택 후 한글 다중 자모 조합(`ㅎ` $\rightarrow$ `하` $\rightarrow$ `한`) 입력 시 2번째 타건에서 기본 글꼴로 되돌아가지 않도록 `pendingCharShape`를 조합 완료 시점까지 유지.
+
+### 9.2 테스트 및 패키징 실행 명령 요약
+
+```bash
+# 단위 테스트 전체 실행 (34개 파일, 242개 테스트)
+npm test
+
+# 타입스크립트 및 Vite 프로덕션 번들 빌드
+npm run build
+
+# Playwright 전체 회귀 및 실기능 E2E 검증
+node tests/verify_ui_and_gpl.mjs
+```
+
+### 9.3 Windows 데스크톱 패키징 (Tauri v2 + MinGW)
+- 환경 변수 설정: `. C:\Users\jun\tools\env.ps1` (MinGW-w64의 `dlltool.exe`, `as.exe`, `gcc.exe` 경로 등록)
+- 번들 빌드: `npx tauri build`
+- 산출물:
+  - 단독 바이너리: `src-tauri/target/release/hop-claw.exe`
+  - WiX MSI 설치 패키지: `src-tauri/target/release/bundle/msi/HOP-Claw_0.1.0_x64_en-US.msi`
+  - NSIS 셋업 설치 패키지: `src-tauri/target/release/bundle/nsis/HOP-Claw_0.1.0_x64-setup.exe`
