@@ -111,8 +111,12 @@ class HopBridgeManager {
       tableControls = allCtrls.filter((c) => c.ctrlId === "tbl " || c.ctrlId === "tbl");
     } catch {}
 
-    return tablesMeta.map((table, idx) => {
-      const ctrlRef = tableControls[idx];
+    let topIdx = 0;
+    return tablesMeta.map((table) => {
+      if (table.depth && table.depth > 0) {
+        return table;
+      }
+      const ctrlRef = tableControls[topIdx++];
       const sec = ctrlRef?.list ?? table.sec ?? 0;
       const para = ctrlRef?.para ?? table.para ?? 0;
       const ctrl = ctrlRef?.controlIndex ?? table.ctrl ?? 0;

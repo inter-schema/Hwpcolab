@@ -148,17 +148,49 @@ export function inspectRhwpWrapper(
     colMaxX.forEach((w) => { tableWidthPx += w; });
     const tableWidthMm = Number((tableWidthPx / PX_PER_MM).toFixed(2));
 
-    if (tableWidthMm > printableWidthMm + 1.0) {
+    const isNested = (tableMeta.depth ?? 0) > 0;
+    let allowedWidthMm: number | null = null;
+    let isParentCellLimit = false;
+
+    if (isNested) {
+      const parentTable = tablesMeta.find((t) => t.tableIndex === tableMeta.parentTableIndex);
+      if (parentTable && tableMeta.parentCell) {
+        const parentCell = parentTable.cells.find(
+          (c) => c.row === tableMeta.parentCell!.row && c.col === tableMeta.parentCell!.col
+        );
+        if (parentCell?.bbox && parentCell.bbox.w > 0) {
+          const pProps = wrapper.getCellProperties(
+            parentTable.sec,
+            parentTable.para,
+            parentTable.ctrl,
+            parentCell.idx
+          ) || {};
+          const padLPx = (pProps.paddingLeft ?? 400) / HU_PER_PX;
+          const padRPx = (pProps.paddingRight ?? 400) / HU_PER_PX;
+          const availWPx = Math.max(0, parentCell.bbox.w - padLPx - padRPx);
+          allowedWidthMm = Number((availWPx / PX_PER_MM).toFixed(2));
+          isParentCellLimit = true;
+        }
+      }
+    } else {
+      allowedWidthMm = printableWidthMm;
+    }
+
+    if (allowedWidthMm != null && tableWidthMm > allowedWidthMm + 1.0) {
+      const overflowMm = Number((tableWidthMm - allowedWidthMm).toFixed(2));
+      const targetDesc = isParentCellLimit
+        ? `부모 셀 내부 폭(${allowedWidthMm}mm)`
+        : `인쇄 가능 폭(${allowedWidthMm}mm)`;
       issues.push({
         id: `table:${tIdx}:exceeds_page`,
         code: "TABLE_EXCEEDS_PAGE",
         severity: "warning",
-        message: `표 ${tIdx}의 너비(${tableWidthMm}mm)가 인쇄 가능 폭(${printableWidthMm}mm)을 ${(tableWidthMm - printableWidthMm).toFixed(2)}mm 초과했습니다.`,
+        message: `표 ${tIdx}의 너비(${tableWidthMm}mm)가 ${targetDesc}을 ${overflowMm}mm 초과했습니다.`,
         tableIndex: tIdx,
         metrics: {
           tableWidthMm,
-          printableWidthMm,
-          overflowWidthMm: Number((tableWidthMm - printableWidthMm).toFixed(2)),
+          printableWidthMm: allowedWidthMm,
+          overflowWidthMm: overflowMm,
         },
       });
     }
@@ -280,7 +312,7 @@ export function inspectRhwpWrapper(
       ctrl,
       cellCount: cellsInfo.length,
       tableWidthMm,
-      printableWidthMm,
+      printableWidthMm: allowedWidthMm ?? printableWidthMm,
       cells: cellsInfo,
     });
   }

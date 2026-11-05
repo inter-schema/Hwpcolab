@@ -121,6 +121,11 @@ export class PrivacySessionMasker {
         if (Array.isArray(cloned.rows)) {
           cloned.rows = cloned.rows.map((r: string[]) => r.map((c: string) => this.unmaskText(c)));
         }
+        if (Array.isArray(cloned.data)) {
+          cloned.data = cloned.data.map((r: string[]) =>
+            Array.isArray(r) ? r.map((c: string) => this.unmaskText(c)) : r
+          );
+        }
         if (Array.isArray(cloned.cells)) {
           cloned.cells = cloned.cells.map((c: string) => this.unmaskText(c));
         }

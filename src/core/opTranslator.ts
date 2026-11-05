@@ -156,6 +156,9 @@ export class OpTranslator {
           break;
         }
 
+        case "insert_nested_table":
+          throw new Error("HWP 바이너리는 중첩 표 미지원 — HWPX로 저장 후 시도");
+
         case "insert_table_row": {
           const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
           out.push({
@@ -525,6 +528,24 @@ export class OpTranslator {
             rows: allCells.length,
             cols: op.headers.length,
             cells: allCells,
+          });
+          break;
+        }
+
+        case "insert_nested_table": {
+          const sanitizedCells = op.data
+            ? op.data.map((row) => row.map((c) => this.sanitizeMarkdownFormatting(c)))
+            : undefined;
+          out.push({
+            type: "insert_nested_table",
+            table: op.tableIndex,
+            row: op.row,
+            col: op.col,
+            rows: op.rows,
+            cols: op.cols,
+            ...(sanitizedCells ? { cells: sanitizedCells, data: sanitizedCells } : {}),
+            ...(op.headerRow !== undefined ? { headerRow: op.headerRow } : {}),
+            ...(op.widthMode ? { widthMode: op.widthMode } : {}),
           });
           break;
         }
