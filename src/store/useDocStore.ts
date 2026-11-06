@@ -95,6 +95,13 @@ interface DocState {
   applyHumanCellEdit: (tableIndex: number, row: number, col: number, newText: string) => Promise<void>;
   applyHumanParagraphEdit: (sec: number, para: number, newText: string, oldText: string) => Promise<void>;
   applyHumanInsertParagraph: (text: string) => Promise<void>;
+  applyHumanNestedTableInsert: (
+    tableIndex: number,
+    row: number,
+    col: number,
+    rows: number,
+    cols: number
+  ) => Promise<void>;
   setAutoMaskPii: (autoMask: boolean) => void;
   toggleExcludeSelection: () => void;
   addAttachment: (att: ParsedAttachment) => void;
@@ -658,6 +665,50 @@ export const useDocStore = create<DocState>((set, get) => ({
 
     if (!res.ok) {
       throw new Error(`셀 수정 실패: ${JSON.stringify(res.stdout_json)} ${res.stderr}`);
+    }
+
+    const updatedBytesArr = await invoke<number[]>("read_file_bytes", { filePath: stagingPath });
+    const updatedBytes = new Uint8Array(updatedBytesArr);
+
+    set({
+      fileBytes: updatedBytes,
+      isDirty: true,
+      isHopDirectDirty: false,
+      undoHistoryBytes: fileBytes ? [...undoHistoryBytes, fileBytes] : undoHistoryBytes,
+      editingTarget: null,
+      selection: null,
+    });
+    await hopBridge.loadDocumentIntoHop(updatedBytes, fileName);
+    await get().refreshDocMarkdown();
+  },
+
+  applyHumanNestedTableInsert: async (tableIndex: number, row: number, col: number, rows: number, cols: number) => {
+    await get().syncHopToStaging();
+    const { stagingPath, isHwpx, tablesMeta, fileBytes, undoHistoryBytes, fileName } = get();
+    if (!stagingPath) return;
+
+    if (!isHwpx) {
+      throw new Error("중첩 표는 국가 표준 HWPX 문서에서만 지원됩니다. HWPX로 저장 후 시도해 주세요.");
+    }
+
+    const op: UnifiedOp = {
+      type: "insert_nested_table",
+      tableIndex,
+      row,
+      col,
+      rows,
+      cols,
+      widthMode: "fit_cell",
+    };
+
+    const payload = OpTranslator.toEnginePayload(stagingPath, isHwpx, [op], tablesMeta, false);
+    const res = await invoke<{ ok: boolean; stdout_json: any; stderr: string }>("execute_claw_ops", {
+      isHwpx: payload.isHwpx,
+      payloadJson: payload.stdinJson,
+    });
+
+    if (!res.ok) {
+      throw new Error(`중첩 표 삽입 실패: ${JSON.stringify(res.stdout_json)} ${res.stderr}`);
     }
 
     const updatedBytesArr = await invoke<number[]>("read_file_bytes", { filePath: stagingPath });

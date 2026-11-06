@@ -36,6 +36,7 @@ export const ModelPrivacySettings: React.FC = () => {
   const [localCustomSupportsTools, setLocalCustomSupportsTools] = useState(customSupportsTools);
   const [localCustomSendReasoning, setLocalCustomSendReasoning] = useState(customSendReasoning);
   const [endpointError, setEndpointError] = useState<string | null>(null);
+  const [savedFeedback, setSavedFeedback] = useState(false);
 
   // Sync state when modal opens
   useEffect(() => {
@@ -74,6 +75,7 @@ export const ModelPrivacySettings: React.FC = () => {
       setLocalCustomSupportsTools(savedCustomSupportsTools);
       setLocalCustomSendReasoning(savedCustomSendReasoning);
       setEndpointError(null);
+      setSavedFeedback(false);
     }
   }, [settingsModalOpen]);
 
@@ -106,6 +108,8 @@ export const ModelPrivacySettings: React.FC = () => {
   };
 
   const handleSave = () => {
+    if (savedFeedback) return;
+
     if (localProvider === "custom") {
       if (!localEndpoint.trim()) {
         setEndpointError("엔드포인트 URL을 입력해주세요.");
@@ -155,14 +159,19 @@ export const ModelPrivacySettings: React.FC = () => {
     setReasoningEffort(localReasoningEffort);
     setAgentLoopMode(localLoopMode);
     setAutoMaskPii(localMaskPii);
-    setSettingsModalOpen(false);
+
+    setSavedFeedback(true);
+    setTimeout(() => {
+      setSavedFeedback(false);
+      setSettingsModalOpen(false);
+    }, 600);
   };
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md max-h-[88vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
           <div className="flex items-center gap-2">
             <Cpu className="w-5 h-5 text-indigo-600" />
             <div>
@@ -179,7 +188,7 @@ export const ModelPrivacySettings: React.FC = () => {
         </div>
 
         {/* Body */}
-        <div className="p-5 flex flex-col gap-4 text-xs">
+        <div className="p-5 flex-1 overflow-y-auto flex flex-col gap-4 text-xs min-h-0">
           {/* Provider Selection */}
           <div className="flex flex-col gap-1.5">
             <label className="font-semibold text-slate-700">AI 프로바이더 선택</label>
@@ -482,7 +491,7 @@ export const ModelPrivacySettings: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between gap-2 bg-slate-50/50">
+        <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between gap-2 bg-slate-50/80 shrink-0 sticky bottom-0">
           <button
             type="button"
             onClick={() => {
@@ -501,11 +510,17 @@ export const ModelPrivacySettings: React.FC = () => {
               취소
             </button>
             <button
+              id="settings-save-button"
               onClick={handleSave}
-              className="flex items-center gap-1 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm"
+              disabled={savedFeedback}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-white font-semibold shadow-sm transition-all ${
+                savedFeedback
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : "bg-indigo-600 hover:bg-indigo-700"
+              }`}
             >
               <Check className="w-3.5 h-3.5" />
-              <span>설정 저장</span>
+              <span>{savedFeedback ? "저장 완료!" : "설정 저장"}</span>
             </button>
           </div>
         </div>

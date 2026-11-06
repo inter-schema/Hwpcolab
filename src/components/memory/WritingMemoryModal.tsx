@@ -38,6 +38,9 @@ import {
   Loader2,
   RotateCcw,
   Eye,
+  Lightbulb,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 async function extractTextFromFile(file: File): Promise<string> {
@@ -79,6 +82,7 @@ export const WritingMemoryModal: React.FC = () => {
   } = useDocStore();
 
   const [activeTab, setActiveTab] = useState<"list" | "create_multi" | "create_current">("list");
+  const [showGuide, setShowGuide] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<MemoryDoc | null>(null);
   const [activeSubview, setActiveSubview] = useState<"edit" | "refine" | "revisions">("edit");
@@ -557,14 +561,92 @@ export const WritingMemoryModal: React.FC = () => {
             </div>
           </div>
 
-          <button
-            onClick={closeMemoryModal}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors"
-            title="닫기"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              id="memory-guide-toggle-btn"
+              data-testid="memory-guide-toggle-btn"
+              onClick={() => setShowGuide(!showGuide)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                showGuide
+                  ? "bg-amber-50 border-amber-300 text-amber-800 shadow-xs"
+                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-800"
+              }`}
+              title="작성 선호사항 기능 안내 보기"
+            >
+              <Lightbulb className="w-4 h-4 text-amber-500" />
+              <span>기능 안내</span>
+              {showGuide ? (
+                <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              )}
+            </button>
+            <button
+              onClick={closeMemoryModal}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors"
+              title="닫기"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+
+        {/* Expandable Guide Banner */}
+        {showGuide && (
+          <div
+            id="writing-memory-guide-banner"
+            data-testid="writing-memory-guide-banner"
+            className="px-6 py-4 bg-gradient-to-r from-amber-50/90 via-amber-50/40 to-teal-50/40 border-b border-amber-200/80 transition-all animate-in fade-in slide-in-from-top-2 duration-200 shrink-0"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-base">💡</span>
+                <h3 className="text-xs font-bold text-amber-950">
+                  작성 선호사항 (Writing Memory) 안내
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGuide(false)}
+                className="text-xs text-amber-700 hover:text-amber-900 font-medium"
+              >
+                닫기 ✕
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="p-3.5 bg-white/95 rounded-xl border border-amber-200/70 shadow-2xs space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                  <span>📌</span>
+                  <span>1. 어떤 기능인가요?</span>
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  사내/기관에서 자주 작성하는 모범 공문서·보고서(HWP, HWPX, DOCX, XLSX, PDF 등 최대 10개)를 등록하면, AI가 문서에 쓰인 <strong>'표 서식'</strong>, <strong>'목차·문단 번호 체계'</strong>, <strong>'공문서 어투(~함, ~기 바람 등 종결형)'</strong>, <strong>'기관 고유 용어'</strong>를 자동으로 분석하여 템플릿 메모리로 추출·보관하는 기능입니다.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-white/95 rounded-xl border border-amber-200/70 shadow-2xs space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                  <span>🚀</span>
+                  <span>2. 어떻게 쓰이나요?</span>
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  AI 채팅 사이드바의 <strong>'작성 선호사항'</strong> 바에서 저장된 메모리를 켜두기만 하면(#1, #2 우선순위 지정 가능), 새로운 공문서 작성이나 표 채우기를 요청할 때 AI가 내가 등록한 양식 규칙을 <strong>100% 자동으로 준수</strong>하여 작성합니다.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-white/95 rounded-xl border border-emerald-200/80 shadow-2xs space-y-1.5 bg-emerald-50/30">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                  <span>🛡️</span>
+                  <span>3. 개인정보(PII)는 안전한가요?</span>
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  <strong>단방향 영구 비식별화(12종 PII 자동 마스킹)</strong>가 적용되어 주민등록번호, 전화번호, 이메일, 성명 등 민감 정보는 추출 단계에서 제거되고 복원이 불가능하므로 사내 보안 규정을 안전하게 준수합니다.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="px-6 border-b border-slate-200 flex items-center gap-2 bg-white">
@@ -1118,6 +1200,13 @@ export const WritingMemoryModal: React.FC = () => {
                     </p>
                   </div>
 
+                  <div className="p-3 bg-teal-50/70 border border-teal-200/80 rounded-xl text-xs text-teal-900 flex items-start gap-2">
+                    <span className="text-sm shrink-0">💡</span>
+                    <div>
+                      <span className="font-semibold">이럴 때 유용해요:</span> 비슷한 양식의 기안문 여러 개를 넣을수록 우리 조직만의 공통 규칙(표 서식, 제목 체계, 종결 어미 등)이 정밀하게 추출됩니다.
+                    </div>
+                  </div>
+
                   <div className="space-y-3">
                     <div>
                       <label className="text-xs font-bold text-slate-700 block mb-1">
@@ -1280,6 +1369,13 @@ export const WritingMemoryModal: React.FC = () => {
                     <p className="text-xs text-slate-500">
                       현재 편집기에서 열려 있는 문서의 문체와 서식을 분석하여 새 메모리로 생성합니다.
                     </p>
+                  </div>
+
+                  <div className="p-3 bg-teal-50/70 border border-teal-200/80 rounded-xl text-xs text-teal-900 flex items-start gap-2">
+                    <span className="text-sm shrink-0">💡</span>
+                    <div>
+                      <span className="font-semibold">이럴 때 유용해요:</span> 현재 작업 중인 완성도 높은 문서 서식을 그대로 재사용하고 싶을 때, 별도 파일 첨부 없이 한 번의 클릭으로 양식과 문체를 캡처하여 바로 메모리로 저장할 수 있습니다.
+                    </div>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">

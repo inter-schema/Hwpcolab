@@ -79,7 +79,7 @@ export class HomeScreen {
     const newBtn = this.createActionButton('새 문서', '빈 HWP 문서 만들기', () => {
       this.actions.createNewDocument();
     });
-    const memoryBtn = this.createActionButton('작성 선호사항', '여러 문서를 넣어 양식 메모리 생성·관리', () => {
+    const memoryBtn = this.createActionButton('작성 선호사항 (양식 메모리)', '사내 공문서·보고서 양식 및 문체 규칙을 분석하여 AI 메모리로 보관', () => {
       this.actions.openWritingMemory?.();
     });
     memoryBtn.id = 'home-writing-memory-btn';
