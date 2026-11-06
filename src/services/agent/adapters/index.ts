@@ -1,4 +1,4 @@
-import { ProviderAdapter, ProviderConfig } from "../types.ts";
+import type { ProviderAdapter, ProviderConfig } from "../types.ts";
 import { validateCustomEndpoint } from "../endpointPolicy.ts";
 import { ClaudeAdapter } from "./claude.ts";
 import { OpenAiCompatAdapter } from "./openaiCompat.ts";

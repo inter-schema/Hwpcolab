@@ -28,7 +28,13 @@ export interface AgentTurnResponse {
   stopReason?: string;
 }
 export class ToolsUnsupportedError extends Error {}
-export class TransientProviderError extends Error { constructor(msg: string, public status?: number) { super(msg); } }
+export class TransientProviderError extends Error {
+  status?: number;
+  constructor(msg: string, status?: number) {
+    super(msg);
+    this.status = status;
+  }
+}
 
 export interface ProviderAdapter {
   readonly id: ProviderId;
