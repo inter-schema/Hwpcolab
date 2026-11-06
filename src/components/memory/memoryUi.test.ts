@@ -163,7 +163,8 @@ describe("Wave 2 Stream D2: Writing Memory UI and Store Integration Tests", () =
       expect(memoryBtn).not.toBeNull();
       expect(memoryBtn.id).toBe("home-writing-memory-btn");
       expect(memoryBtn.dataset.testid).toBe("home-writing-memory-btn");
-      expect(memoryBtn.textContent).toContain("작성 선호사항");
+      expect(memoryBtn.textContent).toContain("작성 선호사항 (양식 메모리)");
+      expect(memoryBtn.textContent).toContain("사내 공문서·보고서 양식 및 문체 규칙을 분석하여 AI 메모리로 보관");
 
       memoryBtn.click();
       expect(openWritingMemoryMock).toHaveBeenCalledTimes(1);

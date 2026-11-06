@@ -6,7 +6,6 @@ import {
   formatCommands,
   insertCommands,
   pageCommands,
-  tableCommands,
   toolCommands,
   viewCommands,
 } from '@/upstream/commands';
@@ -14,6 +13,7 @@ import type { CommandDef, CommandServices, EditorContext, EditorEditMode } from 
 import type { DocumentDirtyState, EventBus, WasmBridge } from '@/upstream/core';
 import { editCommands } from '@/command/commands/edit';
 import { fileCommands } from '@/command/commands/file';
+import { tableCommands } from '@/command/commands/table';
 import { assertUniqueCommandIds } from '../command/replace-upstream-commands';
 import { toolbarLabelsCommand } from './toolbar-labels';
 

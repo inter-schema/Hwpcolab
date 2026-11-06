@@ -28,6 +28,9 @@ export const InlineQuickToolbar: React.FC<Props> = ({ position, onClose }) => {
   } = useDocStore();
 
   const [customPrompt, setCustomPrompt] = useState("");
+  const [showNestedModal, setShowNestedModal] = useState(false);
+  const [nestedRows, setNestedRows] = useState(2);
+  const [nestedCols, setNestedCols] = useState(2);
   const [loading, setLoading] = useState(false);
 
   if (!selection || !position) return null;
@@ -138,6 +141,7 @@ export const InlineQuickToolbar: React.FC<Props> = ({ position, onClose }) => {
           </button>
 
           {isTableSelection && (
+            <>
             <button
               id="quick-btn-fill-table"
               onClick={() => handleAction("fill_or_calc_table")}
@@ -148,6 +152,25 @@ export const InlineQuickToolbar: React.FC<Props> = ({ position, onClose }) => {
               <Calculator className="w-3 h-3 text-teal-700" />
               <span>표 채우기/계산</span>
             </button>
+
+            <button
+              id="quick-btn-nested-table"
+              data-testid="quick-btn-nested-table"
+              onClick={() => {
+                if (!useDocStore.getState().isHwpx) {
+                  alert("중첩 표는 HWPX 형식에서 지원됩니다. [새 문서 .hwpx]나 HWPX 파일에서 사용해주세요.");
+                  return;
+                }
+                setShowNestedModal(true);
+              }}
+              disabled={loading}
+              className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md bg-teal-50 hover:bg-teal-100 text-teal-800 font-semibold border border-teal-200 transition-colors shadow-2xs"
+              title="선택된 표 셀 내부에 중첩 표 삽입 (HWPX 전용)"
+            >
+              <span className="font-mono text-xs">⊞</span>
+              <span>표 안에 표</span>
+            </button>
+            </>
           )}
 
           <button
@@ -206,6 +229,96 @@ export const InlineQuickToolbar: React.FC<Props> = ({ position, onClose }) => {
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
         </button>
       </form>
+
+      {/* Nested Table Modal */}
+      {showNestedModal && selection.kind === "table_cells" && (
+        <div
+          id="nested-table-modal"
+          data-testid="nested-table-modal"
+          className="absolute inset-0 bg-white/98 rounded-xl p-2.5 flex flex-col justify-between z-50 shadow-2xl border border-slate-200"
+        >
+          <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+            <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+              <span className="text-teal-700 font-mono text-xs">⊞</span> 표 안에 표 (중첩 표) 삽입
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowNestedModal(false)}
+              className="text-slate-400 hover:text-slate-600 p-0.5 rounded"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="flex items-center gap-3 py-2 text-xs text-slate-700">
+            <label className="flex items-center gap-1.5">
+              <span className="font-medium text-slate-600">줄 수:</span>
+              <input
+                id="nested-table-rows"
+                data-testid="nested-table-rows"
+                type="number"
+                min={1}
+                max={8}
+                value={nestedRows}
+                onChange={(e) => setNestedRows(Math.max(1, Math.min(8, parseInt(e.target.value, 10) || 1)))}
+                className="w-14 px-2 py-1 border border-slate-200 rounded text-center font-medium bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
+              />
+            </label>
+            <label className="flex items-center gap-1.5">
+              <span className="font-medium text-slate-600">칸 수:</span>
+              <input
+                id="nested-table-cols"
+                data-testid="nested-table-cols"
+                type="number"
+                min={1}
+                max={8}
+                value={nestedCols}
+                onChange={(e) => setNestedCols(Math.max(1, Math.min(8, parseInt(e.target.value, 10) || 1)))}
+                className="w-14 px-2 py-1 border border-slate-200 rounded text-center font-medium bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
+              />
+            </label>
+            <span className="text-[10px] text-slate-400">(1~8줄, 1~8칸)</span>
+          </div>
+          <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setShowNestedModal(false)}
+              className="px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-100 rounded transition-colors"
+            >
+              취소
+            </button>
+            <button
+              id="nested-table-confirm"
+              data-testid="nested-table-confirm"
+              type="button"
+              disabled={loading}
+              onClick={async () => {
+                if (selection.kind !== "table_cells") return;
+                try {
+                  setLoading(true);
+                  await useDocStore.getState().applyHumanNestedTableInsert(
+                    selection.tableIndex,
+                    selection.startRow,
+                    selection.startCol,
+                    nestedRows,
+                    nestedCols
+                  );
+                  setShowNestedModal(false);
+                  setSelection(null);
+                  onClose?.();
+                } catch (err: any) {
+                  alert(`중첩 표 생성 실패: ${err?.message || err}`);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="px-3 py-1 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 rounded transition-colors shadow-2xs flex items-center gap-1"
+            >
+              {loading && <Loader2 className="w-3 h-3 animate-spin" />}
+              <span>삽입</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -9,6 +9,7 @@
       "command/shortcut-map": "a5c28535469c3d076dfe45f7ccf783a5227b48f1600c67b993823f2e1caf5ad8",
       "command/commands/edit": "30a4708bd9b688c0d91104c3a3fdb41409c3adf07be82f1066e48c991deb5ec6",
       "command/commands/file": "9fb77378cdf84564579b13348b0d99f59874560666a983b2e0d7fa782baf91d9",
+      "command/commands/table": "24bcbe75c83e965e60e1e4f3f30a00d1b79a84447530e5166ff48972715b7988",
       "ui/about-dialog": "fb42625816fe8bbaac2de2c7e8b8044fa592374a89c3e312ce2cb76b58cf8d63",
       "ui/dialog": "f45b9c7b5980e70bc6cd97ecf7c7c671441a16ad7d67638b1987e7bb8c7a2175",
       "ui/toolbar": "f80b61e04ddd36d64d08a4f06c364fbef174400e2ecec7186c4ae145bb3d4bb9"
@@ -77,6 +78,11 @@
       "id": "command/commands/file",
       "strategy": "extension",
       "reason": "Replaces native file actions while falling back to upstream web actions."
+    },
+    {
+      "id": "command/commands/table",
+      "strategy": "extension",
+      "reason": "Allows nested table insertion from table commands."
     },
     {
       "id": "ui/about-dialog",

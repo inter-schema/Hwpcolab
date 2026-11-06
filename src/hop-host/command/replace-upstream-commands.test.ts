@@ -5,13 +5,13 @@ import {
   insertCommands,
   formatCommands,
   pageCommands,
-  tableCommands,
   toolCommands,
   viewCommands,
 } from '@/upstream/commands';
 import { toolbarLabelsCommand } from '../host/toolbar-labels';
 import { editCommands } from './commands/edit';
 import { fileCommands } from './commands/file';
+import { tableCommands } from './commands/table';
 import { assertUniqueCommandIds, replaceUpstreamCommands } from './replace-upstream-commands';
 import { defaultShortcuts } from './shortcut-map';
 
