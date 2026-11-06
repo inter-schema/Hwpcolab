@@ -1,13 +1,17 @@
 import {
   callOpenAiAgentTurn,
+} from "../providers/openaiProvider.ts";
+import type {
   OpenAiAgentTurnResult,
   ReasoningEffortOption,
 } from "../providers/openaiProvider.ts";
 import { validateCustomEndpoint } from "./endpointPolicy.ts";
 import { createProviderAdapter } from "./adapters/index.ts";
-import {
+import type {
   NeutralMessage,
   NeutralToolSpec,
+} from "./types.ts";
+import {
   ToolsUnsupportedError,
 } from "./types.ts";
 import type { AiRequestOptions } from "../aiOrchestrator.ts";
