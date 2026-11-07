@@ -835,3 +835,7 @@ export const useDocStore = create<DocState>((set, get) => ({
   },
   clearActiveMemories: () => set({ activeMemoryIds: [] }),
 }));
+
+if (typeof window !== 'undefined') {
+  (window as any).__docStore = useDocStore;
+}
