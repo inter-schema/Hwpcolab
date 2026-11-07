@@ -6,7 +6,7 @@
 <br/>
 
 [![GPL-3.0 License](https://img.shields.io/badge/License-GPL_v3.0-blue.svg)](./LICENSE)
-[![Tests Passing](https://img.shields.io/badge/Tests-58%20Files%20%7C%20430%20Passed%20(100%25)-success.svg)](file:///c:/Users/jun/Documents/rea/codetest/tests)
+[![Tests Passing](https://img.shields.io/badge/Tests-58%20Files%20%7C%20430%20Passed%20(100%25)-success.svg)](https://github.com/inter-schema/Hwpcolab/tree/Beta/tests)
 [![Tauri v2](https://img.shields.io/badge/Tauri-v2.0-orange.svg)](https://v2.tauri.app/)
 [![React 19](https://img.shields.io/badge/React-19.0-61dafb.svg)](https://react.dev/)
 [![WASM Core](https://img.shields.io/badge/Engine-@rhwp/core%20+%20claw--hwp-purple.svg)](https://github.com/hahnlee/rhwp)
@@ -25,7 +25,7 @@
 
 > 아래 영상에서 **HWPX 문서 로드, 중첩 표(표 안의 표) 생성, 인라인 AI 툴바 교정, 작성 선호사항 및 AI 설정 모달 워크플로우**를 확인하실 수 있습니다.
 
-[🎬 HOP-Claw 기능 시연 영상 재생 (docs/videos/hop_claw_feature_walkthrough.webm)](file:///c:/Users/jun/Documents/rea/codetest/docs/videos/hop_claw_feature_walkthrough.webm)
+[🎬 HOP-Claw 기능 시연 영상 재생 (docs/videos/hop_claw_feature_walkthrough.webm)](docs/videos/hop_claw_feature_walkthrough.webm)
 
 ---
 
@@ -37,27 +37,36 @@ HWPX 공문서 원본 서식을 100% 유지한 채 화면에 렌더링하며, �
 
 ---
 
-### 2. HWPX 표 안의 표(중첩 표) 생성 및 실시간 렌더링 (Nested Table)
-기존 한글 에디터 엔진의 한계를 극복하고, 사용자가 원하는 셀 내부 어디서든 계층형 2단 중첩 표(`insert_nested_table`)를 클릭 한 번으로 생성하고 즉시 편집할 수 있습니다.
-![중첩 표 생성 화면](docs/images/02_nested_table_in_action.png)
+### 2. [전후 비교 시연] 표 레이아웃 실시간 교정 및 Smart Diff 즉시 반영 (Before & After Diff)
+문서 내 표 셀 서식 깨짐이나 오버플로우 발생 시, 로컬 AI가 실시간으로 교정안을 분석하여 시각적 Diff 오버레이를 제공합니다. 사용자는 제안된 Diff를 검토하고 **[✔ 전체 적용]** 버튼을 통해 원클릭으로 즉시 서식을 교정할 수 있습니다.
+
+| 수정 전 (Before): AI 제안 검토 및 Smart Diff 오버레이 | 수정 후 (After): Smart Diff 즉시 반영 완료 |
+| :---: | :---: |
+| ![수정 전: AI Diff 검토](docs/images/02a_diff_review.png) | ![수정 후: 즉시 반영 완료](docs/images/02b_diff_applied.png) |
 
 ---
 
-### 3. 직관적인 인라인 플로팅 퀵 툴바 (Inline Quick AI Toolbar)
+### 3. HWPX 표 안의 표(중첩 표) 생성 및 실시간 렌더링 (Nested Table)
+기존 한글 에디터 엔진의 한계를 극복하고, 사용자가 원하는 셀 내부 어디서든 계층형 2단 중첩 표(`insert_nested_table`)를 클릭 한 번으로 생성하고 화면 중앙에서 즉시 확인 및 편집할 수 있습니다.
+![중첩 표 생성 화면](docs/images/03_nested_table_in_action.png)
+
+---
+
+### 4. 직관적인 인라인 플로팅 퀵 툴바 (Inline Quick AI Toolbar)
 문서 본문 드래그나 표 셀 선택 시 커서 옆에 즉각 팝업되어 공문서 개조식 변환, 맞춤법 교정, 표 채우기, 그리고 **[⊞ 표 안에 표]** 삽입 기능을 마우스 원클릭으로 실행합니다.
-![인라인 플로팅 퀵 툴바](docs/images/05_inline_quick_toolbar.png)
+![인라인 플로팅 퀵 툴바](docs/images/04_inline_quick_toolbar.png)
 
 ---
 
-### 4. 사용자 지정(Custom) AI 공급자 설정 & 화면 스크롤 개선
-화면 해상도에 구애받지 않는 반응형 모달 설계(`max-h-[88vh]` 및 고정 푸터)가 적용되어, 스크롤 후에도 **"설정 저장" 버튼이 항상 하단에 고정**되며 시각적 저장 완료 피드백을 제공합니다.
-![AI 프로바이더 설정창](docs/images/03_provider_settings_modal.png)
+### 5. 사용자 지정(Custom) AI 공급자 설정 & 화면 스크롤 개선
+화면 해상도에 구애받지 않는 반응형 모달 설계(`max-h-[88vh]` 및 고정 푸터)가 적용되어, 스크롤 후에도 **"설정 저장" 버튼이 항상 하단에 고정**되며 시각적 저장 완료 피드백을 제공합니다. (사내 LLM 엔드포인트 및 API 키 안전 마스킹 지원)
+![AI 프로바이더 설정창](docs/images/05_provider_settings_modal.png)
 
 ---
 
-### 5. 작성 선호사항 (Writing Memory) & 12종 PII 비식별화
+### 6. 작성 선호사항 (Writing Memory) & 12종 PII 비식별화
 기존 공문서나 보고서에서 작성 스타일과 문체 규칙을 추출하여 보관하며, 단방향 영구 비식별화(주민번호, 계좌번호 등 12종 PII 마스킹) 가이드가 모달 상단에 친절하게 안내됩니다.
-![작성 선호사항 모달](docs/images/04_writing_memory_guide.png)
+![작성 선호사항 모달](docs/images/06_writing_memory_guide.png)
 
 ---
 
@@ -72,6 +81,11 @@ HOP-Claw는 **HWPX 파일에서만 중첩 표(`insert_nested_table`) 생성을 �
 | **셀 내부 데이터** | 셀마다 고정 크기 레코드 헤더와 바이트 오프셋 포인터로 텍스트 관리 | `<hp:tc>` 내부에 임의의 문단(`<hp:p>`) 및 하위 `<hp:subList>` 포함 |
 | **중첩 표 주입 시 결과** | ❌ **치명적 파일 손상 (File Corrupted)**<br/>셀 레코드 내에 하위 표 바이트 블록을 강제 삽입하면 OLE 스트림의 전체 레코드 오프셋 테이블과 컨트롤 ID 포인터가 어긋나 한컴오피스 실행 시 복구 불가능한 손상 오류 발생 | ✅ **완벽한 구조적 호환성 (Valid DOM)**<br/>XML 표준 규격에 따라 `<hp:tc>`의 `<hp:subList>` 안에 새로운 `<hp:tbl>` 노드를 삽입하므로 포인터 붕괴 없이 한컴오피스 및 모든 뷰어에서 정상 인식 |
 | **HOP-Claw 방어 전략** | Policy Guard (G1/G6)가 레거시 HWP 대상 중첩 표 연산을 차단하여 원본 문서 파괴 방지 | `claw-hwp` 기반 XML 노드 패치 및 `buildTablesMetaForHwpx` 프리오더 순회 인덱싱 완벽 지원 |
+
+> ### 🔄 기존 HWP 문서 변환 안내 (HWP ➔ HWPX)
+> 기존에 작성된 레거시 바이너리 HWP 문서를 HWPX로 변환하여 중첩 표 및 최신 XML 서식 기능을 온전히 활용하실 수 있습니다:
+> - **한컴 공식 무료 변환 도구**: [한글과컴퓨터 다운로드 센터](https://www.hancom.com/cs_center/csDownload.do)에서 공식 배포 중인 **[HWPX 변환기(Add-in)]**를 다운로드하여 대량의 HWP 파일들을 일괄 자동 변환할 수 있습니다.
+> - **한컴오피스 한글 프로그램 변환**: 한글 2014 VP, 2018, 2020, 2022, 2024 등 한글 오피스가 설치된 PC에서는 기존 문서를 연 후 `F12` 키 또는 **[파일] ➔ [다른 이름으로 저장하기]** 메뉴를 누르고, 파일 형식을 **한글 표준 문서 (*.hwpx)**로 지정하여 저장하시면 즉시 HWPX 표준 문서로 전환됩니다.
 
 ---
 
@@ -88,36 +102,6 @@ HOP-Claw는 상단 설정에서 사용자가 에이전트 루프 방식을 자�
 
 ---
 
-## 📊 루프 성능 비교 5대 벤치마크 실측 결과 (Z.ai GLM-4.7-Flash)
-
-실제 LLM API(Z.ai GLM-4.7-Flash, 도구 호출 지원, `customSendReasoning: false`) 환경에서 **무료 티어 호출 규격(순차 호출 및 1305 과부하 자동 재시도)**을 준수하며 동일한 5대 핵심 과업에 대해 기존 루프(Legacy)와 개선 루프(V2)를 정밀 실측 비교 검증하였습니다.
-
-### 5대 핵심 검증 항목 실측 비교표
-
-| 번호 | 검증 과업 항목 | Legacy 소요시간 | Legacy 턴수 | Legacy Diffs | Legacy 성공 | V2 소요시간 | V2 턴수 | V2 Diffs | V2 성공 | 판정 |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1** | **공문서 표준 어투 변환 및 개조식 요약** | 16,077ms | 1턴 | 0개 | ❌ FAIL(과부하) | 139,202ms | 1턴 | 2개 | ✅ PASS | 🏆 **V2 단독 통과** |
-| **2** | **표 셀 다중 채우기 및 줄바꿈/여백 유지** | 37,726ms | 1턴 | 2개 | ✅ PASS | 40,939ms | 2턴 | 2개 | ✅ PASS | **동등 (PASS)** |
-| **3** | **중첩 표(`insert_nested_table`) Diff 제안 생성** | 9,627ms | 1턴 | 1개 | ✅ PASS | 105,796ms | 2턴 | 1개 | ✅ PASS | **동등 (PASS)** |
-| **4** | **제외 영역(G3) 침범 방지 정책 가드 및 자가 교정** | 15,859ms | 1턴 | 0개 | ❌ FAIL(과부하) | 28,450ms(*) | 2턴 | 1개 | ✅ PASS | 🏆 **V2 단독 통과** |
-| **5** | **12종 PII 자동 마스킹 및 원본 언마스킹 무결성** | 14,967ms | 1턴 | 1개 | ✅ PASS | 20,962ms | 2턴 | 1개 | ✅ PASS | **동등 (PASS)** |
-
-> (*) 항목 4 V2 소요시간은 시스템 대기 시간을 제외한 순수 실행 시간 기준입니다.
-
-### 🔍 실측 벤치마크 핵심 인사이트
-1. **V2 에이전틱 루프 100% 완주 성공 (5/5 PASS)**:
-   - 무료 티어 API의 일시적 과부하(`code 1305`) 상황에서 Legacy 루프는 어댑터 계층의 복구력 부재로 실패한 반면, **V2 루프는 OpenAiCompatAdapter의 `TransientProviderError` 자동 감지 및 지수 백오프 복구**를 통해 5개 항목 전체를 100% 정상 완주하였습니다.
-2. **제외 영역(G3) 100% 완벽 차단 & 자가 교정**:
-   - 사용자가 지정한 잠금 구역(`0행 0열`)에 대한 AI의 수정 시도를 100% 차단하고, 수정이 허용된 셀(`0행 1열`)에 대한 제안만을 선별 도출하였습니다.
-3. **12종 PII 외부 유출 0건 (제로 리크) & 로컬 복원**:
-   - 외부 LLM으로 전송된 실제 HTTP Request Body 전수 검사 결과, 원문 주민번호/전화번호/계좌번호/이메일 유출 **0건(100% 가명 토큰화)** 확인 및 사용자 UI에 원본 100% 무결 복원을 검증하였습니다.
-4. **HWPX 중첩 표(`insert_nested_table`) 구조 완벽 도출**:
-   - 부모 셀 내부 2x2 하위 테이블 스키마를 단번에 정확하게 구성하여 OWPML XML 표준에 부합하는 제안안을 생성하였습니다.
-
-> 📌 *상세 실행 로그 및 벤치마크 원시 데이터는 [tests/loop_comparison_report.md](file:///c:/Users/jun/Documents/rea/codetest/tests/loop_comparison_report.md)에 보존되어 있습니다.*
-
----
-
 ## 🛡️ 개인정보 보호 및 작성 선호사항 (Privacy & Writing Memory)
 
 - **12종 민감 개인정보(PII) 자동 단방향 마스킹**:
@@ -131,14 +115,32 @@ HOP-Claw는 상단 설정에서 사용자가 에이전트 루프 방식을 자�
 
 ## 🚀 빠른 시작 (Getting Started)
 
-### 필수 요구 사항
+### 📥 1. 설치 파일 다운로드 (GitHub Releases 권장)
+
+최신 빌드 버전의 실행 파일 및 인스톨러를 다운로드하여 별도의 개발 환경 구축 없이 즉시 사용할 수 있습니다:
+
+🔗 **[GitHub Releases 최신 릴리스 다운로드 페이지](https://github.com/inter-schema/Hwpcolab/releases)**
+
+| 배포 형태 | 파일명 | 설명 |
+| :--- | :--- | :--- |
+| **무설치 단독 실행 (권장)** | `hop-claw.exe` (~50.5 MiB) | 설치 과정 없이 다운로드 즉시 실행 가능한 포터블 단독 바이너리 |
+| **NSIS 설치 마법사** | `HOP-Claw_0.1.0_x64-setup.exe` (~30.5 MiB) | Windows 표준 설치 마법사 (바탕화면 및 시작 메뉴 바로가기 생성) |
+| **MSI 인스톨러** | `HOP-Claw_0.1.0_x64_en-US.msi` (~33.6 MiB) | 공공기관 및 사내 IT 자산 관리(GPO) 배포에 적합한 표준 MSI 패키지 |
+
+---
+
+### 💻 2. 개발자용 소스 빌드 및 직접 실행
+
+소스 코드에서 직접 빌드하거나 커스터마이징을 진행하는 개발 환경 설정 방법입니다:
+
+#### 필수 요구 사항
 - **Node.js**: v20.0.0 이상
-- **Rust & Cargo**: 1.75 이상
+- **Rust & Cargo**: 1.75 이상 (Tauri v2 데스크톱 빌드 시)
 - **OS**: Windows 10/11 (64-bit)
 
-### 저장소 복제 및 개발 서버 실행
+#### 저장소 복제 및 개발 서버 실행
 ```bash
-# 1. 저장소 복제
+# 1. 저장소 복제 (Beta 브랜치)
 git clone -b Beta https://github.com/inter-schema/Hwpcolab.git
 cd Hwpcolab
 
