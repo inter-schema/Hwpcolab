@@ -33,7 +33,6 @@
 
 ### 1. 메인 작업 공간 및 AI 사이드바 (Main Workspace & AI Assistant)
 HWPX 공문서 원본 서식을 100% 유지한 채 화면에 렌더링하며, 좌측 AI 어시스턴트 패널에서 단락별 Diff 검토, 즉각 반영, 다중 첨부자료(Excel, PDF, HWP) 파싱을 지원합니다.
-![메인 작업 공간](docs/images/01_workspace_overview.png)
 
 ---
 
