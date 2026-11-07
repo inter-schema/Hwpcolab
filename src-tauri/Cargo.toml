@@ -1,6 +1,6 @@
 [package]
 name = "hop-claw"
-version = "0.1.1"
+version = "0.2.0"
 description = "Local AI-Collaborative HWP/HWPX Desktop App"
 authors = ["HOP-Claw Team"]
 edition = "2021"

@@ -6,11 +6,11 @@
 <br/>
 
 [![GPL-3.0 License](https://img.shields.io/badge/License-GPL_v3.0-blue.svg)](./LICENSE)
-[![Tests Passing](https://img.shields.io/badge/Tests-58%20Files%20%7C%20430%20Passed%20(100%25)-success.svg)](https://github.com/inter-schema/Hwpcolab/tree/Beta/tests)
+[![Tests Passing](https://img.shields.io/badge/Tests-58%20Files%20%7C%20430%20Passed%20(100%25)-success.svg)](https://github.com/inter-schema/Hwpcolab/tree/main/tests)
 [![Tauri v2](https://img.shields.io/badge/Tauri-v2.0-orange.svg)](https://v2.tauri.app/)
 [![React 19](https://img.shields.io/badge/React-19.0-61dafb.svg)](https://react.dev/)
 [![WASM Core](https://img.shields.io/badge/Engine-@rhwp/core%20+%20claw--hwp-purple.svg)](https://github.com/hahnlee/rhwp)
-[![Branch Beta](https://img.shields.io/badge/Branch-Beta-green.svg)](https://github.com/inter-schema/Hwpcolab/tree/Beta)
+[![Branch main](https://img.shields.io/badge/Branch-main-green.svg)](https://github.com/inter-schema/Hwpcolab/tree/main)
 
 <p align="center">
   <b>로컬 설치형 AI HWP / HWPX 문서 협업 데스크톱 애플리케이션</b><br/>
@@ -123,13 +123,13 @@ HOP-Claw는 상단 설정에서 사용자가 에이전트 루프 방식을 자�
 
 | 배포 형태 | 파일명 | 설명 |
 | :--- | :--- | :--- |
-| **무설치 포터블 패키지 (권장)** | `hop-claw-v0.1.1-beta-portable.zip` (~35 MiB) | 압축 해제 후 즉시 실행 (`hop-claw.exe` + `WebView2Loader.dll` + `resources/` 내장 포터블 패키지) |
-| **NSIS 설치 마법사** | `HOP-Claw_0.1.1_x64-setup.exe` (~30.5 MiB) | Windows 표준 설치 마법사 (바탕화면/시작메뉴 바로가기 생성 및 DLL·사이드카 자동 구성) |
-| **MSI 인스톨러** | `HOP-Claw_0.1.0_x64_en-US.msi` (~33.6 MiB) | 공공기관 및 사내 IT 자산 관리(GPO) 배포에 적합한 표준 MSI 패키지 |
+| **무설치 포터블 패키지 (권장)** | `HOP-Claw-v0.2.0-portable.zip` (~35 MiB) | 압축 해제 후 즉시 실행 (`hop-claw.exe` + `WebView2Loader.dll` + `resources/` 내장 포터블 패키지) |
+| **NSIS 설치 마법사** | `HOP-Claw_0.2.0_x64-setup.exe` (~30.5 MiB) | Windows 표준 설치 마법사 (바탕화면/시작메뉴 바로가기 생성 및 DLL·사이드카 자동 구성) |
+| **MSI 인스톨러** | `HOP-Claw_0.2.0_x64_en-US.msi` (~33.6 MiB) | 공공기관 및 사내 IT 자산 관리(GPO) 배포에 적합한 표준 MSI 패키지 |
 
 > 💡 **무설치(포터블) 실행 안내**:
 > HOP-Claw는 MinGW 환경 및 Node.js 기반 HWP/HWPX 사이드카 엔진(`claw-hwp`) 구조를 갖추고 있습니다. 따라서 무설치 버전은 단독 `.exe` 하나만으로는 구동되지 않으며, `WebView2Loader.dll` 및 `resources/` 폴더가 반드시 동일한 위치에 있어야 정상 동작합니다.
-> 이에 따라 무설치 버전은 **ZIP 패키지(`hop-claw-v0.1.1-beta-portable.zip`)로 제공**되며, 원하는 폴더에 압축을 푼 뒤 `hop-claw.exe`를 실행하시면 됩니다. 시스템에 의존성 파일을 자동으로 구성하고 바로가기를 생성하려면 **NSIS 설치 파일(`HOP-Claw_0.1.1_x64-setup.exe`)** 사용을 권장합니다.
+> 이에 따라 무설치 버전은 **ZIP 패키지(`HOP-Claw-v0.2.0-portable.zip`)로 제공**되며, 원하는 폴더에 압축을 푼 뒤 `hop-claw.exe`를 실행하시면 됩니다. 시스템에 의존성 파일을 자동으로 구성하고 바로가기를 생성하려면 **NSIS 설치 파일(`HOP-Claw_0.2.0_x64-setup.exe`)** 사용을 권장합니다.
 
 ---
 
@@ -144,8 +144,8 @@ HOP-Claw는 상단 설정에서 사용자가 에이전트 루프 방식을 자�
 
 #### 저장소 복제 및 개발 서버 실행
 ```bash
-# 1. 저장소 복제 (Beta 브랜치)
-git clone -b Beta https://github.com/inter-schema/Hwpcolab.git
+# 1. 저장소 복제
+git clone https://github.com/inter-schema/Hwpcolab.git
 cd Hwpcolab
 
 # 2. 패키지 의존성 설치
@@ -194,8 +194,8 @@ npx tauri build
 
 빌드 완료 시 다음 위치에 배포 아티팩트가 생성됩니다:
 - **단독 실행 바이너리**: `src-tauri/target/release/hop-claw.exe` (~50.5 MiB)
-- **MSI 설치 파일**: `src-tauri/target/release/bundle/msi/HOP-Claw_0.1.0_x64_en-US.msi` (~33.6 MiB)
-- **NSIS 셋업 설치 파일**: `src-tauri/target/release/bundle/nsis/HOP-Claw_0.1.0_x64-setup.exe` (~30.5 MiB)
+- **MSI 설치 파일**: `src-tauri/target/release/bundle/msi/HOP-Claw_0.2.0_x64_en-US.msi` (~33.6 MiB)
+- **NSIS 셋업 설치 파일**: `src-tauri/target/release/bundle/nsis/HOP-Claw_0.2.0_x64-setup.exe` (~30.5 MiB)
 
 ---
 
