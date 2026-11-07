@@ -37,12 +37,12 @@ HWPX 공문서 원본 서식을 100% 유지한 채 화면에 렌더링하며, �
 
 ---
 
-### 2. [전후 비교 시연] 표 레이아웃 실시간 교정 및 Smart Diff 즉시 반영 (Before & After Diff)
-서식 템플릿의 잔재 텍스트(예: 과거 수업 양식의 '2교시', '지도교사', '단원', '몫이 변하지 않는 원리' 등)나 표 셀 서식 오염이 발생한 경우, 비전 AI 모델(GLM-4.6v-Flash)이 실시간으로 공문서 규격에 맞게 12대 항목을 교정 분석하여 시각적 Diff 오버레이를 제공합니다. 사용자는 제안된 Diff를 검토하고 **[✔ 전체 적용]** 버튼을 통해 원클릭으로 전문 공문서 양식으로 즉각 변환할 수 있습니다.
+### 2. [전후 비교 시연] 표 레이아웃 실측 진단 및 자동 교정 (Before & After Layout Optimization)
+표 내부 셀 너비가 어긋나 텍스트가 잘리거나 침범하는 레이아웃 이슈가 발생했을 때, AI 어시스턴트(BAZE `gpt-6-luna`)가 에이전틱 실측 루프를 통해 페이지 인쇄 가능 폭(150mm)에 맞추어 표와 행 높이를 자동으로 최적화 교정합니다.
 
-| 수정 전 (Before): 비전 AI 제안 12건 검토 및 Smart Diff 오버레이 | 수정 후 (After): Smart Diff 즉시 반영 및 전문 공문서 전환 완료 |
-| :---: | :---: |
-| ![수정 전: AI Diff 검토](docs/images/02a_diff_review.png) | ![수정 후: 즉시 반영 완료](docs/images/02b_diff_applied.png) |
+| 수정 전 (Before): 셀 폭 붕괴 및 텍스트 넘침/잘림 | AI 실측 추론 루프 (이슈 4건 진단 및 해소) | 수정 후 (After): 인쇄 폭 150mm 실측 교정 완료 |
+| :---: | :---: | :---: |
+| ![수정 전: 셀 폭 붕괴 및 텍스트 넘침](docs/images/02a_layout_before.png) | ![AI 실측 추론 루프](docs/images/02b_ai_reasoning_trace.png) | ![수정 후: 실측 교정 완료](docs/images/02c_layout_after.png) |
 
 ---
 
