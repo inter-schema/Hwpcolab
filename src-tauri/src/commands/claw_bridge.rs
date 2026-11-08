@@ -15,8 +15,47 @@ pub struct ClawExecResult {
     pub stderr: String,
 }
 
+fn resolve_node_binary() -> PathBuf {
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let next_to_exe = exe_dir.join("node.exe");
+            if next_to_exe.is_file() {
+                return next_to_exe;
+            }
+            let in_res = exe_dir.join("resources").join("node.exe");
+            if in_res.is_file() {
+                return in_res;
+            }
+            let in_claw = exe_dir.join("resources").join("claw-hwp").join("node.exe");
+            if in_claw.is_file() {
+                return in_claw;
+            }
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
+            let p = PathBuf::from(local_app).join("Programs").join("nodejs").join("node.exe");
+            if p.is_file() {
+                return p;
+            }
+        }
+        for candidate in &[
+            r"C:\Program Files\nodejs\node.exe",
+            r"C:\Program Files (x86)\nodejs\node.exe",
+        ] {
+            let p = PathBuf::from(candidate);
+            if p.is_file() {
+                return p;
+            }
+        }
+    }
+    PathBuf::from("node")
+}
+
 fn new_node_command() -> Command {
-    let mut cmd = Command::new("node");
+    let node_bin = resolve_node_binary();
+    let mut cmd = Command::new(node_bin);
     #[cfg(target_os = "windows")]
     {
         cmd.creation_flags(CREATE_NO_WINDOW);

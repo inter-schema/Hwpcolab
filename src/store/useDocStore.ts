@@ -415,7 +415,9 @@ export const useDocStore = create<DocState>((set, get) => ({
     try {
       const md = await invoke<string>("extract_markdown", { filePath: stagingPath });
       set({ docMarkdown: md });
-    } catch {}
+    } catch (err) {
+      console.warn("[DocStore] Failed to extract markdown:", err);
+    }
 
     const isHwpxDoc = isHwpx ?? /\.hwpx$/i.test(stagingPath);
     if (isHwpxDoc) {
