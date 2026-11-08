@@ -219,7 +219,7 @@ export async function runAgentLoopV2(ctx: LoopV2Context): Promise<LoopV2Result> 
     } else {
       currentTools = availableTools;
       currentToolChoice = "auto";
-      turnEffort = capReasoningEffort(ctx.options.reasoningEffort, "medium");
+      turnEffort = (ctx.options.reasoningEffort as ReasoningEffortOption) || "high";
     }
 
     ctx.emitStep({
@@ -493,8 +493,10 @@ export async function runAgentLoopV2(ctx: LoopV2Context): Promise<LoopV2Result> 
             );
             compSummary = comparison.summaryText;
 
-            // If overflow issues remain, provide 1-time refinement feedback
+            // If overflow issues remain, provide 1-time refinement feedback only if user explicitly asked for layout/overflow fixes
+            const userAskedLayoutFix = /잘려|잘림|안보여|안\s*보여|겹쳐|겹침|넘침|오버플로|overflow|줄간격|여백|레이아웃\s*(?:수정|교정|개선|해결|맞춰)/i.test(ctx.options.userPrompt || "");
             if (
+              userAskedLayoutFix &&
               !comparison.ok &&
               comparison.remainingIssues.length > 0 &&
               verifyFeedbackCount < 1 &&

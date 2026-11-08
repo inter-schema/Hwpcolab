@@ -552,9 +552,10 @@ export const useDocStore = create<DocState>((set, get) => ({
     const target = pendingDiffs.find((d) => d.id === diffId);
     if (!target || !stagingPath) return;
 
+    const isHwpxDoc = Boolean(isHwpx ?? /\.hwpx$/i.test(stagingPath));
     const payload = OpTranslator.toEnginePayload(
       stagingPath,
-      isHwpx,
+      isHwpxDoc,
       target.unifiedOps,
       tablesMeta,
       false
@@ -597,8 +598,9 @@ export const useDocStore = create<DocState>((set, get) => ({
     const { stagingPath, isHwpx, pendingDiffs, tablesMeta, fileBytes, undoHistoryBytes, fileName } = get();
     if (!stagingPath || pendingDiffs.length === 0) return;
 
+    const isHwpxDoc = Boolean(isHwpx ?? /\.hwpx$/i.test(stagingPath));
     const batchedOps = pendingDiffs.flatMap((d) => d.unifiedOps);
-    const payload = OpTranslator.toEnginePayload(stagingPath, isHwpx, batchedOps, tablesMeta, false);
+    const payload = OpTranslator.toEnginePayload(stagingPath, isHwpxDoc, batchedOps, tablesMeta, false);
 
     const res = await invoke<{ ok: boolean; stdout_json: any; stderr: string }>("execute_claw_ops", {
       isHwpx: payload.isHwpx,

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useDocStore, DiffItem } from "../../store/useDocStore";
 import { hopBridge } from "../../core/hopBridge";
 import { diff_match_patch, DIFF_DELETE, DIFF_INSERT } from "diff-match-patch";
-import { Check, X, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Check, X, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 
 const dmp = new diff_match_patch();
 
@@ -27,6 +27,7 @@ function getMetricChips(delta: any): string[] {
 export const SmartDiffOverlay: React.FC = () => {
   const { pendingDiffs, acceptDiffItem, rejectDiffItem, zoom } = useDocStore();
   const [, setScrollTick] = useState(0);
+  const [applyingItemId, setApplyingItemId] = useState<string | null>(null);
 
   useEffect(() => {
     const scrollContainer = document.getElementById("scroll-container");
@@ -42,7 +43,8 @@ export const SmartDiffOverlay: React.FC = () => {
 
   if (pendingDiffs.length === 0) return null;
 
-  const handleAcceptItem = (item: DiffItem) => {
+  const handleAcceptItem = async (item: DiffItem) => {
+    if (applyingItemId === item.id) return;
     const hasWarning =
       (item.warnings && item.warnings.length > 0) ||
       item.verificationStatus === "warning_unresolved" ||
@@ -54,7 +56,15 @@ export const SmartDiffOverlay: React.FC = () => {
       );
       if (!ok) return;
     }
-    acceptDiffItem(item.id);
+    setApplyingItemId(item.id);
+    try {
+      await acceptDiffItem(item.id);
+    } catch (err: any) {
+      console.error("[SmartDiffOverlay] 변경 적용 실패:", err);
+      alert(`변경 적용 실패:\n${err?.message || err}`);
+    } finally {
+      setApplyingItemId(null);
+    }
   };
 
   // Prevent cards from overlapping vertically on the canvas
@@ -111,15 +121,20 @@ export const SmartDiffOverlay: React.FC = () => {
                 <button
                   data-testid="diff-accept-btn"
                   onClick={() => handleAcceptItem(item)}
-                  className={`flex items-center gap-0.5 text-white font-bold px-2 py-0.5 rounded text-[10px] shadow-xs transition-colors ${
+                  disabled={applyingItemId === item.id}
+                  className={`flex items-center gap-0.5 text-white font-bold px-2 py-0.5 rounded text-[10px] shadow-xs transition-colors disabled:opacity-50 ${
                     isWarning
                       ? "bg-amber-600 hover:bg-amber-700"
                       : "bg-emerald-600 hover:bg-emerald-700"
                   }`}
                   title={isWarning ? "경고 확인 후 적용" : "이 변경 적용 (✔)"}
                 >
-                  <Check className="w-3 h-3" />
-                  <span>적용</span>
+                  {applyingItemId === item.id ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Check className="w-3 h-3" />
+                  )}
+                  <span>{applyingItemId === item.id ? "적용 중" : "적용"}</span>
                 </button>
                 <button
                   data-testid="diff-reject-btn"

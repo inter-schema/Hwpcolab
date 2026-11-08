@@ -1,4 +1,4 @@
-/** @vitest-environment happy-dom */
+﻿/** @vitest-environment happy-dom */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -100,11 +100,14 @@ describe('DOCX WordprocessingML extraction', () => {
     });
   });
 
-  it('parses the repository DOCX sample without a wrapped error', async () => {
-    const testDirectory = dirname(fileURLToPath(import.meta.url));
-    const bytes = new Uint8Array(readFileSync(resolve(testDirectory, '../../samples/수학_약안.docx')));
+  it('parses a synthesized DOCX sample without a wrapped error', async () => {
+    const bytes = makeDocx(
+      '<w:document xmlns:w="' + WORD_NS + '">' +
+        '<w:body><w:p><w:r><w:t>샘플 교육 계획 및 약안 요약</w:t></w:r></w:p></w:body>' +
+      '</w:document>',
+    );
 
-    const parsed = await parseLocalAttachment('수학_약안.docx', bytes);
+    const parsed = await parseLocalAttachment('sample.docx', bytes);
 
     expect(parsed.kind).toBe('docx');
     expect(parsed.markdownSummary).not.toMatch(/^\[DOCX 파싱 실패:/);

@@ -139,13 +139,14 @@ export const AiChatSidebar: React.FC = () => {
         );
       }
       if (!latestState.docMarkdown.trim() && latestState.tablesMeta.length === 0) {
-        await latestState.refreshDocMarkdown();
-        latestState = useDocStore.getState();
-      }
-      if (!latestState.docMarkdown.trim() && latestState.tablesMeta.length === 0) {
-        throw new Error(
-          "문서 본문/표를 추출하지 못했습니다(claw-hwp 엔진 실행 실패 가능성). Node.js 설치 및 resources/claw-hwp 폴더 위치를 확인해 주세요."
-        );
+        try {
+          await latestState.refreshDocMarkdown();
+          latestState = useDocStore.getState();
+        } catch (err: any) {
+          throw new Error(
+            `문서 본문/표 추출 중 엔진 오류가 발생했습니다: ${err?.message || err}. Node.js 설치 및 claw-hwp 엔진을 확인해 주세요.`
+          );
+        }
       }
 
       const attachmentsContext = latestState.attachments
@@ -230,7 +231,9 @@ export const AiChatSidebar: React.FC = () => {
 
       // 실제로 AI 컨텍스트에 포함된 읽기 단계만 기록합니다.
       const readSteps: string[] = [
-        `문서 본문 읽기 (${latestState.docMarkdown.length.toLocaleString()}자)`,
+        latestState.docMarkdown.trim()
+          ? `문서 본문 읽기 (${latestState.docMarkdown.length.toLocaleString()}자)`
+          : "빈 문서 상태 확인 (본문 작성 준비 완료)",
         ...(latestState.tablesMeta.length > 0
           ? [`표 구조 읽기 (표 ${latestState.tablesMeta.length}개, 셀 ${latestState.tablesMeta.reduce((n, t) => n + t.cells.length, 0)}개)`]
           : []),
@@ -254,16 +257,8 @@ export const AiChatSidebar: React.FC = () => {
           ? liveSteps
           : stepDetails;
 
-      // Remove fake intro text when no edits are proposed
-      let introText: string | undefined = undefined;
-      if (res.introText) {
-        introText = res.introText;
-      } else if (diffItems.length > 0) {
-        introText =
-          latestState.attachments.length > 0
-            ? "첨부 문서와 현재 양식을 비교해, 양식에 맞는 내용만 골라 채워 넣었습니다."
-            : "문서 구조와 레이아웃을 분석하여 편집 작업을 제안합니다.";
-      }
+      // Display natural summary without misleading canned intro text
+      const introText: string | undefined = res.introText || undefined;
 
       const assistantMsg: ChatMessage = {
         id: crypto.randomUUID(),

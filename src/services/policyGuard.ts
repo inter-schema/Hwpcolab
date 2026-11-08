@@ -112,7 +112,24 @@ export function lintOps(
     let g2Reason = "";
 
     // 1) excludedRegions 셀 좌표 검사
-    if ("tableIndex" in op && "row" in op && "col" in op) {
+    if (op.type === "set_cell_align") {
+      const startRow = (op as any).row;
+      const endRow = typeof (op as any).endRow === "number" ? (op as any).endRow : startRow;
+      const startCol = (op as any).col;
+      const endCol = typeof (op as any).endCol === "number" ? (op as any).endCol : startCol;
+      const tIdx = (op as any).tableIndex;
+      for (let r = Math.min(startRow, endRow); r <= Math.max(startRow, endRow); r++) {
+        for (let c = Math.min(startCol, endCol); c <= Math.max(startCol, endCol); c++) {
+          const key = `${tIdx}:${r}:${c}`;
+          if (excludedCellKeys.has(key)) {
+            violatesG2 = true;
+            g2Reason = `G2 위반: 셀 (${tIdx}번 표 [${r}, ${c}])은 사용자가 AI 수정 제외로 지정한 영역입니다.`;
+            break;
+          }
+        }
+        if (violatesG2) break;
+      }
+    } else if ("tableIndex" in op && "row" in op && "col" in op) {
       const key = `${op.tableIndex}:${op.row}:${op.col}`;
       if (excludedCellKeys.has(key)) {
         violatesG2 = true;
@@ -217,13 +234,15 @@ export function lintOps(
     }
 
     // G1: 오버플로 악화 방지 (Anti-Worsening Overflow)
+    // 사용자가 서식/스타일 변경을 요청했거나 잘림 문제 해결을 지시한 상황이 아니라면 정상적인 텍스트 스타일링을 차단하지 않습니다.
     if (op.type === "apply_text_style") {
+      const isStyleRequested = /스타일|서식|굵게|진하게|크게|크기|폰트|글꼴|볼드|bold|포인트|pt|제목/i.test(userPrompt);
       const increasesFont = (op.sizePt !== undefined && op.sizePt > 11) || op.bold === true;
-      if (increasesFont && (overflowCellKeys.size > 0 || promptComplainsClipping) && !hasDimensionExpansion) {
+      if (promptComplainsClipping && !isStyleRequested && increasesFont && !hasDimensionExpansion) {
         rejectedOps.push({
           op,
           reason:
-            "G1 위반: 이미 공간이 부족하거나 잘림 문제가 있는 셀의 글자 크기를 키우면 잘림이 악화됩니다. 대신 set_row_height, set_col_width, fit_table_to_page 또는 shrink_cell_font를 사용하세요.",
+            "G1 위반: 사용자가 잘림/오버플로 문제 해결을 요청한 상황에서 글자 크기를 키우면 잘림이 악화됩니다. 대신 set_row_height, set_col_width, fit_table_to_page 또는 shrink_cell_font를 사용하세요.",
         });
         continue;
       }

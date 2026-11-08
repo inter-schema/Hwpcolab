@@ -1799,12 +1799,23 @@ const HANDLERS = {
   },
 
   apply_paragraph_style(doc, op, cursor) {
-    if (op.index == null && op.paragraph == null) {
-      throw new Error("apply_paragraph_style: 'index' (paragraph index, 0-based) is required (use \"last\" or -1 to target the most recently appended paragraph)");
+    let idx = op.index ?? op.paragraph;
+    if (idx == null && (op.target || op.targetText)) {
+      const targetStr = op.target || op.targetText;
+      const hit = findFirstTextInBody(doc, targetStr);
+      if (hit) {
+        idx = hit.para;
+      } else {
+        const sec = op.section ?? 0;
+        const paraCount = doc.getParagraphCount(sec);
+        idx = Math.max(0, paraCount - 1);
+      }
+    }
+    if (idx == null) {
+      throw new Error("apply_paragraph_style: 'index' (paragraph index, 0-based) or 'target' is required (use \"last\" or -1 to target the most recently appended paragraph)");
     }
     const sec = op.section ?? 0;
     const paraCount = doc.getParagraphCount(sec);
-    let idx = op.index ?? op.paragraph;
     // "last" / -1 → the most recently appended paragraph in this
     // section. Lets payloads stop counting headings/intros and just say
     // "the paragraph I just added".
@@ -3562,7 +3573,7 @@ async function readStdin() {
   const LIST_OPS = new Set(['set_numbered_list', 'set_bullet_list']);
   // Table-cell properties (valign / size / margins) via raw-patch — patches the
   // cell LIST_HEADER directly (no DocInfo change). See applyCellPropertyInPlace.
-  const CELL_PROP_OPS = new Set(['set_cell_property']);
+  const CELL_PROP_OPS = new Set(['set_cell_property', 'set_cell_align']);
   // Table-level properties (outer margin) via raw-patch — patches the table
   // CTRL_HEADER " lbt" directly (no DocInfo change). See applyTablePropertyInPlace.
   const TABLE_PROP_OPS = new Set(['set_table_property']);
@@ -3706,6 +3717,51 @@ async function readStdin() {
       const subModes = [];
       const allEdits = [];
 
+      const tableOps = ops.filter((o) => APPEND_TABLE_OPS.has(o.type));
+      if (tableOps.length > 0) {
+        const { appendTableInPlace } = await import('./cell-patch.js');
+        const tableOpsWithTemplate = [];
+        let rhwpForTable = null;
+        for (const op of tableOps) {
+          const dataRowCount = Array.isArray(op.rows) ? op.rows.length : 0;
+          const headerCount = Array.isArray(op.headers) ? op.headers.length : 0;
+          const wantRows = Math.max(1, dataRowCount + (headerCount > 0 ? 1 : 0));
+          const wantCols = Math.max(1, headerCount
+            || (typeof op.cols === 'number' ? op.cols : 0)
+            || (Array.isArray(op.rows) && Array.isArray(op.rows[0]) ? op.rows[0].length : 0));
+          if (wantRows >= 1 && wantCols >= 1) {
+            if (!rhwpForTable) {
+              rhwpForTable = await import('./vendor/rhwp/rhwp.js');
+              if (!globalThis.__rhwp_loaded_for_template) {
+                await rhwpForTable.default({
+                  module_or_path: fs.readFileSync(
+                    path.resolve(__dirname, 'vendor/rhwp/rhwp_bg.wasm')
+                  ),
+                });
+                if (typeof globalThis.measureTextWidth !== 'function') {
+                  globalThis.measureTextWidth = (font, text) =>
+                    String(text || '').length * (parseFloat(font) || 10) * 0.55;
+                }
+                globalThis.__rhwp_loaded_for_template = true;
+              }
+            }
+            const tmpDoc = rhwpForTable.HwpDocument.createEmpty();
+            tmpDoc.createBlankDocument();
+            tmpDoc.beginBatch();
+            tmpDoc.createTable(0, 0, 0, wantRows, wantCols);
+            tmpDoc.endBatch();
+            const templateBytes = Buffer.from(tmpDoc.exportHwp());
+            tmpDoc.free();
+            tableOpsWithTemplate.push({ ...op, _templateBytes: templateBytes });
+          } else {
+            tableOpsWithTemplate.push(op);
+          }
+        }
+
+        const tSummary = await appendTableInPlace(outPath, tableOpsWithTemplate);
+        subModes.push(`table:${tSummary.mode || 'in-place'}`);
+        for (const e of tSummary) allEdits.push({ kind: 'table', ...e });
+      }
       if (cellOps.length > 0) {
         const { patchCellsInPlace } = await import('./cell-patch.js');
         const resolvedEdits = await resolveLabelEditsViaRhwp(outPath, cellOps);
@@ -3802,66 +3858,7 @@ async function readStdin() {
         subModes.push(`image:${iSummary.mode || "in-place"}`);
         for (const e of iSummary) allEdits.push({ kind: "image", ...e });
       }
-      const tableOps = ops.filter((o) => APPEND_TABLE_OPS.has(o.type));
-      if (tableOps.length > 0) {
-        const { appendTableInPlace } = await import('./cell-patch.js');
 
-        // When the user provides shape input (rows / cols / headers),
-        // pre-generate a per-op rhwp template containing a table of the
-        // requested shape. cell-patch's appendTableInPlace will splice the
-        // template's table cluster (with cell borderFillIds remapped to a
-        // visible BF in the target's DocInfo) instead of cloning a
-        // source-form table. Without shape input, fall back to clone.
-        //
-        // Inferring shape:
-        //   rows  = (user.rows?.length ?? 0) + (user.headers ? 1 : 0)
-        //   cols  = user.headers?.length ?? user.cols ?? user.rows?.[0]?.length
-        // If we can't infer both ≥1, leave _templateBytes unset → clone path.
-        const tableOpsWithTemplate = [];
-        let rhwpForTable = null;
-        for (const op of tableOps) {
-          const dataRowCount = Array.isArray(op.rows) ? op.rows.length : 0;
-          const headerCount = Array.isArray(op.headers) ? op.headers.length : 0;
-          const wantRows = dataRowCount + (headerCount > 0 ? 1 : 0);
-          const wantCols = headerCount
-            || (typeof op.cols === 'number' ? op.cols : 0)
-            || (Array.isArray(op.rows) && Array.isArray(op.rows[0]) ? op.rows[0].length : 0);
-          if (wantRows >= 1 && wantCols >= 1) {
-            // Lazily init rhwp once
-            if (!rhwpForTable) {
-              rhwpForTable = await import('./vendor/rhwp/rhwp.js');
-              if (!globalThis.__rhwp_loaded_for_template) {
-                await rhwpForTable.default({
-                  module_or_path: fs.readFileSync(
-                    // __dirname (fileURLToPath) — new URL(...).pathname gives
-                    // "/C:/…" on Windows, which path.resolve doubles to "C:\C:\…".
-                    path.resolve(__dirname, 'vendor/rhwp/rhwp_bg.wasm')
-                  ),
-                });
-                if (typeof globalThis.measureTextWidth !== 'function') {
-                  globalThis.measureTextWidth = (font, text) =>
-                    String(text || '').length * (parseFloat(font) || 10) * 0.55;
-                }
-                globalThis.__rhwp_loaded_for_template = true;
-              }
-            }
-            const tmpDoc = rhwpForTable.HwpDocument.createEmpty();
-            tmpDoc.createBlankDocument();
-            tmpDoc.beginBatch();
-            tmpDoc.createTable(0, 0, 0, wantRows, wantCols);
-            tmpDoc.endBatch();
-            const templateBytes = Buffer.from(tmpDoc.exportHwp());
-            tmpDoc.free();
-            tableOpsWithTemplate.push({ ...op, _templateBytes: templateBytes });
-          } else {
-            tableOpsWithTemplate.push(op);
-          }
-        }
-
-        const tSummary = await appendTableInPlace(outPath, tableOpsWithTemplate);
-        subModes.push(`table:${tSummary.mode || 'in-place'}`);
-        for (const e of tSummary) allEdits.push({ kind: 'table', ...e });
-      }
       const textStyleOps = ops.filter((o) => APPLY_TEXT_STYLE_OPS.has(o.type));
       if (textStyleOps.length > 0) {
         const { applyTextStyleInPlace } = await import('./cell-patch.js');

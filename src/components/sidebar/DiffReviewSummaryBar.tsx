@@ -1,6 +1,6 @@
 import React from "react";
 import { useDocStore, DiffItem } from "../../store/useDocStore";
-import { Check, X, CheckCheck, Trash2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Check, X, CheckCheck, Trash2, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { diff_match_patch, DIFF_DELETE, DIFF_INSERT } from "diff-match-patch";
 
 const dmp = new diff_match_patch();
@@ -25,10 +25,13 @@ function getMetricChips(delta: any): string[] {
 
 export const DiffReviewSummaryBar: React.FC = () => {
   const { pendingDiffs, acceptAllDiffs, rejectAllDiffs, acceptDiffItem, rejectDiffItem } = useDocStore();
+  const [isApplyingAll, setIsApplyingAll] = React.useState(false);
+  const [applyingItemId, setApplyingItemId] = React.useState<string | null>(null);
 
   if (pendingDiffs.length === 0) return null;
 
-  const handleAcceptItem = (item: DiffItem) => {
+  const handleAcceptItem = async (item: DiffItem) => {
+    if (applyingItemId === item.id) return;
     const hasWarning =
       (item.warnings && item.warnings.length > 0) ||
       item.verificationStatus === "warning_unresolved" ||
@@ -40,10 +43,19 @@ export const DiffReviewSummaryBar: React.FC = () => {
       );
       if (!ok) return;
     }
-    acceptDiffItem(item.id);
+    setApplyingItemId(item.id);
+    try {
+      await acceptDiffItem(item.id);
+    } catch (err: any) {
+      console.error("[DiffReviewSummaryBar] 변경 적용 실패:", err);
+      alert(`변경 적용 실패:\n${err?.message || err}`);
+    } finally {
+      setApplyingItemId(null);
+    }
   };
 
-  const handleAcceptAll = () => {
+  const handleAcceptAll = async () => {
+    if (isApplyingAll) return;
     const hasWarnings = pendingDiffs.some(
       (d) =>
         (d.warnings && d.warnings.length > 0) ||
@@ -56,7 +68,15 @@ export const DiffReviewSummaryBar: React.FC = () => {
       );
       if (!ok) return;
     }
-    acceptAllDiffs();
+    setIsApplyingAll(true);
+    try {
+      await acceptAllDiffs();
+    } catch (err: any) {
+      console.error("[DiffReviewSummaryBar] 변경사항 모두 적용 실패:", err);
+      alert(`모두 적용 실패:\n${err?.message || err}`);
+    } finally {
+      setIsApplyingAll(false);
+    }
   };
 
   return (
@@ -71,15 +91,19 @@ export const DiffReviewSummaryBar: React.FC = () => {
         <div className="flex items-center gap-1">
           <button
             onClick={handleAcceptAll}
-            className="flex items-center gap-1 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-2 py-1 rounded-md shadow-xs transition-colors"
+            disabled={isApplyingAll}
+            className={`flex items-center gap-1 text-[11px] bg-emerald-600 text-white font-semibold px-2 py-1 rounded-md shadow-xs transition-colors ${
+              isApplyingAll ? "opacity-60 cursor-not-allowed" : "hover:bg-emerald-700"
+            }`}
             title="모두 적용 (Ctrl+Enter)"
           >
-            <CheckCheck className="w-3 h-3" />
-            <span>모두 적용</span>
+            {isApplyingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCheck className="w-3 h-3" />}
+            <span>{isApplyingAll ? "적용 중..." : "모두 적용"}</span>
           </button>
           <button
             onClick={rejectAllDiffs}
-            className="flex items-center gap-1 text-[11px] bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 font-semibold px-2 py-1 rounded-md transition-colors"
+            disabled={isApplyingAll}
+            className="flex items-center gap-1 text-[11px] bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 font-semibold px-2 py-1 rounded-md transition-colors disabled:opacity-50"
             title="모두 취소"
           >
             <Trash2 className="w-3 h-3" />
@@ -113,10 +137,15 @@ export const DiffReviewSummaryBar: React.FC = () => {
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => handleAcceptItem(item)}
-                    className="p-1 hover:bg-emerald-100 text-emerald-700 rounded transition-colors"
+                    disabled={applyingItemId === item.id || isApplyingAll}
+                    className="p-1 hover:bg-emerald-100 text-emerald-700 rounded transition-colors disabled:opacity-50"
                     title="적용"
                   >
-                    <Check className="w-3.5 h-3.5" />
+                    {applyingItemId === item.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Check className="w-3.5 h-3.5" />
+                    )}
                   </button>
                   <button
                     onClick={() => rejectDiffItem(item.id)}

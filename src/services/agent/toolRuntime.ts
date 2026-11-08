@@ -50,7 +50,7 @@ export const READ_DOCUMENT_TOOL: NeutralToolSpec = {
 export const APPLY_TRIAL_EDITS_TOOL: NeutralToolSpec = {
   name: "apply_trial_edits",
   description:
-    "임시 복사본 파일에 시험 편집 연산을 시뮬레이션 적용하고 레이아웃 변화 및 넘침 해결 여부를 실측 비교합니다. 기본적으로 누적(cumulative) 적용되며, reset: true로 원본으로 복구할 수 있습니다.",
+    "임시 복사본 파일에 시험 편집 연산을 시뮬레이션 적용하고 레이아웃 변화 및 넘침 해결 여부를 실측 비교합니다. 기본적으로 누적(cumulative) 적용되며, reset: true로 원본으로 복구할 수 있습니다. (set_cell_align 등 모든 UnifiedOp 지원)",
   parameters: {
     type: "object",
     required: ["reason", "ops"],
@@ -58,7 +58,23 @@ export const APPLY_TRIAL_EDITS_TOOL: NeutralToolSpec = {
       reason: { type: "string", description: "시험 적용 목적 및 가설" },
       ops: {
         type: "array",
-        items: { type: "object", required: ["type"] },
+        items: {
+          type: "object",
+          required: ["type"],
+          properties: {
+            type: {
+              type: "string",
+              description: "연산 종류 (set_cell_align, set_col_width, set_row_height, set_cell_text 등)",
+            },
+            tableIndex: { type: "number", description: "표 인덱스 (0-based)" },
+            row: { type: "number", description: "행 인덱스 (0-based)" },
+            col: { type: "number", description: "열 인덱스 (0-based)" },
+            endRow: { type: "number", description: "set_cell_align 끝 행 (포함)" },
+            endCol: { type: "number", description: "set_cell_align 끝 열 (포함)" },
+            align: { type: "string", enum: ["LEFT", "CENTER", "RIGHT", "JUSTIFY"], description: "가로 정렬" },
+            valign: { type: "string", enum: ["TOP", "CENTER", "BOTTOM"], description: "세로 정렬" },
+          },
+        },
         description: "시험 적용할 UnifiedOp 배열",
       },
       reset: {
@@ -72,7 +88,7 @@ export const APPLY_TRIAL_EDITS_TOOL: NeutralToolSpec = {
 export const PROPOSE_HWP_EDITS_TOOL_SPEC: NeutralToolSpec = {
   name: "propose_hwp_edits",
   description:
-    "HWP/HWPX 문서에 대한 부분 수정 또는 생성 작업(DiffItem 배열)을 제안합니다. 각 변경 단위는 사용자가 화면에서 개별적으로 [✔ 적용] 또는 [✖ 되돌리기]를 선택할 수 있도록 문단 또는 표 셀 단위로 분리하여 반환하세요.",
+    "HWP/HWPX 문서에 대한 부분 수정 또는 생성 작업(DiffItem 배열)을 제안합니다. 표 생성(insert_table)이나 표 셀 범위 정렬(set_cell_align) 등 서로 연관된 일련의 작업은 하나의 논리적 diffItem(예: 표 삽입 1개 diffItem, 셀 범위 정렬 1~2개 diffItem)으로 묶어서 반환하십시오. 불필요하게 셀마다 개별 카드를 생성하지 마십시오.",
   parameters: {
     type: "object",
     required: ["summary", "diffItems"],
@@ -91,7 +107,7 @@ export const PROPOSE_HWP_EDITS_TOOL_SPEC: NeutralToolSpec = {
               type: "string",
               enum: ["paragraph", "cell", "table_structure", "style", "document"],
             },
-            title: { type: "string", description: "변경 위치 요약 (예: '표 1 (2행 3열)', '문단 2')" },
+            title: { type: "string", description: "변경 위치 요약 (예: '표 1 (2행 3열)', '문단 2', '표 1 정렬')" },
             beforeText: { type: "string", description: "변경 전 원본 텍스트 (신규 추가 시 빈 문자열)" },
             afterText: { type: "string", description: "변경 후 텍스트 (시각적 Diff 표시용)" },
             targetCoord: {
@@ -106,10 +122,23 @@ export const PROPOSE_HWP_EDITS_TOOL_SPEC: NeutralToolSpec = {
             },
             unifiedOps: {
               type: "array",
-              description: "이 DiffItem을 실제로 반영하기 위한 UnifiedOp 배열",
+              description: "이 DiffItem을 실제로 반영하기 위한 UnifiedOp 배열 (set_cell_align 포함)",
               items: {
                 type: "object",
                 required: ["type"],
+                properties: {
+                  type: {
+                    type: "string",
+                    description: "연산 종류 (set_cell_align, replace_body_text, set_cell_text, insert_table 등)",
+                  },
+                  tableIndex: { type: "number", description: "표 인덱스 (0-based)" },
+                  row: { type: "number", description: "행 인덱스 (0-based)" },
+                  col: { type: "number", description: "열 인덱스 (0-based)" },
+                  endRow: { type: "number", description: "set_cell_align 끝 행 (포함)" },
+                  endCol: { type: "number", description: "set_cell_align 끝 열 (포함)" },
+                  align: { type: "string", enum: ["LEFT", "CENTER", "RIGHT", "JUSTIFY"], description: "가로 정렬" },
+                  valign: { type: "string", enum: ["TOP", "CENTER", "BOTTOM"], description: "세로 정렬" },
+                },
               },
             },
           },

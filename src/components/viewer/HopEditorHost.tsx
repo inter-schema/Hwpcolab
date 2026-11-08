@@ -4,7 +4,7 @@ import { hopBridge } from "../../core/hopBridge";
 import { useDocStore } from "../../store/useDocStore";
 import { SmartDiffOverlay } from "./SmartDiffOverlay";
 import { InlineQuickToolbar } from "../floating/InlineQuickToolbar";
-import { Sparkles, CheckCircle2, Eye } from "lucide-react";
+import { Sparkles, CheckCircle2, Eye, Loader2 } from "lucide-react";
 
 const STUDIO_HTML = `
     <!-- 메뉴바 -->
@@ -468,12 +468,26 @@ export const HopEditorHost: React.FC = () => {
   const overlayHostRef = useRef<HTMLDivElement | null>(null);
   const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null);
   const [showQuickTrigger, setShowQuickTrigger] = useState<{ x: number; y: number } | null>(null);
+  const [isApplyingDiffs, setIsApplyingDiffs] = useState(false);
 
   const selection = useDocStore((s) => s.selection);
   const setSelection = useDocStore((s) => s.setSelection);
   const pendingDiffs = useDocStore((s) => s.pendingDiffs);
   const acceptAllDiffs = useDocStore((s) => s.acceptAllDiffs);
   const rejectAllDiffs = useDocStore((s) => s.rejectAllDiffs);
+
+  const handleAcceptAll = async () => {
+    if (isApplyingDiffs) return;
+    setIsApplyingDiffs(true);
+    try {
+      await acceptAllDiffs();
+    } catch (err: any) {
+      console.error("[HopEditorHost] 변경사항 모두 적용 실패:", err);
+      alert(`변경사항 적용 중 오류가 발생했습니다:\n${err?.message || err}`);
+    } finally {
+      setIsApplyingDiffs(false);
+    }
+  };
 
   const pendingDiffCount = pendingDiffs.filter((d) => d.status === "pending").length;
   const selectionPreviewText =
@@ -624,15 +638,26 @@ export const HopEditorHost: React.FC = () => {
                 Smart Diff 대기 <span className="text-emerald-600">{pendingDiffCount}건</span>
               </span>
               <button
-                onClick={() => acceptAllDiffs()}
-                className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-0.5 font-medium text-white hover:bg-emerald-700"
+                id="header-accept-all-diffs-btn"
+                data-testid="smart-diff-accept-all-btn"
+                onClick={handleAcceptAll}
+                disabled={isApplyingDiffs}
+                className={`flex items-center gap-1 rounded bg-emerald-600 px-2 py-0.5 font-medium text-white transition-colors ${
+                  isApplyingDiffs ? "opacity-60 cursor-not-allowed" : "hover:bg-emerald-700"
+                }`}
+                title="대기 중인 모든 변경사항 일괄 수락 (Ctrl+Enter)"
               >
-                <CheckCircle2 className="w-3 h-3" />
-                모두 적용
+                {isApplyingDiffs ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-3 h-3" />
+                )}
+                <span>{isApplyingDiffs ? "적용 중..." : `모두 적용 (${pendingDiffCount})`}</span>
               </button>
               <button
                 onClick={() => rejectAllDiffs()}
-                className="rounded border border-slate-200 px-2 py-0.5 text-slate-600 hover:bg-slate-100"
+                disabled={isApplyingDiffs}
+                className="rounded border border-slate-200 px-2 py-0.5 text-slate-600 hover:bg-slate-100 disabled:opacity-50"
               >
                 전체 취소
               </button>

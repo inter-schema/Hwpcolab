@@ -7,7 +7,6 @@ import {
   Undo2,
   Settings,
   Sidebar,
-  CheckCheck,
   ChevronLeft,
   Clock,
   MoreHorizontal,
@@ -22,7 +21,6 @@ export const HeaderToolbar: React.FC = () => {
     fileName,
     isDirty,
     undoHistoryBytes,
-    pendingDiffs,
     sidebarOpen,
     sidebarDock,
     openDocument,
@@ -30,7 +28,6 @@ export const HeaderToolbar: React.FC = () => {
     createBlankDocument,
     saveToOriginalFile,
     undoLastChange,
-    acceptAllDiffs,
     toggleSidebar,
     toggleSidebarDock,
     setSettingsModalOpen,
@@ -169,6 +166,7 @@ export const HeaderToolbar: React.FC = () => {
               </button>
               <div className="my-1 border-t border-slate-100" />
               <button
+                id="header-new-hwp-btn"
                 onClick={async () => {
                   setSampleMenuOpen(false);
                   await createBlankDocument(false);
@@ -177,6 +175,17 @@ export const HeaderToolbar: React.FC = () => {
               >
                 <FilePlus2 className="w-3.5 h-3.5 text-indigo-600" />
                 <span>새 빈 문서 (.hwp)</span>
+              </button>
+              <button
+                id="header-new-hwpx-btn"
+                onClick={async () => {
+                  setSampleMenuOpen(false);
+                  await createBlankDocument(true);
+                }}
+                className="w-full px-3 py-1.5 text-left hover:bg-slate-50 text-slate-700 flex items-center gap-1.5"
+              >
+                <FilePlus2 className="w-3.5 h-3.5 text-teal-600" />
+                <span>새 빈 문서 (.hwpx)</span>
               </button>
             </div>
           )}
@@ -229,19 +238,8 @@ export const HeaderToolbar: React.FC = () => {
         </button>
       </div>
 
-      {/* Right: Pending Diffs Accept All + Dock Switch + Icons + Profile */}
+      {/* Right: Dock Switch + Icons + Profile */}
       <div className="flex items-center gap-2">
-        {pendingDiffs.length > 0 && (
-          <button
-            id="header-accept-all-diffs-btn"
-            onClick={acceptAllDiffs}
-            className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-2.5 py-1 rounded-md font-semibold shadow-xs transition-all"
-            title="대기 중인 모든 변경사항 일괄 수락 (Ctrl+Enter)"
-          >
-            <CheckCheck className="w-3.5 h-3.5" />
-            <span>모두 적용 ({pendingDiffs.length})</span>
-          </button>
-        )}
 
         <button
           id="header-dock-toggle-btn"

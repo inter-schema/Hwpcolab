@@ -146,10 +146,10 @@ async function main() {
     console.log("[Checkpoint 2] Captured:", shot2);
 
     // -------------------------------------------------------------------------
-    // CHECKPOINT 3: Attach 수학_약안.docx + AI Chat Prompt + Agent Execution Log
+    // CHECKPOINT 3: Attach demo_budget_ref.xlsx + AI Chat Prompt + Agent Execution Log
     // -------------------------------------------------------------------------
-    console.log("[Checkpoint 3] Attaching samples/수학_약안.docx and submitting AI chat prompt...");
-    const docxPath = resolve(rootDir, "samples/수학_약안.docx");
+    console.log("[Checkpoint 3] Attaching samples/demo_budget_ref.xlsx and submitting AI chat prompt...");
+    const docxPath = resolve(rootDir, "samples/demo_budget_ref.xlsx");
     const fileInput = page.locator('[data-testid="attachment-file-input"]');
     await fileInput.setInputFiles(docxPath);
     await page.waitForSelector('[data-testid="attachment-card"]', { timeout: 10000 });
@@ -180,7 +180,7 @@ async function main() {
     const shot3 = resolve(screenshotsDir, "03_ai_attachment_and_chat_log.png");
     await page.screenshot({ path: shot3, fullPage: false });
     report.checkpoints.checkpoint3 = {
-      attachedDocx: "수학_약안.docx",
+      attachedDocx: "demo_budget_ref.xlsx",
       execLogText: execLogText?.trim(),
       screenshot: shot3,
     };

@@ -92,5 +92,7 @@ AI가 문서를 마음대로 덮어씌워 레이아웃을 망가뜨리는 문제
 
 ---
 
-## 7. 상세 구현 가이드 (Engineering Blueprint)
-* 본 명세서의 아키텍처 결정 사항, 디렉토리 구조, 핵심 모듈(`claw_bridge.rs`, `rhwpEngine.ts`, `OpTranslator`, `SmartDiffOverlay`, `PrivacySessionMasker`) 전체 레퍼런스 코드 및 단계별 작업 지침은 **[`IMPLEMENTATION_GUIDE.md`](./IMPLEMENTATION_GUIDE.md)** 문서를 참조하십시오.
+## 7. 아키텍처 및 구현 모듈
+- **Tauri Rust 사이드카 (src-tauri/)**: claw_bridge를 통해 claw-hwp 로컬 엔진 실행
+- **WASM 뷰어 (src/)**: @rhwp/core 엔진을 통한 브라우저/웹뷰 인메모리 렌더링
+- **오케스트레이터 및 프라이버시 (src/services/, src/memory/)**: PII 자동 마스킹 및 LLM 에이전트 루프 관리

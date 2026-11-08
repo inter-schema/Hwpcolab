@@ -40,6 +40,21 @@ export type UnifiedOp =
   // 4. 표 셀 스타일링
   | { type: "set_cell_background"; tableIndex: number; row: number; col: number; color: string }
   | {
+      type: "set_cell_align";
+      tableIndex: number;
+      sec?: number;
+      para?: number;
+      ctrl?: number;
+      row: number;
+      col: number;
+      endRow?: number;
+      endCol?: number;
+      align?: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFY" | "left" | "center" | "right" | "justify";
+      horizontal?: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFY" | "left" | "center" | "right" | "justify";
+      valign?: "TOP" | "CENTER" | "MIDDLE" | "BOTTOM" | "top" | "center" | "middle" | "bottom";
+      vertical?: "TOP" | "CENTER" | "MIDDLE" | "BOTTOM" | "top" | "center" | "middle" | "bottom";
+    }
+  | {
       type: "set_cell_border";
       tableIndex: number;
       row: number;

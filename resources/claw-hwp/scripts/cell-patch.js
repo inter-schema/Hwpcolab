@@ -1007,8 +1007,35 @@ async function resolveCellIndexes(filePath, edits) {
         return { ...e, cellIndex: e.cellIndex };
       }
       const sec = e.section ?? 0;
-      const para = e.para ?? 0;
-      const ctrl = e.control ?? 0;
+      let para = e.para;
+      let ctrl = e.control;
+      if (para == null || ctrl == null) {
+        const targetTblIdx = e.tableIndex ?? e.table ?? e.table_index ?? 0;
+        let tblCount = 0;
+        let found = false;
+        const paraCount = doc.getParagraphCount(sec);
+        for (let p = 0; p < paraCount; p++) {
+          for (let c = 0; c < 5; c++) {
+            try {
+              const info = JSON.parse(doc.getCellInfo(sec, p, c, 0));
+              if (info && typeof info.row === 'number') {
+                if (tblCount === targetTblIdx) {
+                  para = p;
+                  ctrl = c;
+                  found = true;
+                  break;
+                }
+                tblCount++;
+              }
+            } catch {}
+          }
+          if (found) break;
+        }
+        if (!found) {
+          para = e.para ?? 0;
+          ctrl = e.control ?? 0;
+        }
+      }
       // Walk cells until we find (row, col). Tables are bounded; 10k is a
       // safe ceiling well above any real form.
       for (let i = 0; i < 10000; i++) {
@@ -1017,7 +1044,7 @@ async function resolveCellIndexes(filePath, edits) {
         catch { break; }
         if (!info || typeof info.row !== 'number') break;
         if (info.row === e.row && info.col === e.col) {
-          return { ...e, cellIndex: i };
+          return { ...e, para, control: ctrl, cellIndex: i };
         }
       }
       throw new Error(`cell (row=${e.row}, col=${e.col}) not found via rhwp at sec=${sec} para=${para} ctrl=${ctrl}`);
@@ -2261,6 +2288,55 @@ export async function appendTableInPlace(filePath, ops) {
       : raw.length;
     raw = Buffer.concat([raw.slice(0, insertAt), cluster, raw.slice(insertAt)]);
 
+    const hasHeaders = Array.isArray(op.headers) && op.headers.length > 0;
+    const hasRows = Array.isArray(op.rows) && op.rows.length > 0;
+    if (hasHeaders || hasRows) {
+      const recordsNow = parseRecords(raw);
+      const tablesNow = findTables(recordsNow, raw);
+      if (tablesNow.length > 0) {
+        const lastTable = tablesNow[tablesNow.length - 1];
+        let secParaIdx = -1;
+        let ctrlIdx = -1;
+        for (let i = 0; i < recordsNow.length; i++) {
+          const r = recordsNow[i];
+          if (r.tag === TAG_PARA_HEADER && r.level === 0) {
+            secParaIdx++;
+            ctrlIdx = -1;
+          }
+          if (r.tag === TAG_CTRL_HEADER && r.level === 1) {
+            ctrlIdx++;
+          }
+          if (r === lastTable.ctrl) break;
+        }
+
+        const tCols = entry.cols || (hasHeaders ? op.headers.length : (op.rows[0]?.length || 1));
+        if (hasHeaders) {
+          for (let c = 0; c < op.headers.length; c++) {
+            const hText = String(op.headers[c] ?? '');
+            if (hText !== '') {
+              raw = applyCellText(raw, parseRecords(raw), secParaIdx, ctrlIdx, c, hText, 0, false, false, null);
+            }
+          }
+        }
+        if (hasRows) {
+          for (let r = 0; r < op.rows.length; r++) {
+            const rowData = op.rows[r];
+            if (Array.isArray(rowData)) {
+              for (let c = 0; c < rowData.length; c++) {
+                const cellText = String(rowData[c] ?? '');
+                const cellIdx = (hasHeaders ? (r + 1) : r) * tCols + c;
+                if (cellText !== '') {
+                  raw = applyCellText(raw, parseRecords(raw), secParaIdx, ctrlIdx, cellIdx, cellText, 0, false, false, null);
+                }
+              }
+            }
+          }
+        }
+        entry.note = 'synthesized via rhwp template + populated with headers and rows';
+        delete entry.user_input_ignored;
+      }
+    }
+
     summary.push(entry);
   }
 
@@ -2356,6 +2432,9 @@ function findLastSimpleBodyParagraph(records) {
   for (let i = clusters.length - 1; i >= 0; i--) {
     if (!clusters[i].hasControls) return clusters[i];
   }
+  // If no cluster without controls exists (e.g. blank document where paragraph 0
+  // has secd/cold controls), fall back to the last available cluster.
+  if (clusters.length > 0) return clusters[clusters.length - 1];
   throw new Error('append_paragraph: no simple body paragraph found in section to use as a template');
 }
 
@@ -2417,7 +2496,9 @@ function buildClonedParaHeader(srcParaHeaderRec, raw, newCharCount, paragraphFla
   // char_count_raw with optional MSB flag.
   const flag = paragraphFlag ? 0x80000000 : 0;
   body.writeUInt32LE(((flag | (newCharCount & 0x7FFFFFFF)) >>> 0), 0);
-  // control_mask, para_shape_id, style_id: keep from source.
+  // Clear control_mask to 0 so cloned paragraphs never inherit secd/cold/table controls.
+  body.writeUInt32LE(0, 4);
+  // para_shape_id, style_id: keep from source.
   // break_val (offset 11) → override if provided. Bit flags:
   //   0x01 section break, 0x02 multi-column, 0x04 page break, 0x08 column break.
   if (typeof breakValOverride === 'number') body.writeUInt8(breakValOverride & 0xFF, 11);
@@ -8561,10 +8642,24 @@ export async function applyCellPropertyInPlace(filePath, ops) {
     if ((op.section ?? 0) !== 0) {
       throw new Error(`set_cell_property: only section 0 is supported (got section ${op.section})`);
     }
-    const has = op.valign != null || op.height_mm != null || op.width_mm != null || op.margin_mm != null || Array.isArray(op.margins) || op.header != null;
-    if (!has) throw new Error('set_cell_property: at least one of valign / height_mm / width_mm / margin_mm / header is required');
-    if (op.valign != null && CELL_VALIGN[String(op.valign).toLowerCase()] == null) {
-      throw new Error(`set_cell_property: valign must be top / middle / bottom (got "${op.valign}")`);
+    const has = op.valign != null || op.vertical != null || op.align != null || op.horizontal != null
+      || op.height_mm != null || op.width_mm != null || op.margin_mm != null || Array.isArray(op.margins) || op.header != null;
+    if (!has) throw new Error('set_cell_property: at least one of align / horizontal / valign / vertical / height_mm / width_mm / margin_mm / header is required');
+    const vCheck = op.valign ?? op.vertical;
+    if (vCheck != null && CELL_VALIGN[String(vCheck).toLowerCase()] == null) {
+      throw new Error(`set_cell_property: valign must be top / middle / center / bottom (got "${vCheck}")`);
+    }
+  }
+
+  // Pre-pass: ensure DocInfo has a para_shape for each requested horizontal alignment
+  const alignToPsId = {};
+  for (const op of ops) {
+    const rawAlign = op.align || op.horizontal;
+    if (rawAlign) {
+      const a = String(rawAlign).toLowerCase();
+      if (ALIGN_BITS[a] !== undefined && !(a in alignToPsId)) {
+        alignToPsId[a] = await ensureAlignedParaShapeInFile(filePath, a);
+      }
     }
   }
   const resolved = await resolveCellIndexes(filePath, ops);
@@ -8607,10 +8702,29 @@ export async function applyCellPropertyInPlace(filePath, ops) {
     if (secRaw.readUInt16LE(o + 8) !== e.col || secRaw.readUInt16LE(o + 10) !== e.row) {
       throw new Error(`set_cell_property: cell-attr layout mismatch at (${e.row},${e.col}) — refusing to patch`);
     }
-    if (e.valign != null) {
-      const v = CELL_VALIGN[String(e.valign).toLowerCase()];
-      const attr = secRaw.readUInt32LE(o + 2);
-      secRaw.writeUInt32LE(((attr & ~(0x3 << 21)) | (v << 21)) >>> 0, o + 2);
+    const rawValign = e.valign ?? e.vertical;
+    if (rawValign != null) {
+      const v = CELL_VALIGN[String(rawValign).toLowerCase()];
+      if (v != null) {
+        const attr = secRaw.readUInt32LE(o + 2);
+        secRaw.writeUInt32LE(((attr & ~(0x3 << 21)) | (v << 21)) >>> 0, o + 2);
+      }
+    }
+    const rawAlign = e.align ?? e.horizontal;
+    if (rawAlign != null) {
+      const a = String(rawAlign).toLowerCase();
+      const psId = alignToPsId[a];
+      if (typeof psId === 'number') {
+        const cellLevel = records[loc.listHeaderRec].level;
+        for (let i = loc.listHeaderRec + 1; i < records.length; i++) {
+          const r = records[i];
+          if (r.tag === TAG_LIST_HEADER && r.level === cellLevel) break;
+          if (r.level < cellLevel) break;
+          if (r.tag === TAG_PARA_HEADER && r.level === cellLevel) {
+            secRaw.writeUInt16LE(psId, r.dataOff + 8);
+          }
+        }
+      }
     }
     if (e.width_mm != null) secRaw.writeUInt32LE(mm(e.width_mm) >>> 0, o + 16);
     if (e.height_mm != null) secRaw.writeUInt32LE(mm(e.height_mm) >>> 0, o + 20);
@@ -8622,7 +8736,7 @@ export async function applyCellPropertyInPlace(filePath, ops) {
     // base 0 → 4 (bit 2). On the top row this is HWP's repeat-header-row behavior.
     if (e.header != null) secRaw.writeUInt16LE(e.header ? 4 : 0, o + 6);
     summary.push({ op: e.type, para, control: ctrl, cellIndex: e.cellIndex, row: e.row, col: e.col,
-      valign: e.valign ?? null, height_mm: e.height_mm ?? null, width_mm: e.width_mm ?? null, header: e.header ?? null });
+      align: rawAlign ?? null, valign: rawValign ?? null, height_mm: e.height_mm ?? null, width_mm: e.width_mm ?? null, header: e.header ?? null });
   }
 
   // Deflate + write Section0 (only fixed-width fields changed → size unchanged).
@@ -10482,10 +10596,13 @@ export async function applyParagraphStyleInPlace(filePath, ops) {
     return Object.assign([], { mode: 'in-place', styled_count: 0 });
   }
   for (const op of ops) {
-    const hasTarget = typeof op.target === 'string' && op.target.length > 0;
-    const hasIdx = Number.isInteger(op.index) && op.index >= 0;
+    const hasTarget = (typeof op.target === 'string' && op.target.length > 0) ||
+                      (typeof op.targetText === 'string' && op.targetText.length > 0);
+    const hasIdx = (Number.isInteger(op.index) && op.index >= 0) ||
+                   (Number.isInteger(op.paraIndex) && op.paraIndex >= 0) ||
+                   op.index === 'last' || op.index === -1 || op.index == null;
     if (!hasTarget && !hasIdx) {
-      throw new Error("apply_paragraph_style: 'target' (string) or 'index' (non-negative integer) is required");
+      throw new Error("apply_paragraph_style: 'target' (string) or 'index' is required");
     }
     const style = normalizeParaStyleOp(op);
     const bg = resolveBackgroundColor(op);
@@ -10540,19 +10657,67 @@ export async function applyParagraphStyleInPlace(filePath, ops) {
     // Locate paragraph: prefer target (consistent with apply_text_style),
     // fall back to index.
     let hit;
-    if (typeof op.target === 'string' && op.target.length > 0) {
-      hit = findTextRangeInSection(secRaw, op.target);
-      if (!hit) {
-        throw new Error(`apply_paragraph_style: target "${op.target}" not found in body`);
+    const targetText = op.target || op.targetText;
+    if (typeof targetText === 'string' && targetText.length > 0) {
+      hit = findTextRangeInSection(secRaw, targetText);
+      if (!hit && targetText.trim() !== targetText) {
+        hit = findTextRangeInSection(secRaw, targetText.trim());
       }
-      // Override start/end to span the whole paragraph (the text-range hit
-      // is just for paragraph identification; styling targets the whole para).
+      // If still not found, check if targetText describes a table cell (e.g. "표 1 (1행 1열)" or "1행 1열")
+      if (!hit) {
+        const m = targetText.match(/(?:표\s*(\d+))?.*?(\d+)\s*행\s*(\d+)\s*열/);
+        if (m) {
+          const tIdx = m[1] ? (parseInt(m[1], 10) - 1) : 0;
+          const rIdx = parseInt(m[2], 10) - 1;
+          const cIdx = parseInt(m[3], 10) - 1;
+          if (rIdx >= 0 && cIdx >= 0) {
+            try {
+              const res = await resolveCellIndexes(filePath, [{ tableIndex: tIdx, row: rIdx, col: cIdx }]);
+              if (res && res.length > 0 && res[0].cellIndex != null) {
+                const recsNow = parseRecords(secRaw);
+                const cellLoc = locateCell(recsNow, res[0].para ?? 0, res[0].control ?? 0, res[0].cellIndex);
+                if (cellLoc && cellLoc.paraHeaderRec >= 0) {
+                  hit = {
+                    paraIdx: res[0].para ?? 0,
+                    paraHeaderRec: recsNow[cellLoc.paraHeaderRec],
+                    textLength: 0,
+                  };
+                }
+              }
+            } catch {}
+          }
+        }
+      }
+      if (!hit) {
+        summary.push({
+          section: 0,
+          target: targetText,
+          modified: false,
+          skipped: true,
+          reason: `target "${targetText}" not found in body or table cells`,
+        });
+        continue;
+      }
       hit.start = 0;
       hit.end = hit.textLength;
     } else {
-      hit = findParagraphByIndexInSection(secRaw, op.index);
+      let idx = op.index ?? op.paraIndex;
+      if (idx === 'last' || idx === -1 || idx == null) {
+        const records = parseRecords(secRaw);
+        let count = 0;
+        for (const r of records) if (r.tag === TAG_PARA_HEADER && r.level === 0) count++;
+        idx = Math.max(0, count - 1);
+      }
+      hit = findParagraphByIndexInSection(secRaw, idx);
       if (!hit) {
-        throw new Error(`apply_paragraph_style: index ${op.index} not found in section`);
+        summary.push({
+          section: 0,
+          index: idx,
+          modified: false,
+          skipped: true,
+          reason: `index ${idx} not found in section`,
+        });
+        continue;
       }
     }
 

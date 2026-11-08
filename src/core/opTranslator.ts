@@ -249,6 +249,29 @@ export class OpTranslator {
           break;
         }
 
+        case "set_cell_align": {
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op);
+          const startR = op.row;
+          const endR = op.endRow ?? op.row;
+          const startC = op.col;
+          const endC = op.endCol ?? op.col;
+          const alignVal = (op.align || op.horizontal) ? (op.align || op.horizontal)!.toLowerCase() : undefined;
+          const valignVal = (op.valign || op.vertical) ? (op.valign || op.vertical)!.toLowerCase() : undefined;
+          for (let r = startR; r <= endR; r++) {
+            for (let c = startC; c <= endC; c++) {
+              out.push({
+                type: "set_cell_align",
+                ...coords,
+                row: r,
+                col: c,
+                ...(alignVal ? { align: alignVal } : {}),
+                ...(valignVal ? { valign: valignVal } : {}),
+              });
+            }
+          }
+          break;
+        }
+
         case "set_cell_background": {
           const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
           out.push({
@@ -524,7 +547,7 @@ export class OpTranslator {
           ];
           out.push({
             type: "insert_table",
-            index: op.afterParaIndex ?? -1,
+            index: op.afterParaIndex !== undefined ? op.afterParaIndex : "end",
             rows: allCells.length,
             cols: op.headers.length,
             cells: allCells,
@@ -640,6 +663,28 @@ export class OpTranslator {
         case "equalize_table":
           out.push({ type: "distribute_table", table: op.tableIndex, mode: op.mode });
           break;
+
+        case "set_cell_align": {
+          const startR = op.row;
+          const endR = op.endRow ?? op.row;
+          const startC = op.col;
+          const endC = op.endCol ?? op.col;
+          const hVal = (op.align || op.horizontal) ? (op.align || op.horizontal)!.toUpperCase() : undefined;
+          const vVal = (op.valign || op.vertical) ? (op.valign || op.vertical)!.toUpperCase() : undefined;
+          for (let r = startR; r <= endR; r++) {
+            for (let c = startC; c <= endC; c++) {
+              out.push({
+                type: "set_cell_align",
+                table: op.tableIndex,
+                row: r,
+                col: c,
+                ...(hVal ? { horizontal: hVal } : {}),
+                ...(vVal ? { vertical: vVal } : {}),
+              });
+            }
+          }
+          break;
+        }
 
         case "set_cell_background":
           out.push({

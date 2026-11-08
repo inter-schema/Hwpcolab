@@ -311,13 +311,15 @@ export function buildDocumentContext(options: {
     }
   }
 
-  // 4. Document Body (full or outline if > 12000 chars)
-  if (options.docMarkdown) {
+  // 4. Document Body (full or outline if > 12000 chars, or indicator if empty)
+  if (options.docMarkdown && options.docMarkdown.trim()) {
     if (options.docMarkdown.length > DOC_MARKDOWN_THRESHOLD) {
       parts.push(generateDocumentOutline(options.docMarkdown, tablesMeta));
     } else {
       parts.push(`### [문서 전체 마크다운 내용]\n${options.docMarkdown}`);
     }
+  } else {
+    parts.push(`### [문서 상태 안내]\n현재 문서는 빈 문서(또는 새로 생성된 문서)입니다. 본문과 표가 비어 있으므로 사용자의 요청에 따라 append_paragraph, append_heading, insert_table 등을 사용하여 문서를 작성하십시오.`);
   }
 
   // 5. Attachments

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useDocStore } from "../../store/useDocStore";
 import { assertAttachmentFileSize, parseLocalAttachment } from "../../core/multiFileParser";
 import { runtimeInvoke as invoke, isTauriEnv } from "../../core/runtimeInvoke";
-import { Paperclip, Check, X, Loader2, Plus } from "lucide-react";
+import { Paperclip, Check, X, Loader2 } from "lucide-react";
 
 export const FileDropZone: React.FC = () => {
   const { attachments, addAttachment, removeAttachment } = useDocStore();
@@ -140,9 +140,9 @@ export const FileDropZone: React.FC = () => {
         </div>
       )}
 
-      {/* Quick Attach Bar (File Picker + Sample Reference Quick Buttons) */}
+      {/* Quick Attach Bar (File Picker) */}
       <div
-        className={`flex items-center justify-between gap-1.5 text-[11px] px-2 py-1 rounded-lg border border-dashed transition-colors ${
+        className={`flex items-center justify-between gap-1.5 text-[11px] px-2 py-1.5 rounded-lg border border-dashed transition-colors ${
           isDragOver ? "border-teal-600 bg-teal-50/60" : "border-slate-200 bg-slate-50/60"
         }`}
       >
@@ -150,7 +150,7 @@ export const FileDropZone: React.FC = () => {
           id="attach-file-btn"
           type="button"
           onClick={handlePickFile}
-          className="flex items-center gap-1 text-slate-600 hover:text-slate-900 font-medium"
+          className="flex items-center gap-1 text-slate-600 hover:text-slate-900 font-medium w-full justify-center"
         >
           {loading ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-700" />
@@ -159,27 +159,6 @@ export const FileDropZone: React.FC = () => {
           )}
           <span>파일 첨부 (DOCX·XLSX·PDF·HWP)</span>
         </button>
-
-        <div className="flex items-center gap-1">
-          <button
-            id="attach-sample-docx-btn"
-            type="button"
-            onClick={() => processFileByPath("samples/수학_약안.docx")}
-            className="px-1.5 py-0.5 rounded bg-white hover:bg-teal-50 text-teal-800 border border-slate-200 text-[10px] font-semibold"
-            title="샘플 수학_약안.docx 즉시 첨부"
-          >
-            + 수학_약안.docx
-          </button>
-          <button
-            id="attach-sample-xlsx-btn"
-            type="button"
-            onClick={() => processFileByPath("samples/demo_budget_ref.xlsx")}
-            className="px-1.5 py-0.5 rounded bg-white hover:bg-emerald-50 text-emerald-800 border border-slate-200 text-[10px] font-semibold"
-            title="샘플 예산안 엑셀(demo_budget_ref.xlsx) 즉시 첨부"
-          >
-            + 예산안.xlsx
-          </button>
-        </div>
       </div>
     </div>
   );

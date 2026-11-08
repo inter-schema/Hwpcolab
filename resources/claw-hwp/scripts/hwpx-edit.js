@@ -1308,9 +1308,16 @@ function opInsertTable(doc, index, rows, cols, cells) {
   // Inject at the target paragraph index (global, ordered across sections).
   // index === -1 prepends at the start of the first section's body.
   const allParas = doc.paragraphs();
-  if (!Number.isInteger(index) || index < -1 || index >= allParas.length) {
-    throw new Error(`insert_table: index ${index} out of range (-1..${allParas.length - 1}; -1 to prepend)`);
+  let targetIndex = index;
+  if (targetIndex === undefined || targetIndex === null || targetIndex === 'end') {
+    targetIndex = allParas.length > 0 ? allParas.length - 1 : -1;
+  } else if (typeof targetIndex === 'number' && targetIndex >= allParas.length) {
+    targetIndex = Math.max(-1, allParas.length - 1);
   }
+  if (!Number.isInteger(targetIndex) || targetIndex < -1 || targetIndex >= allParas.length) {
+    throw new Error(`insert_table: index ${targetIndex} out of range (-1..${allParas.length - 1}; -1 to prepend)`);
+  }
+  index = targetIndex;
   if (index === -1) {
     const firstSec = doc.sectionNames()[0];
     let xml = doc.read(firstSec);
@@ -1681,7 +1688,8 @@ function opSetCellAlign(doc, tableIndex, row, col, horizontal, vertical) {
 
   // Vertical → <hp:subList vertAlign="TOP|CENTER|BOTTOM">
   if (vertical) {
-    const v = String(vertical).toUpperCase();
+    let v = String(vertical).toUpperCase();
+    if (v === 'MIDDLE') v = 'CENTER';
     if (!['TOP', 'CENTER', 'BOTTOM'].includes(v)) throw new Error('set_cell_align: vertical must be TOP/CENTER/BOTTOM');
     tcInner = tcInner.replace(/(<hp:subList\b[^>]*?\svertAlign=")[^"]+(")/, `$1${v}$2`);
   }
@@ -2996,7 +3004,47 @@ function ensureCleanParaPr(doc, opts) {
 }
 
 function opApplyParagraphStyle(doc, index, style) {
-  index = resolveParaIndex(doc.paragraphs(), index, style && style.target);
+  const targetText = style && (style.target || style.targetText);
+  let resolvedIdx = resolveParaIndex(doc.paragraphs(), index, targetText);
+  const parasInitial = doc.paragraphs();
+  const foundInBody = resolvedIdx >= 0 && resolvedIdx < parasInitial.length && (!targetText ||
+    [...parasInitial[resolvedIdx].el.inner.matchAll(/<hp:t[^>]*>([\s\S]*?)<\/hp:t>/g)].map(m => m[1]).join('').includes(targetText));
+
+  // If targetText was given and not found in body paragraphs, search inside table cells!
+  if (targetText && !foundInBody) {
+    for (const sName of doc.sectionNames()) {
+      let xml = doc.read(sName);
+      // Scan each cell
+      const tcMatches = [...xml.matchAll(/<hp:tc\b[\s\S]*?<\/hp:tc>/g)];
+      for (const tcM of tcMatches) {
+        if (tcM[0].includes(targetText)) {
+          // Found cell containing targetText, rewrite p inside it
+          const pMatch = tcM[0].match(/<hp:p\b([^>]*)>([\s\S]*?)<\/hp:p>/);
+          if (pMatch && pMatch[2].includes(targetText)) {
+            // Ensure clean paraPr with requested style
+            const nativeOpts = {
+              align: style.align,
+              indent: style.indent,
+              marginLeft: style.margin_left ?? style.marginLeft,
+              marginRight: style.margin_right ?? style.marginRight,
+              spacingBefore: style.spacing_before ?? style.spacingBefore,
+              spacingAfter: style.spacing_after ?? style.spacingAfter,
+              lineSpacing: style.line_spacing ?? style.lineSpacing,
+            };
+            const pprId = ensureCleanParaPr(doc, nativeOpts) || '0';
+            const newPAttrs = pMatch[1].replace(/paraPrIDRef="\d+"/, `paraPrIDRef="${pprId}"`);
+            const newP = `<hp:p${newPAttrs}>${pMatch[2]}<\/hp:p>`;
+            const updatedTc = tcM[0].replace(pMatch[0], newP);
+            xml = xml.slice(0, tcM.index) + updatedTc + xml.slice(tcM.index + tcM[0].length);
+            doc.write(sName, xml);
+            return { index: -1, inCell: true, paraPrId: pprId, webSafe: true };
+          }
+        }
+      }
+    }
+  }
+
+  index = resolvedIdx;
   const headerName = doc.headerName();
   if (!headerName) throw new Error('apply_paragraph_style: Contents/header.xml missing');
   // Web-safe path: align / indent / margins / spacing / lineSpacing baked into a
@@ -5001,7 +5049,7 @@ function applyOp(doc, op) {
     case 'set_cell_background': return opSetCellBackground(doc, op.table, op.row, op.col, op.color);
     case 'set_cell_border': return opSetCellBorder(doc, op.table, op.row, op.col, op.color, op.width, op.sides);
     case 'set_cell_diagonal': return opSetCellDiagonal(doc, op.table, op.row, op.col, op.direction, op.color, op.width);
-    case 'set_cell_align': return opSetCellAlign(doc, op.table, op.row, op.col, op.horizontal, op.vertical);
+    case 'set_cell_align': return opSetCellAlign(doc, op.table ?? op.tableIndex ?? 0, op.row, op.col, op.horizontal || op.align, op.vertical || op.valign);
     case 'set_cell_size': return opSetCellSize(doc, op.table, op.row, op.col, op.width, op.height);
     case 'set_cell_margin': return opSetCellMargin(doc, op.table, op.row, op.col, op);
     case 'set_table_margin': return opSetTableMargin(doc, op.table, op);
