@@ -1671,8 +1671,30 @@ const HANDLERS = {
 
   set_cell_text(doc, op, cursor) {
     const sec = requireInt(op, "section");
-    const para = requireInt(op, "para");
-    const ctrl = requireInt(op, "control");
+    // para/control may be absent when OpTranslator could not resolve the
+    // tableIndex against tablesMeta (e.g. a table appended earlier in the
+    // same payload). Never fall back to 0,0 here: para 0 / ctrl 0 is
+    // usually not a table at all. Resolve by tableIndex against the live
+    // document instead; if that table does not exist, fail with a clear
+    // no-table error naming the index and the table count.
+    let para;
+    let ctrl;
+    if (typeof op.para === "number" && typeof op.control === "number") {
+      para = op.para;
+      ctrl = op.control;
+    } else {
+      const tableIdx = op.tableIndex ?? op.table ?? op.table_index;
+      if (typeof tableIdx !== "number") {
+        throw new Error("set_cell_text: 'para'/'control' or 'tableIndex' is required");
+      }
+      const tables = enumerateTables(doc);
+      const found = tables[tableIdx];
+      if (!found) {
+        throw new Error(`set_cell_text: table ${tableIdx} not found (document has ${tables.length} table(s))`);
+      }
+      para = found.para;
+      ctrl = found.ctrl;
+    }
     const text = op.text ?? "";
     if (/[\n\r\u2028\u2029]/.test(text)) {
       throw new Error("set_cell_text: 'text' cannot contain paragraph-break characters");
@@ -2090,8 +2112,10 @@ function applyCellText(doc, sec, para, ctrl, cellIdx, cellPara, text) {
 //
 // For the Hancom Docs raw-patch fast path. Converts each op into the shape
 // cell-patch.js expects: {section, para, control, row, col, text}. For
-// set_cell_text we already have those. For set_cell_text_by_label we open
-// rhwp briefly to find the anchor cell, then compute the target (row, col).
+// set_cell_text we already have those — or, when para/control are absent,
+// the tableIndex, which cell-patch.js resolves against the file.
+// For set_cell_text_by_label we open rhwp briefly to find the anchor cell,
+// then compute the target (row, col).
 async function resolveLabelEditsViaRhwp(filePath, ops) {
   // Lazy-init rhwp once. We already loaded the WASM at module init.
   if (typeof globalThis.measureTextWidth !== 'function') {
@@ -2108,18 +2132,38 @@ async function resolveLabelEditsViaRhwp(filePath, ops) {
     for (const op of ops) {
       if (op.type === 'set_cell_text') {
         const sec = op.section ?? 0; // default section 0 — consistent with set_cell_background/border/etc.
-        const para = requireInt(op, 'para');
-        const ctrl = requireInt(op, 'control');
+        // para/control may be absent when OpTranslator could not resolve
+        // the tableIndex against tablesMeta. Do NOT default them to 0:
+        // para 0 / ctrl 0 is usually not a table, and a fabricated 0,0
+        // used to fail downstream as the misleading
+        // "cell (row=0, col=0) not found via rhwp at sec=0 para=0 ctrl=0".
+        // Carry the tableIndex through instead so cell-patch.js resolves
+        // the table against the actual file (its auto-discovery); if no
+        // such table exists it throws a clear no-table error.
+        const tableIndex = op.tableIndex ?? op.table ?? op.table_index;
+        const para = op.para != null ? requireInt(op, 'para') : undefined;
+        const ctrl = op.control != null ? requireInt(op, 'control') : undefined;
         const text = op.text ?? '';
         const cellPara = op.cell_para ?? 0; // which paragraph inside a multi-paragraph cell (default first)
         const clearObjects = !!op.clear_objects; // with text:"" — also remove inline objects in that paragraph
         if (op.row != null && op.col != null) {
-          out.push({ section: sec, para, control: ctrl, row: op.row, col: op.col, text, cell_para: cellPara, clear_objects: clearObjects, fit: !!op.fit, nested: op.nested ?? null, collapse: !!op.collapse });
+          out.push({ section: sec, ...(para != null ? { para } : {}), ...(ctrl != null ? { control: ctrl } : {}), ...(tableIndex != null ? { tableIndex } : {}), row: op.row, col: op.col, text, cell_para: cellPara, clear_objects: clearObjects, fit: !!op.fit, nested: op.nested ?? null, collapse: !!op.collapse });
         } else if (op.cell != null) {
           // Convert flat cellIndex back to (row, col) via rhwp inspect.
+          // With no explicit para/control, resolve the table by index first.
+          let p = para;
+          let c = ctrl;
+          if (p == null || c == null) {
+            if (!doc) doc = new HwpDocument(new Uint8Array(fs.readFileSync(filePath)));
+            const tables = enumerateTables(doc);
+            const found = tables[tableIndex ?? 0];
+            if (!found) throw new Error(`set_cell_text: table ${tableIndex ?? 0} not found (document has ${tables.length} table(s))`);
+            p = found.para;
+            c = found.ctrl;
+          }
           if (!doc) doc = new HwpDocument(new Uint8Array(fs.readFileSync(filePath)));
-          const info = JSON.parse(doc.getCellInfo(sec, para, ctrl, op.cell));
-          out.push({ section: sec, para, control: ctrl, row: info.row, col: info.col, text, cell_para: cellPara, clear_objects: clearObjects, fit: !!op.fit, nested: op.nested ?? null, collapse: !!op.collapse });
+          const info = JSON.parse(doc.getCellInfo(sec, p, c, op.cell));
+          out.push({ section: sec, para: p, control: c, row: info.row, col: info.col, text, cell_para: cellPara, clear_objects: clearObjects, fit: !!op.fit, nested: op.nested ?? null, collapse: !!op.collapse });
         } else {
           throw new Error("set_cell_text: provide row+col or cell");
         }

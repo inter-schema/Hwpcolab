@@ -67,8 +67,22 @@ export class OpTranslator {
     }
     const meta = tablesMeta[tableIndex];
     if (!meta) {
-      // Fallback: if table index is out of bounds (e.g. newly added table), assume sec:0, para:0, ctrl:0
-      return { section: 0, para: 0, control: 0 };
+      // DO NOT fabricate { section: 0, para: 0, control: 0 } here.
+      // para 0 / ctrl 0 is usually NOT a table: cover paragraphs pack a
+      // logo (ctrl 0), a checkbox (ctrl 1), a textbox (ctrl 2) before the
+      // actual table (see cell-inspect.js enumerateTables). Fabricating
+      // 0,0,0 used to surface downstream as the misleading
+      // "cell (row=0, col=0) not found via rhwp at sec=0 para=0 ctrl=0"
+      // even though the target cell existed in a table at another
+      // paragraph. Instead, leave para/control unset and carry the
+      // tableIndex so the engine resolves the table against the actual
+      // file at execution time (cell-patch.js auto-discovery for the
+      // raw-patch path, enumerateTables() for the rhwp path). That also
+      // covers a table appended earlier in the same payload, which is
+      // absent from tablesMeta by construction. If no table with that
+      // index exists in the file, the engine throws a clear "no table"
+      // error naming the requested index and the table count.
+      return { section: 0, tableIndex };
     }
     return { section: meta.sec, para: meta.para, control: meta.ctrl };
   }

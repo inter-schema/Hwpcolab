@@ -980,11 +980,19 @@ function findStreamEntry(entries, pathParts) {
 // ── Public entry ──────────────────────────────────────────────────────────
 //
 // patchCellsInPlace(filePath, edits) edits = [{ section, para, control, row, col, text }, ...]
-// Mutates the file at filePath. Returns a summary array.
+// para/control may be omitted when tableIndex is given instead; the table
+// is then located by index in document order. Mutates the file at
+// filePath. Returns a summary array.
 
 // Resolve (section, para, control, row, col) → cellIndex via rhwp inspect.
 // We open the doc, walk getCellInfo until we find the matching (row, col),
 // then immediately discard the doc — rhwp is never used to write bytes.
+// When para/control are absent, the table is located by tableIndex
+// (document order, same as enumerateTables in cell-inspect.js). Never
+// default a missing table to para 0 / ctrl 0: that address is usually
+// not a table at all, and the old silent 0,0 fallback produced the
+// misleading "cell (row=0, col=0) not found via rhwp at sec=0 para=0
+// ctrl=0" even though the cell existed in a table at another paragraph.
 async function resolveCellIndexes(filePath, edits) {
   // Windows: a bare `${__dirname}/…` string is parsed by the ESM loader as a
   // URL whose scheme is the drive letter ("c:") and rejected. pathToFileURL
@@ -1014,8 +1022,11 @@ async function resolveCellIndexes(filePath, edits) {
         let tblCount = 0;
         let found = false;
         const paraCount = doc.getParagraphCount(sec);
+        // Scan up to 64 controls per paragraph, matching MAX_CONTROL_IDX
+        // in cell-inspect.js: a paragraph can hold non-table controls
+        // (logo, checkbox, textbox) before the actual table.
         for (let p = 0; p < paraCount; p++) {
-          for (let c = 0; c < 5; c++) {
+          for (let c = 0; c < 64; c++) {
             try {
               const info = JSON.parse(doc.getCellInfo(sec, p, c, 0));
               if (info && typeof info.row === 'number') {
@@ -1032,22 +1043,30 @@ async function resolveCellIndexes(filePath, edits) {
           if (found) break;
         }
         if (!found) {
-          para = e.para ?? 0;
-          ctrl = e.control ?? 0;
+          throw new Error(`no table found in section ${sec} (tableIndex ${targetTblIdx} requested; document has ${tblCount} table(s) in this section)`);
         }
       }
       // Walk cells until we find (row, col). Tables are bounded; 10k is a
       // safe ceiling well above any real form.
+      let seenCells = 0;
+      let maxRow = -1;
+      let maxCol = -1;
       for (let i = 0; i < 10000; i++) {
         let info;
         try { info = JSON.parse(doc.getCellInfo(sec, para, ctrl, i)); }
         catch { break; }
         if (!info || typeof info.row !== 'number') break;
+        seenCells++;
+        maxRow = Math.max(maxRow, info.row);
+        maxCol = Math.max(maxCol, info.col);
         if (info.row === e.row && info.col === e.col) {
           return { ...e, para, control: ctrl, cellIndex: i };
         }
       }
-      throw new Error(`cell (row=${e.row}, col=${e.col}) not found via rhwp at sec=${sec} para=${para} ctrl=${ctrl}`);
+      if (seenCells === 0) {
+        throw new Error(`no table at sec=${sec} para=${para} ctrl=${ctrl} (getCellInfo found no cells there)`);
+      }
+      throw new Error(`cell (row=${e.row}, col=${e.col}) not found via rhwp at sec=${sec} para=${para} ctrl=${ctrl} (table has rows 0..${maxRow}, cols 0..${maxCol})`);
     });
   } finally {
     try { doc.free(); } catch { /* ignore */ }
