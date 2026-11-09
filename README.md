@@ -1,209 +1,304 @@
-# HOP-Claw (Hwpcolab)
+# HOP-Claw
 
 <div align="center">
 
-![HOP-Claw Logo](https://img.shields.io/badge/HOP--Claw-AI_한글_협업_스튜디오-2563eb?style=for-the-badge&logo=electron&logoColor=white)
+![HOP-Claw](https://img.shields.io/badge/HOP--Claw-AI_HWP_Document_Studio-2563eb?style=for-the-badge&logo=electron&logoColor=white)
 <br/>
 
 [![GPL-3.0 License](https://img.shields.io/badge/License-GPL_v3.0-blue.svg)](./LICENSE)
-[![Tests Passing](https://img.shields.io/badge/Tests-58%20Files%20%7C%20430%20Passed%20(100%25)-success.svg)](https://github.com/inter-schema/Hwpcolab/tree/main/tests)
 [![Tauri v2](https://img.shields.io/badge/Tauri-v2.0-orange.svg)](https://v2.tauri.app/)
 [![React 19](https://img.shields.io/badge/React-19.0-61dafb.svg)](https://react.dev/)
-[![WASM Core](https://img.shields.io/badge/Engine-@rhwp/core%20+%20claw--hwp-purple.svg)](https://github.com/hahnlee/rhwp)
-[![Branch main](https://img.shields.io/badge/Branch-main-green.svg)](https://github.com/inter-schema/Hwpcolab/tree/main)
+[![Document Engine](https://img.shields.io/badge/Engine-rhwp%20%2B%20claw--hwp-purple.svg)](https://github.com/hahnlee/rhwp)
 
-<p align="center">
-  <b>로컬 설치형 AI HWP / HWPX 문서 협업 데스크톱 애플리케이션</b><br/>
-  외부 클라우드 파일 업로드 없이 로컬 WASM/Node.js 사이드카 엔진으로 직접 렌더링하고 편집하는 프라이버시 우선 AI 한글 오피스
-</p>
+**HWP / HWPX 문서를 사람과 AI가 함께 작성하고 편집하는 데스크톱 작업실**
+
+빈 문서에서 초안을 만들고, 기존 문서를 고치고, 참고자료를 반영하고, 표와 서식을 다듬습니다.  
+AI는 실제 HWP 편집 연산을 변경 제안으로 만들고, 사용자는 적용할 내용을 검토하고 선택합니다.
 
 </div>
 
 ---
 
-## 🎥 주요 기능 시연 (Walkthrough Video)
+## 1. HOP-Claw란?
 
-> 아래 영상에서 **HWPX 문서 로드, 중첩 표(표 안의 표) 생성, 인라인 AI 툴바 교정, 작성 선호사항 및 AI 설정 모달 워크플로우**를 확인하실 수 있습니다.
+HOP-Claw는 **HWP와 HWPX 문서의 생성·작성·수정·검토**를 지원하는 로컬 설치형 AI 문서 편집기입니다.
 
-[🎬 HOP-Claw 기능 시연 영상 재생 (docs/videos/hop_claw_feature_walkthrough.webm)](docs/videos/hop_claw_feature_walkthrough.webm)
+일반적인 AI 글쓰기처럼 텍스트 답변만 제공하는 데 그치지 않습니다. 문서 본문과 표 구조를 읽고, 문단·표·서식에 대한 편집 연산을 제안하며, 사용자가 수락한 변경을 실제 문서에 반영합니다.
 
----
+- **새 문서 작성:** 빈 HWP/HWPX 문서에 제목, 본문, 목록, 표 구성
+- **기존 문서 편집:** 문장 교정, 내용 교체·보충, 문체와 서식 통일
+- **자료 기반 작성:** PDF, DOCX, Excel 등의 내용을 참고해 본문과 표 채우기
+- **구조 편집:** 표 생성, 행·열 조정, 셀 병합·분할, 표 안의 표(HWPX)
+- **문서 디자인:** 글자·문단 서식, 이미지·직인, 머리말·꼬리말, 쪽 번호
+- **레이아웃 검수:** 너비와 넘침 측정, 임시 복사본 시험 편집, 수정 전후 비교
 
-## 🖼️ 화면 갤러리 (Feature Visual Gallery)
+> 여기서 '공동 편집'은 **사람과 AI가 한 문서에서 제안·검토·적용을 반복하는 협업**을 뜻합니다. 여러 사용자가 동시에 접속하는 실시간 공동 편집 서비스는 아닙니다.
 
-### 1. 메인 작업 공간 및 AI 사이드바 (Main Workspace & AI Assistant)
-HWPX 공문서 원본 서식을 100% 유지한 채 화면에 렌더링하며, 좌측 AI 어시스턴트 패널에서 단락별 Diff 검토, 즉각 반영, 다중 첨부자료(Excel, PDF, HWP) 파싱을 지원합니다.
+## 2. 빠른 시작 (Quickstart)
 
----
+### 2.1 설치 파일 다운로드
 
-### 2. [전후 비교 시연] 표 레이아웃 실측 진단 및 자동 교정 (Before & After Layout Optimization)
-표 내부 셀 너비가 어긋나 텍스트가 잘리거나 침범하는 레이아웃 이슈가 발생했을 때, AI 어시스턴트(BAZE `gpt-6-luna`)가 에이전틱 실측 루프를 통해 페이지 인쇄 가능 폭(150mm)에 맞추어 표와 행 높이를 자동으로 최적화 교정합니다.
+Windows 10/11 64-bit 사용자는 [GitHub Releases](https://github.com/inter-schema/Hwpcolab/releases/latest)에서 최신 배포 파일을 내려받을 수 있습니다.
 
-| 수정 전 (Before): 셀 폭 붕괴 및 텍스트 넘침/잘림 | AI 실측 추론 루프 (이슈 4건 진단 및 해소) | 수정 후 (After): 인쇄 폭 150mm 실측 교정 완료 |
+| 배포 방식 | 추천 대상 | 실행 방법 |
+| --- | --- | --- |
+| **NSIS 설치 파일** | 일반 사용자 | 설치 마법사를 실행한 뒤 시작 메뉴에서 HOP-Claw 실행 |
+| **Portable ZIP** | 무설치 실행 및 이동식 환경 | ZIP 전체를 압축 해제한 뒤 폴더 안의 실행 파일 실행 |
+| **MSI** | 조직의 표준 소프트웨어 배포 | Windows Installer로 설치 |
+
+Portable ZIP은 실행 파일만 따로 꺼내는 방식이 아닙니다. ZIP 안의 **실행 파일, WebView2Loader.dll, resources 폴더**를 함께 유지해야 합니다.
+
+### 2.2 AI 공급자 설정
+
+1. 앱 상단의 설정을 엽니다.
+2. BAZE, Claude, OpenAI, Gemini, Ollama 또는 OpenAI 호환 사용자 지정 공급자를 선택합니다.
+3. 선택한 공급자에서 발급받은 API 키와 모델 정보를 입력합니다. Ollama 등 로컬 엔드포인트도 설정할 수 있습니다.
+4. 사용자 지정 공급자를 사용하는 경우 해당 모델의 도구 호출(Tool Calling) 지원 여부도 확인합니다.
+
+HOP-Claw 자체가 모든 공급자의 API 이용권이나 API 키를 제공하는 것은 아닙니다. 공급자와 모델에 따라 지원되는 에이전트 기능이 다를 수 있습니다.
+
+### 2.3 새 문서를 만들거나 기존 문서 열기
+
+- **새 문서:** 상단 문서 메뉴에서 새 빈 문서(.hwp 또는 .hwpx)를 선택합니다.
+- **기존 문서:** 열기를 눌러 편집할 HWP/HWPX 파일을 선택합니다.
+- **참고자료:** AI 사이드바의 파일 첨부 영역에 DOCX, XLSX, PDF, HWP/HWPX, TXT 등의 자료를 추가합니다.
+
+### 2.4 AI에게 작업 요청하기
+
+AI 사이드바에 원하는 결과를 자연어로 입력합니다.
+
+예시:
+
+- "이 메모를 보고서 형태로 작성하고 제목과 소제목을 구성해줘."
+- "현재 문서의 문장을 공문서 개조식 어투로 통일해줘."
+- "첨부한 예산표를 참고해 문서의 빈 표를 채워줘."
+- "표 너비가 인쇄 영역을 넘지 않도록 조정하고 잘린 셀을 확인해줘."
+
+빈 문서에서는 제목·문단·표를 추가하는 방식으로 초안을 만들 수 있습니다. 기존 문서에서는 현재 내용과 표 구조를 읽고 필요한 부분을 수정하도록 요청할 수 있습니다.
+
+### 2.5 변경사항 검토하고 저장하기
+
+기본 모드에서는 AI가 문서 전체를 무조건 덮어쓰지 않고 **변경 제안(Diff)**을 만듭니다.
+
+1. 변경 전·후 내용과 변경 위치를 확인합니다.
+2. 필요한 항목만 수락하고, 불필요한 항목은 거부합니다.
+3. 직접 편집한 내용과 AI가 반영한 내용을 확인합니다.
+4. 저장을 눌러 HWP/HWPX 파일로 내보냅니다.
+
+설정에서 즉시 반영 모드를 선택할 수도 있습니다. 중요한 문서는 검토 모드를 사용하는 것을 권장합니다.
+
+## 3. 어떤 문서 작업을 할 수 있나요?
+
+### 3.1 빈 문서에서 초안 작성
+
+메모, 개요, 문장, 간단한 요구사항을 입력하면 문서 구조에 맞춰 작성하도록 요청할 수 있습니다.
+
+- 제목과 단계별 소제목 작성
+- 본문 문단 추가 및 내용 확장
+- 글머리표·번호 목록 구성
+- 표 생성 및 데이터 입력
+- 문단 정렬과 기본 서식 적용
+
+새 빈 HWP/HWPX 문서 세션과 제목·문단·표 추가 연산을 지원합니다. 문서의 목적, 독자, 분량, 목차 등을 구체적으로 지시할수록 결과를 조정하기 쉽습니다.
+
+### 3.2 기존 문서 공동 편집
+
+문서 전체 또는 선택 영역을 대상으로 수정안을 제안합니다.
+
+- 맞춤법·띄어쓰기·문장 흐름 교정
+- 긴 문단 요약 및 개조식 변환
+- 문체·용어·표기 통일
+- 문장 또는 문단 교체·추가
+- 글꼴, 크기, 굵기, 색상, 자간 변경
+- 문단 정렬, 들여쓰기, 줄 간격 조정
+- 번호 및 글머리표 목록 적용
+
+### 3.3 참고자료를 이용한 문서 작성
+
+여러 파일에서 추출한 내용을 AI 작업 컨텍스트로 함께 제공합니다.
+
+| 참고자료 | 처리 방식 |
+| --- | --- |
+| HWP / HWPX | 본문과 표 구조 추출 |
+| DOCX | 본문 및 표의 텍스트 추출 |
+| XLSX / XLS / CSV | 시트별 데이터와 표 형태 추출 |
+| PDF | 페이지 텍스트 추출 |
+| TXT / MD / JSON | 텍스트 내용 읽기 |
+| PNG / JPG / JPEG | 이미지 파일 첨부 및 문서 삽입 경로 제공 |
+
+예를 들어 기존 공문서 양식을 열고 PDF 사업계획서와 Excel 예산표를 함께 첨부한 뒤, 참고자료를 근거로 본문과 표를 채우도록 요청할 수 있습니다.
+
+### 3.4 표와 데이터 구조 편집
+
+표의 내용뿐 아니라 구조와 서식도 편집합니다.
+
+- 새 표 생성 및 셀 내용 채우기
+- 행·열 추가 및 삭제
+- 셀 병합·해제·분할
+- 셀 정렬, 배경색, 테두리 설정
+- 열 너비, 행 높이, 셀 여백 조정
+- 표를 본문 인쇄 가능 영역에 맞추기
+- 표 안에 표 삽입 (**HWPX 전용**)
+
+중첩 표는 HWPX에서 지원합니다. 레거시 HWP 바이너리 문서에는 중첩 표 연산을 적용하지 않도록 방어합니다.
+
+### 3.5 문서 서식과 페이지 구성
+
+- 글자 및 문단 스타일 조정
+- 1~3단 편집
+- 이미지 삽입 및 위치 지정
+- 직인 이미지 배치
+- 머리말·꼬리말 추가
+- 쪽 번호 및 각주 삽입
+- 페이지 여백 조정
+
+### 3.6 레이아웃 측정과 수정 검증
+
+레이아웃 문제를 감으로만 수정하지 않습니다.
+
+1. 문서와 표의 너비·셀 배치·넘침 상태를 측정합니다.
+2. 수정안을 임시 복사본에 시험 적용합니다.
+3. 수정 전후 측정값을 비교합니다.
+4. 검증 결과와 주의사항을 변경 제안에 표시합니다.
+
+표 너비 초과, 셀 내용 잘림, 행 높이 부족, 셀 여백 등의 문제를 점검하고 조정할 수 있습니다.
+
+## 4. 레이아웃 검증 시연
+
+아래 캡처는 기존 샘플 문서에서 레이아웃 진단과 수정 과정을 보여줍니다.
+
+| 수정 전 | AI 진단 및 시험 적용 | 수정 후 |
 | :---: | :---: | :---: |
-| ![수정 전: 셀 폭 붕괴 및 텍스트 넘침](docs/images/02a_layout_before.png) | ![AI 실측 추론 루프](docs/images/02b_ai_reasoning_trace.png) | ![수정 후: 실측 교정 완료](docs/images/02c_layout_after.png) |
+| ![수정 전 레이아웃](docs/images/02a_layout_before.png) | ![AI 진단 진행](docs/images/02b_ai_reasoning_trace.png) | ![수정 후 레이아웃](docs/images/02c_layout_after.png) |
 
----
+AI는 표의 인쇄 가능 폭과 셀 내용을 확인하고, 시험 적용 및 재측정을 거쳐 변경 제안을 구성합니다. 결과는 문서와 작업 조건에 따라 달라질 수 있습니다.
 
-### 3. HWPX 표 안의 표(중첩 표) 생성 및 실시간 렌더링 (Nested Table)
-기존 한글 에디터 엔진의 한계를 극복하고, 사용자가 원하는 셀 내부 어디서든 계층형 2단 중첩 표(`insert_nested_table`)를 클릭 한 번으로 생성하고 화면 중앙에서 즉시 확인 및 편집할 수 있습니다.
-![중첩 표 생성 화면](docs/images/03_nested_table_in_action.png)
+## 5. 작성 선호사항 (Writing Memory)
 
----
+반복해서 사용하는 문서 양식과 작성 스타일을 메모리로 만들어 다음 작업에 재사용할 수 있습니다.
 
-### 4. 직관적인 인라인 플로팅 퀵 툴바 (Inline Quick AI Toolbar)
-문서 본문 드래그나 표 셀 선택 시 커서 옆에 즉각 팝업되어 공문서 개조식 변환, 맞춤법 교정, 표 채우기, 그리고 **[⊞ 표 안에 표]** 삽입 기능을 마우스 원클릭으로 실행합니다.
-![인라인 플로팅 퀵 툴바](docs/images/04_inline_quick_toolbar.png)
+- 여러 참고 문서에서 공통 문체·어투·용어·표기 규칙 추출
+- 표 구성과 제목 번호 체계 등 반복 서식 정리
+- 문서 유형별 작성 규칙 저장 및 선택 적용
+- 메모리 내용의 변경 전후 비교와 선택 반영
 
----
+![작성 선호사항 및 개인정보 안내](docs/images/06_writing_memory_guide.png)
 
-### 5. 사용자 지정(Custom) AI 공급자 설정 & 화면 스크롤 개선
-화면 해상도에 구애받지 않는 반응형 모달 설계(`max-h-[88vh]` 및 고정 푸터)가 적용되어, 스크롤 후에도 **"설정 저장" 버튼이 항상 하단에 고정**되며 시각적 저장 완료 피드백을 제공합니다. (사내 LLM 엔드포인트 및 API 키 안전 마스킹 지원)
-![AI 프로바이더 설정창](docs/images/05_provider_settings_modal.png)
+작성 선호사항 생성 시에는 입력 문서와 생성 결과에 개인정보 패턴을 검사·비식별화하는 처리가 포함됩니다. 패턴 기반 처리이므로 모든 개인정보를 완벽하게 탐지한다고 보장하지는 않습니다.
 
----
+## 6. 지원 범위와 현재 제한사항
 
-### 6. 작성 선호사항 (Writing Memory) & 12종 PII 비식별화
-기존 공문서나 보고서에서 작성 스타일과 문체 규칙을 추출하여 보관하며, 단방향 영구 비식별화(주민번호, 계좌번호 등 12종 PII 마스킹) 가이드가 모달 상단에 친절하게 안내됩니다.
-![작성 선호사항 모달](docs/images/06_writing_memory_guide.png)
+| 항목 | 지원 범위 및 제한 |
+| --- | --- |
+| 문서 형식 | HWP 및 HWPX 열기·편집·저장 |
+| 신규 작성 | 빈 HWP/HWPX 문서에서 제목·문단·표 작성 |
+| 표 안의 표 | HWPX 전용. 레거시 HWP에서는 지원하지 않음 |
+| 첨부 파일 크기 | 파일당 최대 128 MiB |
+| PDF | 텍스트 추출은 최대 30페이지까지 |
+| 이미지 입력 | 파일을 문서에 삽입할 수 있으나 이미지 내용을 자동으로 읽어 문서 구조로 변환하지는 않음 |
+| 실시간 공동 편집 | 여러 사용자가 동시에 편집하는 온라인 공동 편집은 지원하지 않음 |
 
----
+**스케치나 사진을 문서로 바꾸는 작업에 관해:** 현재 PNG/JPG 첨부는 이미지 삽입을 위한 경로로 처리됩니다. 스케치 안의 글씨·도형·화살표를 자동 인식해 제목·문단·표로 변환하는 시각 이해 기능은 아직 제공하지 않습니다.
 
-## 💡 기술 심층 분석: 왜 HWPX에서만 중첩 표가 지원되는가? (HWPX vs HWP)
+## 7. 개인정보와 AI 데이터 처리
 
-HOP-Claw는 **HWPX 파일에서만 중첩 표(`insert_nested_table`) 생성을 허용**하고, 레거시 HWP 5.0에서는 안전 가드로 이를 원천 차단합니다. 이는 두 포맷의 근본적인 바이너리/데이터 구조 차이 때문입니다:
+HOP-Claw는 문서 파싱과 편집을 로컬 데스크톱 환경의 WASM 및 Node.js 사이드카 엔진에서 수행합니다. 다만 **로컬 문서 처리와 AI 추론은 구분해야 합니다.**
 
-| 비교 항목 | 레거시 HWP 5.0 (바이너리) | HWPX (KS X 6101 / OWPML 표준) |
-| :--- | :--- | :--- |
-| **저장 형식** | Microsoft OLE/CFB 기반 복합 이진 스트림 (`BodyText/SectionN`) | ZIP 압축 기반 표준 XML DOM 패키지 (`Contents/section0.xml`) |
-| **표 데이터 구조** | `HWPTAG_TABLE` 및 `HWPTAG_CTRL_HEADER`의 고정 바이트 길이 레코드 | `<hp:tbl>` 태그 및 `<hp:tr>`, `<hp:tc>` 계층 구조 태그 |
-| **셀 내부 데이터** | 셀마다 고정 크기 레코드 헤더와 바이트 오프셋 포인터로 텍스트 관리 | `<hp:tc>` 내부에 임의의 문단(`<hp:p>`) 및 하위 `<hp:subList>` 포함 |
-| **중첩 표 주입 시 결과** | ❌ **치명적 파일 손상 (File Corrupted)**<br/>셀 레코드 내에 하위 표 바이트 블록을 강제 삽입하면 OLE 스트림의 전체 레코드 오프셋 테이블과 컨트롤 ID 포인터가 어긋나 한컴오피스 실행 시 복구 불가능한 손상 오류 발생 | ✅ **완벽한 구조적 호환성 (Valid DOM)**<br/>XML 표준 규격에 따라 `<hp:tc>`의 `<hp:subList>` 안에 새로운 `<hp:tbl>` 노드를 삽입하므로 포인터 붕괴 없이 한컴오피스 및 모든 뷰어에서 정상 인식 |
-| **HOP-Claw 방어 전략** | Policy Guard (G1/G6)가 레거시 HWP 대상 중첩 표 연산을 차단하여 원본 문서 파괴 방지 | `claw-hwp` 기반 XML 노드 패치 및 `buildTablesMetaForHwpx` 프리오더 순회 인덱싱 완벽 지원 |
+- AI 요청에는 문서에서 추출한 텍스트, 표 구조, 선택 영역, 첨부자료의 추출 내용 및 사용자의 지시가 포함될 수 있습니다.
+- 원격 AI 공급자를 선택하면 해당 프롬프트 내용이 선택한 공급자의 서버로 전송됩니다.
+- Ollama 등 로컬 모델 엔드포인트를 사용하면 해당 로컬 환경에서 추론하도록 구성할 수 있습니다.
+- 일반 AI 요청의 개인정보 자동 마스킹은 선택 기능이며 기본값은 꺼져 있습니다. 켜면 주민등록번호, 전화번호, 이메일, 라벨이 붙은 계좌번호 등의 패턴을 가명 토큰으로 치환합니다.
+- 사용자는 특정 내용이나 셀을 AI 전송 제외 대상으로 지정할 수 있습니다.
+- 작성 선호사항 생성에는 별도의 개인정보 패턴 검사·비식별화 처리가 있습니다.
 
-> ### 🔄 기존 HWP 문서 변환 안내 (HWP ➔ HWPX)
-> 기존에 작성된 레거시 바이너리 HWP 문서를 HWPX로 변환하여 중첩 표 및 최신 XML 서식 기능을 온전히 활용하실 수 있습니다:
-> - **한컴 공식 무료 변환 도구**: [한글과컴퓨터 다운로드 센터](https://www.hancom.com/cs_center/csDownload.do)에서 공식 배포 중인 **[HWPX 변환기(Add-in)]**를 다운로드하여 대량의 HWP 파일들을 일괄 자동 변환할 수 있습니다.
-> - **한컴오피스 한글 프로그램 변환**: 한글 2014 VP, 2018, 2020, 2022, 2024 등 한글 오피스가 설치된 PC에서는 기존 문서를 연 후 `F12` 키 또는 **[파일] ➔ [다른 이름으로 저장하기]** 메뉴를 누르고, 파일 형식을 **한글 표준 문서 (*.hwpx)**로 지정하여 저장하시면 즉시 HWPX 표준 문서로 전환됩니다.
+정규식 기반 마스킹은 누락이나 오탐이 발생할 수 있습니다. 민감한 문서는 자동 마스킹에만 의존하지 말고 전송 전에 직접 검토하거나 로컬 모델을 사용하십시오. 공급자의 데이터 보관·학습 정책은 각 공급자의 약관을 확인해야 합니다.
 
----
+## 8. 에이전트 루프와 AI 공급자
 
-## ⚡ 에이전틱 루프 듀얼 아키텍처 (Legacy vs v2 State Machine)
+### 에이전트 루프
 
-HOP-Claw는 상단 설정에서 사용자가 에이전트 루프 방식을 자유롭게 선택할 수 있습니다:
-1. **기존 루프 (Legacy Loop - 기본/안정화)**:
-   - OpenAI 호환 단일 루프 기반으로 정밀 레이아웃 추론 및 도구 호출 수행.
-   - 오랜 기간 테스트되어 높은 신뢰도와 안정성 제공.
-2. **개선 루프 (v2 State Machine - 베타/고도화)**:
-   - 공급자별 독립 어댑터(`ClaudeAdapter`, `OpenAiCompatAdapter`) 분리.
-   - 정밀 상태 전이 머신(Init → Inspect → Trial Plan → Verification → Proposal).
-   - 400 `reasoning_effort` 자동 자가 복구, 일시적 네트워크 오류 지수 백오프, 메타데이터 SSRF 엔드포인트 보안 검증 내장.
+- **Legacy Loop:** 기존 멀티턴 도구 호출 기반 작업 흐름
+- **v2 State Machine:** 공급자별 어댑터와 상태 전이 기반 작업 흐름. 문서 확인, 시험 편집, 검증, 변경 제안 단계를 분리합니다.
 
----
+### 지원 공급자
 
-## 🛡️ 개인정보 보호 및 작성 선호사항 (Privacy & Writing Memory)
+- BAZE
+- Anthropic Claude
+- OpenAI
+- Google Gemini
+- Ollama
+- OpenAI 호환 사용자 지정 엔드포인트
 
-- **12종 민감 개인정보(PII) 자동 단방향 마스킹**:
-  - 주민등록번호, 외국인등록번호, 여권번호, 운전면허번호, 전화번호, 이메일, 계좌번호, 카드번호, 주소, IP 주소, 사업자번호, 개인 식별 명칭 등
-  - LLM API 서버로는 오직 임의의 토큰(예: `[주민등록번호_1]`)만이 전송되며, 외부에서 원본을 복원하는 언마스킹 수단은 원천 차단됩니다.
-- **작성 선호사항 (Writing Memory)**:
-  - 사용자가 지정한 여러 참고 문서에서 반복되는 양식, 서식, 어투, 결재선 표기법을 학습하여 메모리로 저장.
-  - 사이드바에서 원클릭으로 주입 여부를 토글하여 일관된 공문서 작성 지원.
+공급자와 모델에 따라 도구 호출, 추론 파라미터, 엔드포인트 지원 범위가 다를 수 있습니다. 사용자 지정 공급자는 도구 호출 지원 여부를 확인해야 합니다.
 
----
+## 9. 개발 환경 및 소스 실행
 
-## 🚀 빠른 시작 (Getting Started)
+### 필수 요구 사항
 
-### 📥 1. 설치 파일 다운로드 (GitHub Releases 권장)
+- Windows 10/11 64-bit
+- Node.js 20 이상
+- Rust 및 Cargo 1.75 이상 (Tauri 데스크톱 빌드 시)
 
-최신 빌드 버전의 실행 파일 및 인스톨러를 다운로드하여 별도의 개발 환경 구축 없이 즉시 사용할 수 있습니다:
+### 설치 및 실행
 
-🔗 **[GitHub Releases 최신 릴리스 다운로드 페이지](https://github.com/inter-schema/Hwpcolab/releases)**
-
-| 배포 형태 | 파일명 | 설명 |
-| :--- | :--- | :--- |
-| **무설치 포터블 패키지 (권장)** | `HOP-Claw-v0.2.1-portable.zip` (~35 MiB) | 압축 해제 후 즉시 실행 (`hop-claw.exe` + `WebView2Loader.dll` + `resources/` 내장 포터블 패키지) |
-| **NSIS 설치 마법사** | `HOP-Claw_0.2.1_x64-setup.exe` (~30.5 MiB) | Windows 표준 설치 마법사 (바탕화면/시작메뉴 바로가기 생성 및 DLL·사이드카 자동 구성) |
-| **MSI 인스톨러** | `HOP-Claw_0.2.1_x64_en-US.msi` (~33.6 MiB) | 공공기관 및 사내 IT 자산 관리(GPO) 배포에 적합한 표준 MSI 패키지 |
-
-> 💡 **무설치(포터블) 실행 안내**:
-> HOP-Claw는 MinGW 환경 및 Node.js 기반 HWP/HWPX 사이드카 엔진(`claw-hwp`) 구조를 갖추고 있습니다. 따라서 무설치 버전은 단독 `.exe` 하나만으로는 구동되지 않으며, `WebView2Loader.dll` 및 `resources/` 폴더가 반드시 동일한 위치에 있어야 정상 동작합니다.
-> 이에 따라 무설치 버전은 **ZIP 패키지(`HOP-Claw-v0.2.1-portable.zip`)로 제공**되며, 원하는 폴더에 압축을 푼 뒤 `hop-claw.exe`를 실행하시면 됩니다. 시스템에 의존성 파일을 자동으로 구성하고 바로가기를 생성하려면 **NSIS 설치 파일(`HOP-Claw_0.2.1_x64-setup.exe`)** 사용을 권장합니다.
-
----
-
-### 💻 2. 개발자용 소스 빌드 및 직접 실행
-
-소스 코드에서 직접 빌드하거나 커스터마이징을 진행하는 개발 환경 설정 방법입니다:
-
-#### 필수 요구 사항
-- **Node.js**: v20.0.0 이상
-- **Rust & Cargo**: 1.75 이상 (Tauri v2 데스크톱 빌드 시)
-- **OS**: Windows 10/11 (64-bit)
-
-#### 저장소 복제 및 개발 서버 실행
-```bash
-# 1. 저장소 복제
+~~~bash
 git clone https://github.com/inter-schema/Hwpcolab.git
 cd Hwpcolab
-
-# 2. 패키지 의존성 설치
 npm install
-
-# 3. 프론트엔드 Vite 개발 서버 실행
 npm run dev
+~~~
 
-# 4. Tauri 데스크톱 애플리케이션 개발 모드 실행
+Tauri 데스크톱 개발 모드:
+
+~~~bash
 npm run tauri dev
-```
+~~~
 
----
+### 테스트 및 빌드
 
-## 🧪 테스트 및 품질 검증 (Test Suite)
-
-HOP-Claw는 100% 테스트 주도 품질 보증을 유지합니다:
-
-```bash
-# 단위 테스트 전체 실행 (58개 파일, 430개 테스트 전원 통과)
+~~~bash
+# 전체 테스트
 npm test
 
-# 타입 검사 및 프론트엔드 프로덕션 빌드 번들링 검증
+# 타입 검사 및 프런트엔드 프로덕션 빌드
 npm run build
 
-# E2E 공급자 및 루프 모드 검증
+# 공급자 및 에이전트 루프 E2E
 node tests/e2e_providers_loops.mjs
 
-# E2E 작성 선호사항 & PII 비식별화 검증
+# 작성 선호사항 및 개인정보 비식별화 E2E
 node tests/e2e_writing_memory.mjs
-```
+~~~
 
----
+### Windows 패키징
 
-## 📦 프로덕션 데스크톱 패키징 (Packaging Guide)
-
-Windows 환경에서 MinGW-w64 툴체인을 사용하여 상용 수준의 단독 실행 바이너리 및 인스톨러를 빌드합니다:
-
-```powershell
-# 1. MinGW 툴체인 및 환경 변수 로드
-. [local path redacted]
-
-# 2. Tauri 프로덕션 릴리스 빌드
+~~~powershell
 npx tauri build
-```
+~~~
 
-빌드 완료 시 다음 위치에 배포 아티팩트가 생성됩니다:
-- **단독 실행 바이너리**: `src-tauri/target/release/hop-claw.exe` (~50.5 MiB)
-- **MSI 설치 파일**: `src-tauri/target/release/bundle/msi/HOP-Claw_0.2.1_x64_en-US.msi` (~33.6 MiB)
-- **NSIS 셋업 설치 파일**: `src-tauri/target/release/bundle/nsis/HOP-Claw_0.2.1_x64-setup.exe` (~30.5 MiB)
+빌드 결과는 Tauri의 release 및 bundle 출력 디렉터리에 생성됩니다. 배포 형태와 도구 체인에 따라 산출물 구성이 달라질 수 있습니다.
 
----
+## 10. 기술 구성
 
-## 📄 라이선스 (License & Attribution)
+| 구성 요소 | 역할 |
+| --- | --- |
+| Tauri v2 | Windows 데스크톱 애플리케이션 |
+| React 19 / TypeScript | 사용자 인터페이스와 문서 작업 흐름 |
+| @rhwp/core | WASM 기반 HWP/HWPX 파싱·렌더링 및 레이아웃 측정 |
+| claw-hwp | Node.js 사이드카 기반 HWP/HWPX 편집 연산 |
+| Policy Guard | 편집 연산의 정책·호환성 검사 |
+| Agent Loop | AI 도구 호출, 시험 편집, 검증, Diff 제안 |
+| Writing Memory | 문서 작성 스타일 추출 및 재사용 |
 
-본 프로젝트는 **[GNU General Public License v3.0 (GPL-3.0)](./LICENSE)** 하에 배포됩니다.
+## 11. 라이선스 및 오픈소스 기반
 
-### 주요 오픈소스 기반
-- **[`@rhwp/core`](https://github.com/hahnlee/rhwp)** (Edward Kim, MIT License) — WASM 기반 HWP/HWPX 문서 바이너리 파서 및 레이아웃 렌더러
-- **[`claw-hwp`](https://github.com/DoHyun468/claw-hwp)** (DoHyun468, MIT License) — Node.js 사이드카 기반 HWP 바이너리/HWPX XML 변이 엔진
-- **[`golbin/hop`](https://github.com/golbin/hop)** (golbin, MIT License) — 한글 문서 뷰어 및 웹 편집 인터페이스 프로토타입
-- **[`SheetJS cfb`](https://github.com/SheetJS/sheetjs)** (Apache-2.0) — OLE/CFB 복합 파일 파싱 유틸리티
+본 프로젝트는 **[GNU General Public License v3.0](./LICENSE)**에 따라 배포됩니다.
+
+주요 기반 프로젝트:
+
+- [@rhwp/core](https://github.com/hahnlee/rhwp) — WASM 기반 HWP/HWPX 문서 엔진
+- [claw-hwp](https://github.com/DoHyun468/claw-hwp) — HWP/HWPX 편집 사이드카
+- [golbin/hop](https://github.com/golbin/hop) — 한글 문서 뷰어 및 웹 편집 인터페이스 기반
+- [SheetJS CFB](https://github.com/SheetJS/sheetjs) — OLE/CFB 복합 파일 처리 기반
+
+각 오픈소스 구성 요소의 저작권과 라이선스는 해당 프로젝트 및 배포 파일의 고지를 따릅니다.
