@@ -53,6 +53,11 @@ fn resolve_node_binary() -> PathBuf {
     PathBuf::from("node")
 }
 
+// `mut` below is only needed on Windows (creation_flags); on Linux
+// clippy -D warnings would fail without this, while the Windows build
+// still needs the mutable binding. Same Linux-only issue as the
+// 2026-11-04 QA branch fix, which Main never picked up.
+#[cfg_attr(not(target_os = "windows"), allow(unused_mut))]
 fn new_node_command() -> Command {
     let node_bin = resolve_node_binary();
     let mut cmd = Command::new(node_bin);

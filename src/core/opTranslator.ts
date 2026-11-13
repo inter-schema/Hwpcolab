@@ -63,14 +63,28 @@ export class OpTranslator {
     op: { sec?: number; para?: number; ctrl?: number }
   ) {
     if (typeof op.sec === "number" && typeof op.para === "number" && typeof op.ctrl === "number") {
-      return { section: op.sec, para: op.para, control: op.ctrl };
+      return { section: op.sec, para: op.para, control: op.ctrl, ...(typeof tableIndex === "number" ? { tableIndex } : {}) };
     }
     const meta = tablesMeta[tableIndex];
     if (!meta) {
-      // Fallback: if table index is out of bounds (e.g. newly added table), assume sec:0, para:0, ctrl:0
-      return { section: 0, para: 0, control: 0 };
+      // DO NOT fabricate { section: 0, para: 0, control: 0 } here.
+      // para 0 / ctrl 0 is usually NOT a table: cover paragraphs pack a
+      // logo (ctrl 0), a checkbox (ctrl 1), a textbox (ctrl 2) before the
+      // actual table (see cell-inspect.js enumerateTables). Fabricating
+      // 0,0,0 used to surface downstream as the misleading
+      // "cell (row=0, col=0) not found via rhwp at sec=0 para=0 ctrl=0"
+      // even though the target cell existed in a table at another
+      // paragraph. Instead, leave para/control unset and carry the
+      // tableIndex so the engine resolves the table against the actual
+      // file at execution time (cell-patch.js auto-discovery for the
+      // raw-patch path, enumerateTables() for the rhwp path). That also
+      // covers a table appended earlier in the same payload, which is
+      // absent from tablesMeta by construction. If no table with that
+      // index exists in the file, the engine throws a clear "no table"
+      // error naming the requested index and the table count.
+      return { section: 0, tableIndex };
     }
-    return { section: meta.sec, para: meta.para, control: meta.ctrl };
+    return { section: meta.sec, para: meta.para, control: meta.ctrl, tableIndex };
   }
 
   /**
@@ -160,7 +174,7 @@ export class OpTranslator {
           throw new Error("HWP 바이너리는 중첩 표 미지원 — HWPX로 저장 후 시도");
 
         case "insert_table_row": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({
             type: "insert_table_row",
             ...coords,
@@ -185,13 +199,13 @@ export class OpTranslator {
         }
 
         case "delete_table_row": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({ type: "delete_table_row", ...coords, row: op.row });
           break;
         }
 
         case "insert_table_col": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({
             type: "insert_table_col",
             ...coords,
@@ -202,13 +216,13 @@ export class OpTranslator {
         }
 
         case "delete_table_col": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({ type: "delete_table_col", ...coords, col: op.col });
           break;
         }
 
         case "merge_cells": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({
             type: "merge_cells",
             ...coords,
@@ -221,13 +235,13 @@ export class OpTranslator {
         }
 
         case "unmerge_cells": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({ type: "unmerge_cells", ...coords, row: op.row, col: op.col });
           break;
         }
 
         case "split_cell": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({
             type: "split_cell",
             ...coords,
@@ -239,7 +253,7 @@ export class OpTranslator {
         }
 
         case "equalize_table": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           if (op.mode === "width" || op.mode === "both") {
             out.push({ type: "equalize_table_columns", ...coords });
           }
@@ -250,7 +264,7 @@ export class OpTranslator {
         }
 
         case "set_cell_align": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op);
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           const startR = op.row;
           const endR = op.endRow ?? op.row;
           const startC = op.col;
@@ -273,7 +287,7 @@ export class OpTranslator {
         }
 
         case "set_cell_background": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({
             type: "set_cell_background",
             ...coords,
@@ -285,7 +299,7 @@ export class OpTranslator {
         }
 
         case "set_cell_border": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({
             type: "set_cell_border",
             ...coords,
@@ -338,11 +352,11 @@ export class OpTranslator {
 
         case "insert_image": {
           if (op.cell) {
-            const coords = this.resolveHwpTableCoords(op.cell.tableIndex, tablesMeta, {});
+            const coords = this.resolveHwpTableCoords(op.cell.tableIndex, tablesMeta, op as any);
             out.push({
               type: "insert_image",
               path: op.path,
-              cell: { row: op.cell.row, col: op.cell.col, para: coords.para, control: coords.control },
+              cell: { row: op.cell.row, col: op.cell.col, ...coords },
               ...(op.widthMm ? { width_mm: op.widthMm } : {}),
               ...(op.heightMm ? { height_mm: op.heightMm } : {}),
             });
@@ -391,11 +405,10 @@ export class OpTranslator {
           break;
 
         case "set_col_width": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({
             type: "set_col_width",
-            para: coords.para,
-            control: coords.control,
+            ...coords,
             col: op.col,
             width_mm: op.widthMm,
             ...(op.keepTableWidth !== undefined ? { keep_table_width: op.keepTableWidth } : {}),
@@ -404,11 +417,10 @@ export class OpTranslator {
         }
 
         case "set_row_height": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({
             type: "set_row_height",
-            para: coords.para,
-            control: coords.control,
+            ...coords,
             row: op.row,
             height_mm: op.heightMm,
           });
@@ -416,11 +428,10 @@ export class OpTranslator {
         }
 
         case "set_cell_padding": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({
             type: "set_cell_padding",
-            para: coords.para,
-            control: coords.control,
+            ...coords,
             row: op.row,
             col: op.col,
             ...(op.leftMm !== undefined ? { left_mm: op.leftMm } : {}),
@@ -433,11 +444,10 @@ export class OpTranslator {
         }
 
         case "fit_table_to_page": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({
             type: "fit_table_to_page",
-            para: coords.para,
-            control: coords.control,
+            ...coords,
             ...(op.targetWidthMm !== undefined ? { target_width_mm: op.targetWidthMm } : {}),
           });
           break;
@@ -456,11 +466,10 @@ export class OpTranslator {
         }
 
         case "shrink_cell_font": {
-          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, {});
+          const coords = this.resolveHwpTableCoords(op.tableIndex, tablesMeta, op as any);
           out.push({
             type: "shrink_cell_font",
-            para: coords.para,
-            control: coords.control,
+            ...coords,
             row: op.row,
             col: op.col,
             size_pt: op.sizePt,

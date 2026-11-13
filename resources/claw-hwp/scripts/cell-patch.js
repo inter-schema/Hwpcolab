@@ -980,11 +980,19 @@ function findStreamEntry(entries, pathParts) {
 // ── Public entry ──────────────────────────────────────────────────────────
 //
 // patchCellsInPlace(filePath, edits) edits = [{ section, para, control, row, col, text }, ...]
-// Mutates the file at filePath. Returns a summary array.
+// para/control may be omitted when tableIndex is given instead; the table
+// is then located by index in document order. Mutates the file at
+// filePath. Returns a summary array.
 
 // Resolve (section, para, control, row, col) → cellIndex via rhwp inspect.
 // We open the doc, walk getCellInfo until we find the matching (row, col),
 // then immediately discard the doc — rhwp is never used to write bytes.
+// When para/control are absent, the table is located by tableIndex
+// (document order, same as enumerateTables in cell-inspect.js). Never
+// default a missing table to para 0 / ctrl 0: that address is usually
+// not a table at all, and the old silent 0,0 fallback produced the
+// misleading "cell (row=0, col=0) not found via rhwp at sec=0 para=0
+// ctrl=0" even though the cell existed in a table at another paragraph.
 async function resolveCellIndexes(filePath, edits) {
   // Windows: a bare `${__dirname}/…` string is parsed by the ESM loader as a
   // URL whose scheme is the drive letter ("c:") and rejected. pathToFileURL
@@ -1014,8 +1022,11 @@ async function resolveCellIndexes(filePath, edits) {
         let tblCount = 0;
         let found = false;
         const paraCount = doc.getParagraphCount(sec);
+        // Scan up to 64 controls per paragraph, matching MAX_CONTROL_IDX
+        // in cell-inspect.js: a paragraph can hold non-table controls
+        // (logo, checkbox, textbox) before the actual table.
         for (let p = 0; p < paraCount; p++) {
-          for (let c = 0; c < 5; c++) {
+          for (let c = 0; c < 64; c++) {
             try {
               const info = JSON.parse(doc.getCellInfo(sec, p, c, 0));
               if (info && typeof info.row === 'number') {
@@ -1032,22 +1043,30 @@ async function resolveCellIndexes(filePath, edits) {
           if (found) break;
         }
         if (!found) {
-          para = e.para ?? 0;
-          ctrl = e.control ?? 0;
+          throw new Error(`no table found in section ${sec} (tableIndex ${targetTblIdx} requested; document has ${tblCount} table(s) in this section)`);
         }
       }
       // Walk cells until we find (row, col). Tables are bounded; 10k is a
       // safe ceiling well above any real form.
+      let seenCells = 0;
+      let maxRow = -1;
+      let maxCol = -1;
       for (let i = 0; i < 10000; i++) {
         let info;
         try { info = JSON.parse(doc.getCellInfo(sec, para, ctrl, i)); }
         catch { break; }
         if (!info || typeof info.row !== 'number') break;
+        seenCells++;
+        maxRow = Math.max(maxRow, info.row);
+        maxCol = Math.max(maxCol, info.col);
         if (info.row === e.row && info.col === e.col) {
           return { ...e, para, control: ctrl, cellIndex: i };
         }
       }
-      throw new Error(`cell (row=${e.row}, col=${e.col}) not found via rhwp at sec=${sec} para=${para} ctrl=${ctrl}`);
+      if (seenCells === 0) {
+        throw new Error(`no table at sec=${sec} para=${para} ctrl=${ctrl} (getCellInfo found no cells there)`);
+      }
+      throw new Error(`cell (row=${e.row}, col=${e.col}) not found via rhwp at sec=${sec} para=${para} ctrl=${ctrl} (table has rows 0..${maxRow}, cols 0..${maxCol})`);
     });
   } finally {
     try { doc.free(); } catch { /* ignore */ }
@@ -4566,7 +4585,8 @@ export async function insertImageInPlace(filePath, ops) {
         // paragraph inside the cell. The body-built gso cluster is dropped two
         // levels deeper (cell paragraphs are level 2) and spliced at the cell's
         // end; the cell's paragraph count is bumped and its last-para flag fixed.
-        const para = op.cell.para ?? 0, control = op.cell.control ?? 0;
+        const targetTable = resolveTableTarget(records, raw, op.cell, 'insert_image');
+        const para = targetTable.para, control = targetTable.ctrl;
         const target = tableCellRecords(records, raw, para, control)
           .find((c) => c.row === op.cell.row && c.col === op.cell.col);
         if (!target) throw new Error(`insert_image: cell (row=${op.cell.row}, col=${op.cell.col}) not found in table at para ${para} control ${control}`);
@@ -8694,7 +8714,13 @@ export async function applyCellPropertyInPlace(filePath, ops) {
   const mm = (v) => Math.round(v * HWPUNIT_PER_MM);
   const summary = [];
   for (const e of resolved) {
-    const para = e.para ?? 0, ctrl = e.control ?? 0;
+    let para = e.para, ctrl = e.control;
+    if (para == null || ctrl == null) {
+      const records = parseRecords(secRaw);
+      const targetTable = resolveTableTarget(records, secRaw, e, e.type || 'set_cell_property');
+      para = targetTable.para;
+      ctrl = targetTable.ctrl;
+    }
     const records = parseRecords(secRaw);
     const loc = locateCell(records, para, ctrl, e.cellIndex);
     const o = records[loc.listHeaderRec].dataOff;
@@ -9236,10 +9262,11 @@ export async function equalizeTableInPlace(filePath, ops) {
 
   const summary = [];
   for (const op of ops) {
-    const para = op.para ?? 0, ctrl = op.control ?? 0;
-    const dim = op.dim === 'height' ? 'height' : 'width';
     const records = parseRecords(secRaw);
-    const tableRec = findTableRecord(records, para, ctrl);
+    const targetTable = resolveTableTarget(records, secRaw, op, 'equalize_table');
+    const para = targetTable.para, ctrl = targetTable.ctrl;
+    const dim = op.dim === 'height' ? 'height' : 'width';
+    const tableRec = targetTable.tableRec;
     const rows = secRaw.readUInt16LE(tableRec.dataOff + 4);
     const cols = secRaw.readUInt16LE(tableRec.dataOff + 6);
     const cells = tableCellRecords(records, secRaw, para, ctrl);
@@ -9304,6 +9331,68 @@ export async function equalizeTableInPlace(filePath, ops) {
 
   writeFileSync(filePath, buf);
   return Object.assign(summary, { mode: 'in-place', equalized_count: summary.length });
+}
+
+// Enumerate all tables in the section in deterministic document order.
+// Each entry returns { para, ctrlIdx, ctrl, ctrlRec, tableRec, tableIndex }.
+function enumerateSectionTables(records, secRaw) {
+  const tables = [];
+  let para = -1;
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
+    if (r.tag === TAG_PARA_HEADER && r.level === 0) {
+      para++;
+      let ctrlIdx = -1;
+      for (let j = i + 1; j < records.length; j++) {
+        const rj = records[j];
+        if (rj.tag === TAG_PARA_HEADER && rj.level === 0) break;
+        if (rj.tag === TAG_CTRL_HEADER && rj.level === 1) {
+          ctrlIdx++;
+          let tableRec = null;
+          for (let k = j + 1; k < records.length; k++) {
+            const rk = records[k];
+            if (rk.tag === TAG_PARA_HEADER && rk.level === 0) break;
+            if (rk.tag === TAG_CTRL_HEADER && rk.level === 1) break;
+            if (rk.tag === TAG_TABLE && rk.level === 2) {
+              tableRec = rk;
+              break;
+            }
+          }
+          if (tableRec) {
+            tables.push({
+              para,
+              ctrlIdx,
+              ctrl: ctrlIdx,
+              ctrlRec: rj,
+              tableRec,
+              tableIndex: tables.length,
+            });
+          }
+        }
+      }
+    }
+  }
+  return tables;
+}
+
+// Resolve target table by (para, control) if explicitly provided, or by tableIndex.
+// Throws descriptive errors if table is not found.
+function resolveTableTarget(records, secRaw, op, opName = 'table_op') {
+  const sec = op.section ?? op.sec ?? 0;
+  const tables = enumerateSectionTables(records, secRaw);
+  if (typeof op.para === 'number' && typeof op.control === 'number') {
+    const match = tables.find((t) => t.para === op.para && t.ctrlIdx === op.control);
+    if (!match) {
+      throw new Error(`${opName}: no table found at sec=${sec} para=${op.para} ctrl=${op.control} (document has ${tables.length} table(s) in this section)`);
+    }
+    return { ...match, ctrl: match.ctrlIdx, tableIndex: match.tableIndex };
+  }
+  const reqIdx = op.tableIndex ?? op.table ?? op.table_index ?? 0;
+  if (!Number.isInteger(reqIdx) || reqIdx < 0 || reqIdx >= tables.length) {
+    throw new Error(`${opName}: no table found in section ${sec} (tableIndex ${reqIdx} requested; document has ${tables.length} table(s) in this section)`);
+  }
+  const match = tables[reqIdx];
+  return { ...match, ctrl: match.ctrlIdx, tableIndex: reqIdx };
 }
 
 // The TAG_TABLE record (table grid: rows, cols, and the per-row cell-count
@@ -9401,7 +9490,7 @@ export async function deleteTableRowInPlace(filePath, ops) {
   }
   const summary = [];
   for (const op of ops) {
-    const para = op.para ?? 0, ctrl = op.control ?? 0, delRow = op.row;
+    const delRow = op.row;
     let buf = readFileSync(filePath);
     let { ssz, mssz, dirStart, fatAddrs, minifatStart } = parseCfbHeader(buf);
     let fat = readFat(buf, fatAddrs, ssz);
@@ -9428,7 +9517,9 @@ export async function deleteTableRowInPlace(filePath, ops) {
     let secRaw = Buffer.from(inflateRawSync(secCompressed));
 
     const records = parseRecords(secRaw);
-    const tableRec = findTableRecord(records, para, ctrl);
+    const targetTable = resolveTableTarget(records, secRaw, op, 'delete_table_row');
+    const para = targetTable.para, ctrl = targetTable.ctrl;
+    const tableRec = targetTable.tableRec;
     const rows = secRaw.readUInt16LE(tableRec.dataOff + 4);
     if (delRow < 0 || delRow >= rows) throw new Error(`delete_table_row: row ${delRow} out of range (table has ${rows} rows)`);
     const cells = tableCellRecords(records, secRaw, para, ctrl);
@@ -9517,7 +9608,7 @@ export async function splitCellInPlace(filePath, ops) {
   }
   const summary = [];
   for (const op of ops) {
-    const para = op.para ?? 0, ctrl = op.control ?? 0, R = op.row, C = op.col, N = op.into_rows ?? 2;
+    const R = op.row, C = op.col, N = op.into_rows ?? 2;
     let buf = readFileSync(filePath);
     let { ssz, mssz, dirStart, fatAddrs, minifatStart } = parseCfbHeader(buf);
     let fat = readFat(buf, fatAddrs, ssz);
@@ -9544,7 +9635,9 @@ export async function splitCellInPlace(filePath, ops) {
     let secRaw = Buffer.from(inflateRawSync(secCompressed));
 
     const records = parseRecords(secRaw);
-    const tableRec = findTableRecord(records, para, ctrl);
+    const targetTable = resolveTableTarget(records, secRaw, op, 'split_cell');
+    const para = targetTable.para, ctrl = targetTable.ctrl;
+    const tableRec = targetTable.tableRec;
     const rows = secRaw.readUInt16LE(tableRec.dataOff + 4);
     const cells = tableCellRecords(records, secRaw, para, ctrl);
     const target = cells.find((c) => c.row === R && c.col === C);
@@ -9634,7 +9727,7 @@ export async function unmergeCellsInPlace(filePath, ops) {
   }
   const summary = [];
   for (const op of ops) {
-    const para = op.para ?? 0, ctrl = op.control ?? 0, R = op.row, C = op.col;
+    const R = op.row, C = op.col;
     let buf = readFileSync(filePath);
     let { ssz, mssz, dirStart, fatAddrs, minifatStart } = parseCfbHeader(buf);
     let fat = readFat(buf, fatAddrs, ssz);
@@ -9661,7 +9754,9 @@ export async function unmergeCellsInPlace(filePath, ops) {
     let secRaw = Buffer.from(inflateRawSync(secCompressed));
 
     const records = parseRecords(secRaw);
-    const tableRec = findTableRecord(records, para, ctrl);
+    const targetTable = resolveTableTarget(records, secRaw, op, 'unmerge_cells');
+    const para = targetTable.para, ctrl = targetTable.ctrl;
+    const tableRec = targetTable.tableRec;
     const cells = tableCellRecords(records, secRaw, para, ctrl);
     const target = cells.find((c) => c.row === R && c.col === C);
     if (!target) throw new Error(`unmerge_cells: cell (${R},${C}) not found (target the merged cell's top-left)`);
@@ -9859,7 +9954,6 @@ export async function insertTableRowInPlace(filePath, ops) {
   }
   const summary = [];
   for (const op of ops) {
-    const para = op.para ?? 0, ctrl = op.control ?? 0;
     let buf = readFileSync(filePath);
     let { ssz, mssz, dirStart, fatAddrs, minifatStart } = parseCfbHeader(buf);
     let fat = readFat(buf, fatAddrs, ssz);
@@ -9886,7 +9980,9 @@ export async function insertTableRowInPlace(filePath, ops) {
     let secRaw = Buffer.from(inflateRawSync(secCompressed));
 
     const records = parseRecords(secRaw);
-    const tableRec = findTableRecord(records, para, ctrl);
+    const targetTable = resolveTableTarget(records, secRaw, op, 'insert_table_row');
+    const para = targetTable.para, ctrl = targetTable.ctrl;
+    const tableRec = targetTable.tableRec;
     const rows = secRaw.readUInt16LE(tableRec.dataOff + 4);
     const cols = secRaw.readUInt16LE(tableRec.dataOff + 6);
     if (op.row < 0 || op.row >= rows) throw new Error(`insert_table_row: row ${op.row} out of range (table has ${rows} rows)`);
@@ -10018,7 +10114,6 @@ export async function insertTableColInPlace(filePath, ops) {
   }
   const summary = [];
   for (const op of ops) {
-    const para = op.para ?? 0, ctrl = op.control ?? 0;
     let buf = readFileSync(filePath);
     let { ssz, mssz, dirStart, fatAddrs, minifatStart } = parseCfbHeader(buf);
     let fat = readFat(buf, fatAddrs, ssz);
@@ -10045,7 +10140,9 @@ export async function insertTableColInPlace(filePath, ops) {
     let secRaw = Buffer.from(inflateRawSync(secCompressed));
 
     const records = parseRecords(secRaw);
-    const tableRec = findTableRecord(records, para, ctrl);
+    const targetTable = resolveTableTarget(records, secRaw, op, 'insert_table_col');
+    const para = targetTable.para, ctrl = targetTable.ctrl;
+    const tableRec = targetTable.tableRec;
     const rows = secRaw.readUInt16LE(tableRec.dataOff + 4);
     const cols = secRaw.readUInt16LE(tableRec.dataOff + 6);
     if (op.col < 0 || op.col >= cols) throw new Error(`insert_table_col: col ${op.col} out of range (table has ${cols} cols)`);
@@ -10137,7 +10234,7 @@ export async function deleteTableColInPlace(filePath, ops) {
   }
   const summary = [];
   for (const op of ops) {
-    const para = op.para ?? 0, ctrl = op.control ?? 0, delCol = op.col;
+    const delCol = op.col;
     let buf = readFileSync(filePath);
     let { ssz, mssz, dirStart, fatAddrs, minifatStart } = parseCfbHeader(buf);
     let fat = readFat(buf, fatAddrs, ssz);
@@ -10164,7 +10261,9 @@ export async function deleteTableColInPlace(filePath, ops) {
     let secRaw = Buffer.from(inflateRawSync(secCompressed));
 
     const records = parseRecords(secRaw);
-    const tableRec = findTableRecord(records, para, ctrl);
+    const targetTable = resolveTableTarget(records, secRaw, op, 'delete_table_col');
+    const para = targetTable.para, ctrl = targetTable.ctrl;
+    const tableRec = targetTable.tableRec;
     const cols = secRaw.readUInt16LE(tableRec.dataOff + 6);
     if (delCol < 0 || delCol >= cols) throw new Error(`delete_table_col: col ${delCol} out of range (table has ${cols} cols)`);
     const cells = tableCellRecords(records, secRaw, para, ctrl);
@@ -10246,14 +10345,27 @@ export async function mergeCellsInPlace(filePath, ops) {
   }
   const summary = [];
   for (const op of ops) {
-    const para = op.para ?? 0, ctrl = op.control ?? 0;
     const r0 = Math.min(op.from_row, op.to_row), r1 = Math.max(op.from_row, op.to_row);
     const c0 = Math.min(op.from_col, op.to_col), c1 = Math.max(op.from_col, op.to_col);
     if (r0 === r1 && c0 === c1) throw new Error('merge_cells: region must span more than one cell');
 
+    const targetTblIdx = op.tableIndex ?? op.table ?? op.table_index;
     const region = [];
-    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) region.push({ section: 0, para, control: ctrl, row: r, col: c });
+    for (let r = r0; r <= r1; r++) {
+      for (let c = c0; c <= c1; c++) {
+        region.push({
+          section: 0,
+          ...(typeof op.para === 'number' ? { para: op.para } : {}),
+          ...(typeof op.control === 'number' ? { control: op.control } : {}),
+          ...(targetTblIdx != null ? { tableIndex: targetTblIdx } : {}),
+          row: r,
+          col: c,
+        });
+      }
+    }
     const resolved = await resolveCellIndexes(filePath, region);
+    const resolvedPara = resolved[0]?.para;
+    const resolvedCtrl = resolved[0]?.control;
 
     let buf = readFileSync(filePath);
     let { ssz, mssz, dirStart, fatAddrs, minifatStart } = parseCfbHeader(buf);
@@ -10281,6 +10393,12 @@ export async function mergeCellsInPlace(filePath, ops) {
     let secRaw = Buffer.from(inflateRawSync(secCompressed));
 
     const records = parseRecords(secRaw);
+    const targetTable = resolveTableTarget(records, secRaw, {
+      ...op,
+      para: resolvedPara ?? op.para,
+      control: resolvedCtrl ?? op.control,
+    }, 'merge_cells');
+    const para = targetTable.para, ctrl = targetTable.ctrl;
     // 1. top-left cell → colSpan / rowSpan
     const tl = resolved.find((e) => e.row === r0 && e.col === c0);
     if (!tl) throw new Error(`merge_cells: top-left cell (${r0},${c0}) not resolved`);
@@ -10293,7 +10411,7 @@ export async function mergeCellsInPlace(filePath, ops) {
 
     // 2/3. compute clusters to delete + decrement TABLE row-size (in-place,
     // before any deletion — all offsets below are still original).
-    const tableRec = findTableRecord(records, para, ctrl);
+    const tableRec = targetTable.tableRec;
     const toRemove = resolved.filter((e) => !(e.row === r0 && e.col === c0));
     const ranges = toRemove.map((e) => ({ row: e.row, ...cellClusterByteRange(records, secRaw, para, ctrl, e.cellIndex) }));
     for (const rng of ranges) {
@@ -10429,8 +10547,13 @@ export async function applyCellStyleInPlace(filePath, ops) {
 
   const summary = [];
   for (const e of resolved) {
-    const para = e.para ?? 0;
-    const ctrl = e.control ?? 0;
+    let para = e.para, ctrl = e.control;
+    if (para == null || ctrl == null) {
+      const records = parseRecords(secRaw);
+      const targetTable = resolveTableTarget(records, secRaw, e, e.type || 'set_cell_style');
+      para = targetTable.para;
+      ctrl = targetTable.ctrl;
+    }
     const bg = resolveBackgroundColor(e);
 
     // Re-parse per op: the only secRaw mutation below is a 2-byte in-place
@@ -10945,13 +11068,14 @@ export async function setColWidthInPlace(filePath, ops) {
   const summary = [];
 
   for (const op of ops) {
-    const para = op.para ?? 0, ctrl = op.control ?? 0;
     const targetCol = op.col;
     const newTargetWidth = op.width_hwpunit ?? mm(op.width_mm);
     const keepTableWidth = op.keep_table_width !== undefined ? !!op.keep_table_width : false;
 
     const records = parseRecords(secRaw);
-    const tableRec = findTableRecord(records, para, ctrl);
+    const targetTable = resolveTableTarget(records, secRaw, op, 'set_col_width');
+    const para = targetTable.para, ctrl = targetTable.ctrl;
+    const tableRec = targetTable.tableRec;
     const rows = secRaw.readUInt16LE(tableRec.dataOff + 4);
     const cols = secRaw.readUInt16LE(tableRec.dataOff + 6);
     if (targetCol < 0 || targetCol >= cols) throw new Error(`set_col_width: col ${targetCol} out of range (total cols: ${cols})`);
@@ -11017,12 +11141,13 @@ export async function setRowHeightInPlace(filePath, ops) {
   const summary = [];
 
   for (const op of ops) {
-    const para = op.para ?? 0, ctrl = op.control ?? 0;
     const targetRow = op.row;
     const newTargetHeight = op.height_hwpunit ?? mm(op.height_mm);
 
     const records = parseRecords(secRaw);
-    const tableRec = findTableRecord(records, para, ctrl);
+    const targetTable = resolveTableTarget(records, secRaw, op, 'set_row_height');
+    const para = targetTable.para, ctrl = targetTable.ctrl;
+    const tableRec = targetTable.tableRec;
     const rows = secRaw.readUInt16LE(tableRec.dataOff + 4);
     if (targetRow < 0 || targetRow >= rows) throw new Error(`set_row_height: row ${targetRow} out of range (total rows: ${rows})`);
 
@@ -11079,7 +11204,6 @@ export async function fitTableToPageInPlace(filePath, ops) {
   const summary = [];
 
   for (const op of ops) {
-    const para = op.para ?? 0, ctrl = op.control ?? 0;
     const records = parseRecords(secRaw);
 
     const pageDef = records.find(r => r.tag === TAG_PAGE_DEF);
@@ -11089,7 +11213,9 @@ export async function fitTableToPageInPlace(filePath, ops) {
     const marginR = secRaw.readUInt32LE(pageDef.dataOff + 12);
     const printableWidth = pageWidth - marginL - marginR;
 
-    const tableRec = findTableRecord(records, para, ctrl);
+    const targetTable = resolveTableTarget(records, secRaw, op, 'fit_table_to_page');
+    const para = targetTable.para, ctrl = targetTable.ctrl;
+    const tableRec = targetTable.tableRec;
     const cols = secRaw.readUInt16LE(tableRec.dataOff + 6);
     const cells = tableCellRecords(records, secRaw, para, ctrl);
 
@@ -11154,8 +11280,9 @@ export async function setCellPaddingInPlace(filePath, ops) {
   const summary = [];
 
   for (const op of ops) {
-    const para = op.para ?? 0, ctrl = op.control ?? 0;
     const records = parseRecords(secRaw);
+    const targetTable = resolveTableTarget(records, secRaw, op, 'set_cell_padding');
+    const para = targetTable.para, ctrl = targetTable.ctrl;
     const cells = tableCellRecords(records, secRaw, para, ctrl);
     const target = cells.find(c => c.row === op.row && c.col === op.col);
     if (!target) throw new Error(`set_cell_padding: cell (${op.row}, ${op.col}) not found`);
@@ -11227,7 +11354,9 @@ export async function shrinkCellFontInPlace(filePath, ops) {
       if (resolved.length > 0) {
         const ctx = loadSection0ForLayout(filePath);
         const records = parseRecords(ctx.secRaw);
-        const loc = locateCell(records, op.para ?? 0, op.control ?? 0, resolved[0].cellIndex);
+        const para = resolved[0].para ?? op.para ?? 0;
+        const ctrl = resolved[0].control ?? op.control ?? 0;
+        const loc = locateCell(records, para, ctrl, resolved[0].cellIndex);
         if (loc.paraTextRec !== null && loc.paraTextRec >= 0) {
           const rec = records[loc.paraTextRec];
           const rawText = ctx.secRaw.slice(rec.dataOff, rec.dataOff + rec.size).toString('utf16le');
