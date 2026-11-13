@@ -251,8 +251,8 @@ async function run() {
     const headerText = await header.innerText();
 
     record(
-      "Hardcoded User '최준우' is NOT Present in Header",
-      !headerText.includes("최준우"),
+      "Hardcoded User '홍길동' is NOT Present in Header",
+      !headerText.includes("홍길동"),
       `Header text sample: "${headerText.replace(/\s+/g, " ").trim().slice(0, 100)}"`
     );
 

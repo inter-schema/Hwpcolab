@@ -16,24 +16,24 @@ pub struct ClawExecResult {
 }
 
 fn resolve_node_binary() -> PathBuf {
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(exe_dir) = exe_path.parent() {
-            let next_to_exe = exe_dir.join("node.exe");
-            if next_to_exe.is_file() {
-                return next_to_exe;
-            }
-            let in_res = exe_dir.join("resources").join("node.exe");
-            if in_res.is_file() {
-                return in_res;
-            }
-            let in_claw = exe_dir.join("resources").join("claw-hwp").join("node.exe");
-            if in_claw.is_file() {
-                return in_claw;
-            }
-        }
-    }
     #[cfg(target_os = "windows")]
     {
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                let next_to_exe = exe_dir.join("node.exe");
+                if next_to_exe.is_file() {
+                    return next_to_exe;
+                }
+                let in_res = exe_dir.join("resources").join("node.exe");
+                if in_res.is_file() {
+                    return in_res;
+                }
+                let in_claw = exe_dir.join("resources").join("claw-hwp").join("node.exe");
+                if in_claw.is_file() {
+                    return in_claw;
+                }
+            }
+        }
         if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
             let p = PathBuf::from(local_app).join("Programs").join("nodejs").join("node.exe");
             if p.is_file() {
@@ -43,6 +43,34 @@ fn resolve_node_binary() -> PathBuf {
         for candidate in &[
             r"C:\Program Files\nodejs\node.exe",
             r"C:\Program Files (x86)\nodejs\node.exe",
+        ] {
+            let p = PathBuf::from(candidate);
+            if p.is_file() {
+                return p;
+            }
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                let next_to_exe = exe_dir.join("node");
+                if next_to_exe.is_file() {
+                    return next_to_exe;
+                }
+                let in_res = exe_dir.join("resources").join("node");
+                if in_res.is_file() {
+                    return in_res;
+                }
+                let in_claw = exe_dir.join("resources").join("claw-hwp").join("node");
+                if in_claw.is_file() {
+                    return in_claw;
+                }
+            }
+        }
+        for candidate in &[
+            "/usr/local/bin/node",
+            "/usr/bin/node",
         ] {
             let p = PathBuf::from(candidate);
             if p.is_file() {
@@ -137,18 +165,6 @@ fn resolve_script_path_inner(app: &AppHandle, script_name: &str) -> Result<PathB
         .join(script_name);
     if dev_path.exists() {
         return Ok(dev_path);
-    }
-    if let Ok(home) = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")) {
-        let fallback = PathBuf::from(home)
-            .join(".gemini")
-            .join("config")
-            .join("skills")
-            .join("hwp")
-            .join("scripts")
-            .join(script_name);
-        if fallback.exists() {
-            return Ok(fallback);
-        }
     }
     Err(format!("Script not found: {} (tried: {:?})", script_name, dev_path))
 }

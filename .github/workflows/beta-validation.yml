@@ -2,10 +2,10 @@ name: Beta validation
 
 on:
   pull_request:
-    branches: [Beta]
+    branches: [main, Beta]
     types: [opened, synchronize, reopened, edited]
   push:
-    branches: [Beta]
+    branches: [main, Beta]
 
 permissions:
   contents: read
@@ -13,7 +13,7 @@ permissions:
 jobs:
   sync-lockfiles:
     name: Sync dependency lockfiles
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'codex/beta-hardening-2026-11-04' }}
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

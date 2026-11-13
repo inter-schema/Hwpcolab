@@ -1,6 +1,6 @@
-# scripts/
+# HOP-Claw HWP Engine Scripts
 
-Bundled scripts referenced by `SKILL.md`. Each script is intentionally low-level — Claude does the high-level reasoning and invokes these only for operations it can't do natively (zip handling, WASM calls).
+Bundled scripts for the HOP-Claw local HWP/HWPX engine. Each script is intentionally low-level — the application orchestrator handles high-level document operations and invokes these scripts for standalone operations (text extraction, inspection, binary patching, and WASM conversion).
 
 ## Status
 
@@ -37,7 +37,7 @@ End-to-end round-trip tested against rhwp's `samples/`:
 `package.json` and `package-lock.json` are kept for maintainers who want to update bundled libraries:
 
 ```bash
-cd skills/hwp/scripts
+cd resources/claw-hwp/scripts
 npm install                      # repopulate node_modules with latest matching versions
 cp node_modules/@rhwp/core/{rhwp.js,rhwp_bg.wasm,LICENSE} vendor/rhwp/
 cp node_modules/fflate/esm/index.mjs vendor/fflate/
