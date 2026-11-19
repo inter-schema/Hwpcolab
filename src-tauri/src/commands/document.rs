@@ -247,6 +247,51 @@ pub async fn get_hwp_default_app_status(app: AppHandle) -> Result<HwpDefaultAppS
     })
 }
 
+#[cfg(target_os = "windows")]
+fn query_hkcu_ext_progid(ext: &str) -> Option<String> {
+    let key = format!(r"HKCU\Software\Classes\{}", ext);
+    let output = std::process::Command::new("reg")
+        .args(["query", &key, "/ve"])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        if let Some(idx) = line.find("REG_SZ") {
+            let val = line[idx + "REG_SZ".len()..].trim();
+            if !val.is_empty() && val != "HOPClaw.Document" {
+                return Some(val.to_string());
+            }
+        }
+    }
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn notify_assoc_changed() {
+    #[link(name = "shell32")]
+    extern "system" {
+        fn SHChangeNotify(
+            w_event_id: i32,
+            u_flags: u32,
+            dw_item1: *const std::ffi::c_void,
+            dw_item2: *const std::ffi::c_void,
+        );
+    }
+    const SHCNE_ASSOCCHANGED: i32 = 0x0800_0000;
+    const SHCNF_IDLIST: u32 = 0x0000;
+    unsafe {
+        SHChangeNotify(
+            SHCNE_ASSOCCHANGED,
+            SHCNF_IDLIST,
+            std::ptr::null(),
+            std::ptr::null(),
+        );
+    }
+}
+
 #[tauri::command]
 pub async fn set_hwp_default_app(
     app: AppHandle,
@@ -255,14 +300,26 @@ pub async fn set_hwp_default_app(
     let config_dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
     fs::create_dir_all(&config_dir).map_err(|e| e.to_string())?;
     let flag_path = config_dir.join("default_hwp_app.json");
-    let payload = serde_json::json!({ "enabled": enabled });
-    fs::write(&flag_path, payload.to_string()).map_err(|e| e.to_string())?;
+
+    let mut backups: std::collections::HashMap<String, String> = fs::read_to_string(&flag_path)
+        .ok()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+        .and_then(|v| v.get("backups").cloned())
+        .and_then(|b| serde_json::from_value(b).ok())
+        .unwrap_or_default();
 
     #[cfg(target_os = "windows")]
     if let Ok(exe_path) = std::env::current_exe() {
         let exe_str = exe_path.to_string_lossy().to_string();
         let open_cmd = format!("\"{}\" \"%1\"", exe_str);
         if enabled {
+            for ext in [".hwp", ".hwpx"] {
+                if !backups.contains_key(ext) {
+                    if let Some(prev) = query_hkcu_ext_progid(ext) {
+                        backups.insert(ext.to_string(), prev);
+                    }
+                }
+            }
             let _ = std::process::Command::new("reg")
                 .args([
                     "add",
@@ -289,22 +346,35 @@ pub async fn set_hwp_default_app(
                     .args(["add", &key, "/ve", "/d", "HOPClaw.Document", "/f"])
                     .status();
             }
+            notify_assoc_changed();
         } else {
             for ext in [".hwp", ".hwpx"] {
                 let key = format!(r"HKCU\Software\Classes\{}", ext);
-                let _ = std::process::Command::new("reg")
-                    .args(["delete", &key, "/ve", "/f"])
-                    .status();
+                if let Some(prev) = backups.get(ext) {
+                    let _ = std::process::Command::new("reg")
+                        .args(["add", &key, "/ve", "/d", prev, "/f"])
+                        .status();
+                } else {
+                    let _ = std::process::Command::new("reg")
+                        .args(["delete", &key, "/ve", "/f"])
+                        .status();
+                }
             }
+            notify_assoc_changed();
         }
     }
+
+    let payload = serde_json::json!({
+        "enabled": enabled,
+        "backups": backups,
+    });
+    fs::write(&flag_path, payload.to_string()).map_err(|e| e.to_string())?;
 
     Ok(HwpDefaultAppStatus {
         is_default: enabled,
         supported: true,
     })
 }
-
 
 #[cfg(test)]
 mod tests {
