@@ -14,12 +14,15 @@ import {
   ArrowLeftRight,
   FilePlus2,
   BookMarked,
+  Loader2,
 } from "lucide-react";
 
 export const HeaderToolbar: React.FC = () => {
   const {
     fileName,
     isDirty,
+    isLoadingDocument,
+    loadingMessage,
     undoHistoryBytes,
     sidebarOpen,
     sidebarDock,
@@ -191,9 +194,26 @@ export const HeaderToolbar: React.FC = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-1 text-xs text-slate-500 ml-1 whitespace-nowrap">
-          <Clock className="w-3.5 h-3.5 text-slate-400" />
-          <span>{isDirty ? "수정됨 ●" : "저장됨"}</span>
+        <div
+          data-testid="header-loading-status"
+          className="flex items-center gap-1 text-xs text-slate-500 ml-1 whitespace-nowrap"
+        >
+          {isLoadingDocument ? (
+            <>
+              <Loader2
+                data-testid="header-loading-spinner"
+                className="w-3.5 h-3.5 animate-spin text-teal-600"
+              />
+              <span className="text-teal-700 font-medium">
+                {loadingMessage || "파일 로드 중..."}
+              </span>
+            </>
+          ) : (
+            <>
+              <Clock className="w-3.5 h-3.5 text-slate-400" />
+              <span>{isDirty ? "수정됨 ●" : "저장됨"}</span>
+            </>
+          )}
         </div>
 
         <div className="h-4 w-px bg-slate-200 mx-1.5" />

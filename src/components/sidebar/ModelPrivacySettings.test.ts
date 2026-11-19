@@ -27,7 +27,8 @@ describe("ModelPrivacySettings Component", () => {
       customEndpoint: "",
       autoMaskPii: true,
       reasoningEffort: "high",
-      agentLoopMode: "legacy",
+      agentLoopMode: "v2",
+      useAsDefaultHwpApp: false,
       customName: "사용자 지정",
       customSupportsTools: true,
       customSendReasoning: false,
@@ -74,6 +75,54 @@ describe("ModelPrivacySettings Component", () => {
     const saveBtn = container.querySelector("#settings-save-button");
     expect(saveBtn).not.toBeNull();
     expect(saveBtn?.textContent).toContain("설정 저장");
+  });
+
+  it("defaults to improved loop (v2 / NEW DEFAULT) and classifies old loop as LEGACY", async () => {
+    await act(async () => {
+      root.render(React.createElement(ModelPrivacySettings));
+    });
+
+    const v2Option = container.querySelector('[data-testid="loop-mode-v2-option"]');
+    const legacyOption = container.querySelector('[data-testid="loop-mode-legacy-option"]');
+    expect(v2Option).not.toBeNull();
+    expect(legacyOption).not.toBeNull();
+    expect(v2Option?.textContent).toContain("기본 루프 (개선 루프)");
+    expect(v2Option?.textContent).toContain("NEW DEFAULT");
+    expect(legacyOption?.textContent).toContain("레거시 루프 (기존 루프)");
+    expect(legacyOption?.textContent).toContain("LEGACY");
+
+    const v2Radio = v2Option?.querySelector('input[type="radio"]') as HTMLInputElement;
+    const legacyRadio = legacyOption?.querySelector('input[type="radio"]') as HTMLInputElement;
+    expect(v2Radio?.checked).toBe(true);
+    expect(legacyRadio?.checked).toBe(false);
+  });
+
+  it("renders HWP default app setting and Hancom Office file association caution notice", async () => {
+    await act(async () => {
+      root.render(React.createElement(ModelPrivacySettings));
+    });
+
+    const section = container.querySelector('[data-testid="default-hwp-app-section"]');
+    const checkbox = container.querySelector('[data-testid="default-hwp-app-checkbox"]') as HTMLInputElement;
+    const warning = container.querySelector('[data-testid="default-hwp-app-warning"]');
+
+    expect(section).not.toBeNull();
+    expect(checkbox).not.toBeNull();
+    expect(checkbox.checked).toBe(false);
+    expect(warning?.textContent).toContain("기존 한글(한컴오피스 한글) 프로그램과의 파일 연결이 변경됩니다");
+
+    await act(async () => {
+      checkbox.click();
+    });
+    expect(checkbox.checked).toBe(true);
+
+    const saveBtn = container.querySelector("#settings-save-button") as HTMLButtonElement;
+    await act(async () => {
+      saveBtn.click();
+    });
+
+    expect(localStorage.getItem("hop_default_hwp_app")).toBe("true");
+    expect(useDocStore.getState().useAsDefaultHwpApp).toBe(true);
   });
 
   it("shows save feedback and closes modal after timeout", async () => {

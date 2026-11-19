@@ -475,6 +475,8 @@ export const HopEditorHost: React.FC = () => {
   const pendingDiffs = useDocStore((s) => s.pendingDiffs);
   const acceptAllDiffs = useDocStore((s) => s.acceptAllDiffs);
   const rejectAllDiffs = useDocStore((s) => s.rejectAllDiffs);
+  const isLoadingDocument = useDocStore((s) => s.isLoadingDocument);
+  const loadingMessage = useDocStore((s) => s.loadingMessage);
 
   const handleAcceptAll = async () => {
     if (isApplyingDiffs) return;
@@ -707,6 +709,31 @@ export const HopEditorHost: React.FC = () => {
             setShowQuickTrigger(null);
           }}
         />
+
+        {/* Rotational Document Loading Indicator Overlay */}
+        {isLoadingDocument && (
+          <div
+            data-testid="document-loading-overlay"
+            role="status"
+            aria-live="polite"
+            className="pointer-events-auto absolute inset-0 z-40 flex items-center justify-center bg-slate-900/25 backdrop-blur-[1.5px] animate-in fade-in duration-150"
+          >
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-6 py-5 shadow-xl">
+              <Loader2
+                data-testid="document-loading-spinner"
+                className="h-8 w-8 animate-spin text-teal-600"
+              />
+              <div className="flex flex-col items-center gap-0.5 text-center">
+                <span className="text-xs font-bold text-slate-800">
+                  {loadingMessage || "파일을 불러오는 중..."}
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  HWP/HWPX 문서 레이아웃 및 표 구조를 분석하고 있습니다
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

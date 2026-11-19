@@ -397,7 +397,7 @@ export const insertCommands: CommandDef[] = [
       // 메뉴 노출 판정(input-handler)과 같은 경로라 여기 도달하면 보통 성공한다.
       const target = chartTargetFromSelection(ref);
       if (!target) return;
-      let matched = null;
+      let matched: any = null;
       try {
         matched = matchChartRef(services.wasm.listCharts(), target);
       } catch {

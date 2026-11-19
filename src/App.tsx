@@ -64,7 +64,7 @@ export const App: React.FC = () => {
       const savedCustomName = localStorage.getItem("hop_custom_name") || "사용자 지정";
       const savedCustomSupportsTools = localStorage.getItem("hop_custom_supports_tools") !== "false";
       const savedCustomSendReasoning = localStorage.getItem("hop_custom_send_reasoning") === "true";
-      const savedLoopMode = (localStorage.getItem("hop_agent_loop_mode") as any) || "legacy";
+      const savedLoopMode = (localStorage.getItem("hop_agent_loop_mode") as any) || "v2";
 
       setProviderSettings({
         provider: savedProvider,

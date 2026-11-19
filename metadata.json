@@ -1,0 +1,5 @@
+{
+  "name": "HOP-Claw — 로컬 AI 한글(HWP/HWPX) 협업 스튜디오",
+  "description": "HWP/HWPX 문서를 사람과 로컬 AI가 함께 작성·편집·검수하는 한글 협업 스튜디오입니다.",
+  "requestFramePermissions": []
+}

@@ -29,8 +29,8 @@ export function parseCanvasKitDocumentPreflight(
   }
 
   const report = parsed as Partial<CanvasKitDocumentPreflight>;
-  const summary = report.summary as Record<string, unknown> | undefined;
-  const limits = report.limits as Record<string, unknown> | undefined;
+  const summary = report.summary as unknown as Record<string, unknown> | undefined;
+  const limits = report.limits as unknown as Record<string, unknown> | undefined;
   if (
     report.schemaVersion !== 1
     || !PREFLIGHT_MODES.has(String(report.mode))

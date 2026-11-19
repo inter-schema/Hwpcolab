@@ -544,7 +544,8 @@ export async function orchestrateAiEdit(options: AiRequestOptions): Promise<Orch
   };
 
   let rawResult: { summary: string; diffItems: any[] } = { summary: "", diffItems: [] };
-  if (options.loopMode === "v2") {
+  const effectiveLoopMode: AgentLoopMode = options.loopMode ?? "v2";
+  if (effectiveLoopMode === "v2") {
     try {
       const adapter = createProviderAdapter({
         provider: options.provider,

@@ -22,6 +22,8 @@ pub fn run() {
             write_file_bytes,
             commit_staging_to_original,
             get_startup_file,
+            get_hwp_default_app_status,
+            set_hwp_default_app,
             inspect_document,
             extract_markdown,
             execute_claw_ops,

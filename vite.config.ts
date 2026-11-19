@@ -1,13 +1,20 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, extname, isAbsolute, join, relative, resolve } from "node:path";
-import { spawn, execFileSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { resolve, basename, extname, join } from "node:path";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { randomUUID } from "node:crypto";
+import { execFile, spawn } from "node:child_process";
+import { promisify } from "node:util";
 import { createHopOverrides } from "./hop-overrides";
+import { handleFontAssetRequest } from "./src/hop-host/core/font-asset-middleware";
 import { isValidHwpxPackage } from "./src/hop-host/core/hwpx-package";
 import { copyFileAtomically } from "./src/hop-host/core/atomic-file";
-import { handleFontAssetRequest } from "./src/hop-host/core/font-asset-middleware";
 import { ActiveHttpRequests } from "./src/hop-host/core/active-http-requests";
 import {
   normalizeLlmTimeoutMs,
@@ -16,322 +23,375 @@ import {
   validateLlmEndpoint,
 } from "./src/hop-host/core/llm-http-bridge";
 
-const rootDir = __dirname;
-const hopSrc = resolve(rootDir, "src/hop-host");
-const upstreamSrc = resolve(rootDir, "third_party/rhwp/rhwp-studio/src");
-const wasmDir = resolve(rootDir, "vendor/rhwp-core");
-const fontsDir = resolve(rootDir, "assets/fonts");
-const stagingDir = resolve(rootDir, ".hop-staging");
-const clawScriptsDir = resolve(rootDir, "resources/claw-hwp/scripts");
+const execFileAsync = promisify(execFile);
 
-function collectFontFiles(dir: string): string[] {
-  if (!existsSync(dir)) return [];
-  const entries = readdirSync(dir, { withFileTypes: true });
-  const files: string[] = [];
-  for (const entry of entries) {
-    const fullPath = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...collectFontFiles(fullPath));
-    } else if (entry.isFile() && extname(entry.name).toLowerCase() === ".woff2") {
-      files.push(fullPath);
-    }
-  }
-  return files;
+const ROOT_DIR = __dirname;
+const HOP_HOST_DIR = resolve(ROOT_DIR, "src/hop-host");
+const UPSTREAM_SRC_DIR = resolve(ROOT_DIR, "third_party/rhwp/rhwp-studio/src");
+const WASM_DIR = resolve(ROOT_DIR, "public/vendor/rhwp");
+const FONTS_DIR = resolve(ROOT_DIR, "assets/fonts");
+const STAGING_DIR = resolve(ROOT_DIR, ".hop-staging");
+const SCRIPTS_DIR = resolve(ROOT_DIR, "resources/claw-hwp/scripts");
+
+const MAX_ATTACHMENT_BYTES = 128 * 1024 * 1024;
+const activeHttpRequests = new ActiveHttpRequests();
+
+function hasZipLocalFileHeader(bytes: Uint8Array): boolean {
+  return (
+    bytes.byteLength >= 4 &&
+    bytes[0] === 0x50 &&
+    bytes[1] === 0x4b &&
+    bytes[2] === 0x03 &&
+    bytes[3] === 0x04
+  );
 }
 
-function hopFontAssets(): Plugin {
-  return {
-    name: "hop-font-assets",
-    configureServer(server) {
-      server.middlewares.use("/fonts", (req, res, next) => {
-        handleFontAssetRequest(fontsDir, req.url, res, next);
-      });
-    },
-    writeBundle(options) {
-      const outDir = options.dir ? resolve(rootDir, options.dir) : resolve(rootDir, "dist");
-      for (const source of collectFontFiles(fontsDir)) {
-        const target = resolve(outDir, "fonts", relative(fontsDir, source));
-        mkdirSync(resolve(target, ".."), { recursive: true });
-        copyFileSync(source, target);
-      }
-    },
-  };
-}
-
-function resolveLocalPath(p: string): string {
-  if (!p) return "";
-  return isAbsolute(p) ? p : resolve(rootDir, p);
-}
-
-function runClawStdin(scriptName: string, stdinJson: string): Promise<{ ok: boolean; stdout_json: any; stderr: string }> {
+function runClawScriptWithStdin(
+  scriptPath: string,
+  payloadJson: string,
+  timeoutMs = 30_000
+): Promise<{ ok: boolean; stdout_json: unknown; stderr: string }> {
   return new Promise((resolvePromise, rejectPromise) => {
-    const scriptPath = resolve(clawScriptsDir, scriptName);
-    const child = spawn("node", [scriptPath], { stdio: ["pipe", "pipe", "pipe"] });
-    const outChunks: Buffer[] = [];
-    const errChunks: Buffer[] = [];
-    child.stdout.on("data", (d) => outChunks.push(Buffer.from(d)));
-    child.stderr.on("data", (d) => errChunks.push(Buffer.from(d)));
-    child.on("error", (err) => rejectPromise(err));
+    const child = spawn(process.execPath, [scriptPath], {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    const stdoutChunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
+
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      rejectPromise(
+        new Error("claw 실행 타임아웃: 30초 내에 프로세스가 응답하지 않았습니다.")
+      );
+    }, timeoutMs);
+
+    child.stdout.on("data", (chunk) => stdoutChunks.push(Buffer.from(chunk)));
+    child.stderr.on("data", (chunk) => stderrChunks.push(Buffer.from(chunk)));
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      rejectPromise(err);
+    });
     child.on("close", (code) => {
-      const stdoutStr = Buffer.concat(outChunks).toString("utf8").trim();
-      const stderrStr = Buffer.concat(errChunks).toString("utf8");
+      clearTimeout(timer);
+      const stdoutStr = Buffer.concat(stdoutChunks).toString("utf8").trim();
+      const stderrStr = Buffer.concat(stderrChunks).toString("utf8");
       let parsed: any;
       try {
         parsed = JSON.parse(stdoutStr);
       } catch {
         parsed = { status: "error", raw_stdout: stdoutStr, stderr: stderrStr };
       }
-      const ok = code === 0 && (parsed?.status === "success" || parsed?.ok === true);
-      resolvePromise({ ok, stdout_json: parsed, stderr: stderrStr });
+      const ok =
+        code === 0 &&
+        (parsed?.status === "success" || parsed?.ok === true);
+      resolvePromise({
+        ok,
+        stdout_json: parsed,
+        stderr: stderrStr,
+      });
     });
-    child.stdin.write(stdinJson, "utf8");
+
+    child.stdin.write(payloadJson);
     child.stdin.end();
   });
 }
 
-const activeHttpRequests = new ActiveHttpRequests();
+let mockDefaultHwpAppEnabled = false;
 
-function localClawBridgePlugin(): Plugin {
-  return {
-    name: "hop-local-claw-bridge",
-    configureServer(server) {
-      server.middlewares.use("/__hop_claw_api/", async (req, res) => {
-        const cmd = decodeURIComponent((req.url ?? "").split("?")[0].replace(/^\/+/, ""));
-        const chunks: Buffer[] = [];
-        req.on("data", (c) => chunks.push(Buffer.from(c)));
-        req.on("end", async () => {
-          res.setHeader("Content-Type", "application/json; charset=utf-8");
-          try {
-            const bodyStr = Buffer.concat(chunks).toString("utf8");
-            const args = bodyStr ? JSON.parse(bodyStr) : {};
-            mkdirSync(stagingDir, { recursive: true });
+async function handleBridgeCommand(
+  cmd: string,
+  args: Record<string, any>
+): Promise<unknown> {
+  mkdirSync(STAGING_DIR, { recursive: true });
 
-            let result: any = null;
+  switch (cmd) {
+    case "get_startup_file":
+      return process.env.HOP_STARTUP_FILE || null;
 
-            switch (cmd) {
-              case "open_document_session": {
-                const srcPath = resolveLocalPath(args.filePath || args.file_path);
-                if (!existsSync(srcPath)) {
-                  throw new Error(`파일을 찾을 수 없습니다: ${srcPath}`);
-                }
-                const bytes = readFileSync(srcPath);
-                const hasZipSignature = bytes.length >= 4
-                  && bytes[0] === 0x50 && bytes[1] === 0x4b
-                  && bytes[2] === 0x03 && bytes[3] === 0x04;
-                const requestedHwpx = extname(srcPath).toLowerCase() === ".hwpx";
-                const isHwpx = hasZipSignature
-                  ? isValidHwpxPackage(new Uint8Array(bytes))
-                  : false;
-                if (hasZipSignature && !isHwpx) {
-                  throw new Error("유효한 HWPX(OWPML) 패키지가 아닙니다. 일반 ZIP 또는 손상된 문서는 열 수 없습니다.");
-                }
-                if (requestedHwpx && !isHwpx) {
-                  throw new Error("HWPX 파일의 ZIP/OWPML 패키지 구조가 손상되었거나 올바르지 않습니다.");
-                }
-                const ext = isHwpx ? "hwpx" : "hwp";
-                const stagingPath = resolve(stagingDir, `staging_${randomUUID()}.${ext}`);
-                writeFileSync(stagingPath, bytes);
-                result = {
-                  original_path: srcPath,
-                  staging_path: stagingPath,
-                  file_name: basename(srcPath),
-                  is_hwpx: isHwpx,
-                  bytes: Array.from(bytes),
-                };
-                break;
-              }
+    case "pick_local_file":
+      return null;
 
-              case "create_blank_session": {
-                const isHwpx = Boolean(args.isHwpx ?? args.is_hwpx);
-                const ext = isHwpx ? "hwpx" : "hwp";
-                const stagingPath = resolve(stagingDir, `new_${randomUUID()}.${ext}`);
-                result = {
-                  original_path: "",
-                  staging_path: stagingPath,
-                  file_name: `새 문서.${ext}`,
-                  is_hwpx: isHwpx,
-                  bytes: [],
-                };
-                break;
-              }
+    case "list_local_fonts":
+      return [];
 
-              case "read_file_bytes":
-              case "read_attachment_bytes": {
-                const target = resolveLocalPath(args.filePath || args.file_path);
-                const bytes = readFileSync(target);
-                result = Array.from(bytes);
-                break;
-              }
+    case "read_local_font": {
+      const p = resolve(ROOT_DIR, String(args.path || ""));
+      return Array.from(readFileSync(p));
+    }
 
-              case "write_file_bytes": {
-                const target = resolveLocalPath(args.filePath || args.file_path);
-                writeFileSync(target, Buffer.from(args.bytes || []));
-                result = null;
-                break;
-              }
+    case "open_document_session": {
+      const rawPath = String(args.filePath ?? args.file_path ?? "");
+      const srcPath = resolve(ROOT_DIR, rawPath);
+      if (!existsSync(srcPath)) {
+        throw new Error(`파일 읽기 실패: ${rawPath}`);
+      }
+      const bytes = new Uint8Array(readFileSync(srcPath));
+      const hasZip = hasZipLocalFileHeader(bytes);
+      const requestedHwpx = extname(srcPath).toLowerCase() === ".hwpx";
+      let isHwpx = false;
+      if (hasZip) {
+        if (!isValidHwpxPackage(bytes)) {
+          throw new Error(
+            "유효한 HWPX(OWPML) 패키지가 아닙니다. 일반 ZIP 또는 손상된 문서는 열 수 없습니다."
+          );
+        }
+        isHwpx = true;
+      } else {
+        if (requestedHwpx) {
+          throw new Error(
+            "HWPX 파일의 ZIP/OWPML 패키지 구조가 손상되었거나 올바르지 않습니다."
+          );
+        }
+        isHwpx = false;
+      }
+      const ext = isHwpx ? "hwpx" : "hwp";
+      const stagingPath = join(STAGING_DIR, `staging_${randomUUID()}.${ext}`);
+      writeFileSync(stagingPath, bytes);
+      return {
+        original_path: rawPath,
+        staging_path: stagingPath,
+        file_name: basename(srcPath) || `untitled.${ext}`,
+        is_hwpx: isHwpx,
+        bytes: Array.from(bytes),
+      };
+    }
 
-              case "commit_staging_to_original": {
-                const stg = resolveLocalPath(args.stagingPath || args.staging_path);
-                const orig = args.originalPath || args.original_path;
-                const target = orig && orig.trim() ? resolveLocalPath(orig) : resolve(stagingDir, `saved_${basename(stg)}`);
-                copyFileAtomically(stg, target);
-                result = target;
-                break;
-              }
+    case "create_blank_session": {
+      const isHwpx = Boolean(args.isHwpx ?? args.is_hwpx);
+      const ext = isHwpx ? "hwpx" : "hwp";
+      const stagingPath = join(STAGING_DIR, `new_${randomUUID()}.${ext}`);
+      return {
+        original_path: "",
+        staging_path: stagingPath,
+        file_name: `새 문서.${ext}`,
+        is_hwpx: isHwpx,
+        bytes: [],
+      };
+    }
 
-              case "get_startup_file": {
-                const defaultLessonSample = resolve(rootDir, "samples/(날짜)(교시)(과목명)교수.학습과정안(이름).hwp");
-                const defaultOfficialSample = resolve(rootDir, "samples/demo_official_report.hwp");
-                if (existsSync(defaultLessonSample)) {
-                  result = defaultLessonSample;
-                } else if (existsSync(defaultOfficialSample)) {
-                  result = defaultOfficialSample;
-                } else {
-                  result = null;
-                }
-                break;
-              }
+    case "read_file_bytes": {
+      const rawPath = String(args.filePath ?? args.file_path ?? "");
+      const target = resolve(ROOT_DIR, rawPath);
+      return Array.from(readFileSync(target));
+    }
 
-              case "inspect_document": {
-                const target = resolveLocalPath(args.filePath || args.file_path);
-                const script = resolve(clawScriptsDir, "extract_text.js");
-                const stdout = execFileSync("node", [script, "--inspect", "--with-cell-text", target], {
-                  encoding: "utf8",
-                  maxBuffer: 20 * 1024 * 1024,
-                });
-                result = JSON.parse(stdout);
-                break;
-              }
+    case "write_file_bytes": {
+      const rawPath = String(args.filePath ?? args.file_path ?? "");
+      const target = resolve(ROOT_DIR, rawPath);
+      const bytes = Uint8Array.from(args.bytes || []);
+      writeFileSync(target, bytes);
+      return null;
+    }
 
-              case "extract_markdown": {
-                const target = resolveLocalPath(args.filePath || args.file_path);
-                const script = resolve(clawScriptsDir, "extract_text.js");
-                const stdout = execFileSync("node", [script, "--format", "markdown", target], {
-                  encoding: "utf8",
-                  maxBuffer: 20 * 1024 * 1024,
-                });
-                result = stdout;
-                break;
-              }
+    case "read_attachment_bytes": {
+      const rawPath = String(args.filePath ?? args.file_path ?? "");
+      const target = resolve(ROOT_DIR, rawPath);
+      const st = statSync(target);
+      if (!st.isFile()) {
+        throw new Error(`첨부 경로가 일반 파일이 아닙니다: ${rawPath}`);
+      }
+      if (st.size > MAX_ATTACHMENT_BYTES) {
+        throw new Error(
+          `첨부 파일은 128 MiB 이하만 처리할 수 있습니다: ${rawPath}`
+        );
+      }
+      return Array.from(readFileSync(target));
+    }
 
-              case "execute_claw_ops": {
-                const isHwpx = Boolean(args.isHwpx ?? args.is_hwpx);
-                const payloadJson = String(args.payloadJson ?? args.payload_json ?? "{}");
-                const scriptName = isHwpx ? "hwpx-edit.js" : "create.js";
-                result = await runClawStdin(scriptName, payloadJson);
-                break;
-              }
+    case "commit_staging_to_original": {
+      const stagingPath = resolve(
+        ROOT_DIR,
+        String(args.stagingPath ?? args.staging_path ?? "")
+      );
+      const originalRaw = String(args.originalPath ?? args.original_path ?? "").trim();
+      const targetPath = originalRaw
+        ? resolve(ROOT_DIR, originalRaw)
+        : join(
+            STAGING_DIR,
+            `saved_${randomUUID()}${extname(stagingPath) || ".hwp"}`
+          );
+      copyFileAtomically(stagingPath, targetPath);
+      return targetPath;
+    }
 
-              case "call_llm_http": {
-                const reqObj = args.req || args;
-                const rawRequestId = reqObj.request_id || reqObj.requestId;
-                const reqId = typeof rawRequestId === "string" && rawRequestId.length > 0
-                  ? rawRequestId
-                  : undefined;
-                const endpoint = validateLlmEndpoint(reqObj.url);
-                const body = serializeBoundedRequestBody(reqObj.body_json ?? {});
-                const timeoutMs = normalizeLlmTimeoutMs(reqObj.timeout_ms ?? reqObj.timeoutMs);
-                const headers = new Headers(reqObj.headers || {});
-                if (!headers.has("content-type")) {
-                  headers.set("Content-Type", "application/json");
-                }
+    case "inspect_document": {
+      const rawPath = String(args.filePath ?? args.file_path ?? "");
+      const target = resolve(ROOT_DIR, rawPath);
+      const script = join(SCRIPTS_DIR, "extract_text.js");
+      const { stdout } = await execFileAsync(
+        process.execPath,
+        [script, "--inspect", "--with-cell-text", target],
+        { maxBuffer: 20 * 1024 * 1024 }
+      );
+      return JSON.parse(stdout);
+    }
 
-                const controller = new AbortController();
-                if (reqId) {
-                  activeHttpRequests.register(reqId, controller);
-                }
-                const timer = setTimeout(() => controller.abort(), timeoutMs);
+    case "extract_markdown": {
+      const rawPath = String(args.filePath ?? args.file_path ?? "");
+      const target = resolve(ROOT_DIR, rawPath);
+      const script = join(SCRIPTS_DIR, "extract_text.js");
+      const { stdout } = await execFileAsync(
+        process.execPath,
+        [script, "--format", "markdown", target],
+        { maxBuffer: 20 * 1024 * 1024 }
+      );
+      return stdout;
+    }
 
-                try {
-                  const resp = await fetch(endpoint, {
-                    method: "POST",
-                    headers,
-                    body,
-                    signal: controller.signal,
-                    redirect: "manual",
-                  });
-                  const status = resp.status;
-                  const text = await readBoundedResponseText(resp);
-                  let parsedBody: any;
-                  try {
-                    parsedBody = JSON.parse(text);
-                  } catch {
-                    parsedBody = { raw_text: text };
-                  }
-                  result = { status, body: parsedBody };
-                } catch (fetchErr: any) {
-                  if (fetchErr.name === "AbortError" || controller.signal.aborted) {
-                    throw new Error("LLM 요청이 사용자에 의해 취소되었거나 타임아웃되었습니다.");
-                  }
-                  throw fetchErr;
-                } finally {
-                  clearTimeout(timer);
-                  if (reqId) {
-                    activeHttpRequests.cleanup(reqId, controller);
-                  }
-                }
-                break;
-              }
+    case "execute_claw_ops": {
+      const isHwpx = Boolean(args.isHwpx ?? args.is_hwpx);
+      const payloadJson = String(args.payloadJson ?? args.payload_json ?? "{}");
+      const script = join(SCRIPTS_DIR, isHwpx ? "hwpx-edit.js" : "create.js");
+      return await runClawScriptWithStdin(script, payloadJson);
+    }
 
-              case "cancel_llm_request": {
-                const rawRequestId = args.request_id || args.requestId;
-                result = typeof rawRequestId === "string" && rawRequestId.length > 0
-                  ? activeHttpRequests.cancel(rawRequestId)
-                  : false;
-                break;
-              }
-
-              default:
-                throw new Error(`Unknown command: ${cmd}`);
-            }
-
-            res.statusCode = 200;
-            res.end(JSON.stringify({ result }));
-          } catch (err: any) {
-            res.statusCode = 200;
-            res.end(JSON.stringify({ __hop_error: err?.message || String(err) }));
-          }
+    case "call_llm_http": {
+      const req = args.req || {};
+      const url = validateLlmEndpoint(String(req.url || ""));
+      const bodyStr = serializeBoundedRequestBody(req.body_json);
+      const timeoutMs = normalizeLlmTimeoutMs(req.timeout_ms);
+      const requestId = req.request_id ? String(req.request_id) : undefined;
+      const controller = new AbortController();
+      if (requestId) {
+        activeHttpRequests.register(requestId, controller);
+      }
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          ...(req.headers || {}),
+        };
+        const resp = await fetch(url, {
+          method: "POST",
+          headers,
+          body: bodyStr,
+          signal: controller.signal,
         });
+        const text = await readBoundedResponseText(resp);
+        let parsedBody: unknown;
+        try {
+          parsedBody = JSON.parse(text);
+        } catch {
+          parsedBody = { raw_text: text };
+        }
+        return {
+          status: resp.status,
+          body: parsedBody,
+        };
+      } finally {
+        clearTimeout(timer);
+        if (requestId) {
+          activeHttpRequests.cleanup(requestId, controller);
+        }
+      }
+    }
+
+    case "cancel_llm_request": {
+      const requestId = String(args.requestId ?? args.request_id ?? "");
+      return activeHttpRequests.cancel(requestId);
+    }
+
+    case "get_hwp_default_app_status": {
+      return {
+        isDefault: mockDefaultHwpAppEnabled,
+        platform: process.platform,
+        supported: true,
+      };
+    }
+
+    case "set_hwp_default_app": {
+      const enabled = Boolean(args.enabled);
+      mockDefaultHwpAppEnabled = enabled;
+      return {
+        isDefault: mockDefaultHwpAppEnabled,
+        platform: process.platform,
+        supported: true,
+      };
+    }
+
+    default:
+      throw new Error(`Unknown bridge command: ${cmd}`);
+  }
+}
+
+function createHopClawDevPlugin(): Plugin {
+  const attachMiddlewares = (middlewares: any) => {
+    middlewares.use("/fonts", (req: any, res: any, next: any) => {
+      handleFontAssetRequest(FONTS_DIR, req.url, res, next);
+    });
+
+    middlewares.use("/__hop_claw_api/", (req: any, res: any, next: any) => {
+      if (req.method !== "POST") {
+        next();
+        return;
+      }
+      const cmd = decodeURIComponent((req.url || "/").replace(/^\/+/, "").split("?")[0]);
+      const chunks: Buffer[] = [];
+      req.on("data", (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
+      req.on("end", async () => {
+        res.setHeader("Content-Type", "application/json");
+        try {
+          const rawBody = Buffer.concat(chunks).toString("utf8");
+          const args = rawBody ? JSON.parse(rawBody) : {};
+          const result = await handleBridgeCommand(cmd, args);
+          res.statusCode = 200;
+          res.end(JSON.stringify({ result }));
+        } catch (err: any) {
+          res.statusCode = 200;
+          res.end(
+            JSON.stringify({
+              __hop_error: err instanceof Error ? err.message : String(err),
+            })
+          );
+        }
       });
+    });
+  };
+
+  return {
+    name: "hop-claw-dev-bridge",
+    configureServer(server) {
+      attachMiddlewares(server.middlewares);
+    },
+    configurePreviewServer(server) {
+      attachMiddlewares(server.middlewares);
     },
   };
 }
 
 export default defineConfig({
-  plugins: [react(), hopFontAssets(), localClawBridgePlugin()],
-  clearScreen: false,
+  plugins: [react(), createHopClawDevPlugin()],
+  define: {
+    __APP_VERSION__: JSON.stringify("0.8.7"),
+    __HOP_VERSION__: JSON.stringify("0.2.2"),
+  },
   resolve: {
     alias: [
-      ...createHopOverrides(hopSrc),
+      ...createHopOverrides(HOP_HOST_DIR),
       {
-        find: "@wasm/rhwp.js",
-        replacement: resolve(wasmDir, "rhwp.js"),
+        find: /^@\/upstream\/(.*)$/,
+        replacement: `${resolve(HOP_HOST_DIR, "upstream")}/$1`,
       },
       {
-        find: "@/upstream",
-        replacement: resolve(hopSrc, "upstream"),
+        find: /^@\/(.*)$/,
+        replacement: `${UPSTREAM_SRC_DIR}/$1`,
       },
       {
-        find: "@upstream",
-        replacement: upstreamSrc,
+        find: /^@upstream\/(.*)$/,
+        replacement: `${UPSTREAM_SRC_DIR}/$1`,
       },
       {
-        find: "@",
-        replacement: upstreamSrc,
+        find: /^@wasm\/(.*)$/,
+        replacement: `${WASM_DIR}/$1`,
       },
     ],
   },
   server: {
-    port: 1420,
-    strictPort: true,
-    fs: {
-      allow: [rootDir, hopSrc, upstreamSrc, wasmDir, fontsDir],
-    },
-    watch: {
-      ignored: ["**/src-tauri/**", "**/.hop-staging/**"],
-    },
+    port: 3000,
+    host: "0.0.0.0",
   },
-  optimizeDeps: {
-    exclude: ["@wasm/rhwp.js"],
+  test: {
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    exclude: ["node_modules/**", "dist/**", "third_party/**"],
   },
-});
+} as any);

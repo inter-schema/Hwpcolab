@@ -63,7 +63,13 @@ interface DocState {
   memoriesIndex: MemoryMeta[];
   activeMemoryIds: string[];
 
+  isLoadingDocument: boolean;
+  loadingMessage: string | null;
+  useAsDefaultHwpApp: boolean;
+
   // Actions
+  setLoadingDocument: (loading: boolean, message?: string | null) => void;
+  setUseAsDefaultHwpApp: (enabled: boolean) => Promise<void>;
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
   setSidebarDock: (dock: "left" | "right") => void;
@@ -183,7 +189,7 @@ export const useDocStore = create<DocState>((set, get) => ({
   sessionMasker: new PrivacySessionMasker(),
   agentLoopMode:
     (typeof localStorage !== "undefined" && (localStorage.getItem("hop_agent_loop_mode") as AgentLoopMode)) ||
-    "legacy",
+    "v2",
   customName:
     (typeof localStorage !== "undefined" && localStorage.getItem("hop_custom_name")) ||
     "사용자 지정",
@@ -199,6 +205,27 @@ export const useDocStore = create<DocState>((set, get) => ({
   memoryModalInitialTab: "list",
   memoriesIndex: [],
   activeMemoryIds: [],
+  isLoadingDocument: false,
+  loadingMessage: null,
+  useAsDefaultHwpApp:
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem("hop_default_hwp_app") === "true"
+      : false,
+
+  setLoadingDocument: (isLoadingDocument, loadingMessage = null) =>
+    set({ isLoadingDocument, loadingMessage }),
+
+  setUseAsDefaultHwpApp: async (enabled: boolean) => {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("hop_default_hwp_app", String(enabled));
+    }
+    set({ useAsDefaultHwpApp: enabled });
+    try {
+      await invoke("set_hwp_default_app", { enabled });
+    } catch (err) {
+      console.warn("[DocStore] 기본 앱 설정 브리지 호출 생략:", err);
+    }
+  },
 
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
@@ -267,72 +294,83 @@ export const useDocStore = create<DocState>((set, get) => ({
   },
 
   openDocument: async (filePath: string) => {
-    const session = await invoke<OpenedDocSession>("open_document_session", { filePath });
-    const bytes = new Uint8Array(session.bytes);
-    set({
-      originalPath: session.original_path,
-      stagingPath: session.staging_path,
-      fileName: session.file_name,
-      isHwpx: session.is_hwpx,
-      fileBytes: bytes,
-      isDirty: false,
-      isHopDirectDirty: false,
-      undoHistoryBytes: [],
-      pendingDiffs: [],
-      selection: null,
-      excludedRegions: [],
-      docMarkdown: "",
-      tablesMeta: [],
-      sessionMasker: new PrivacySessionMasker(),
-    });
-    await hopBridge.loadDocumentIntoHop(bytes, session.file_name);
-    const rt = hopBridge.getRuntime();
-    if (rt) {
-      set({ pageCount: Math.max(1, rt.wasm.pageCount) });
+    const shortName = filePath.split(/[\\/]/).pop() || filePath;
+    set({ isLoadingDocument: true, loadingMessage: `${shortName} 파일을 불러오는 중...` });
+    try {
+      const session = await invoke<OpenedDocSession>("open_document_session", { filePath });
+      const bytes = new Uint8Array(session.bytes);
+      set({
+        originalPath: session.original_path,
+        stagingPath: session.staging_path,
+        fileName: session.file_name,
+        isHwpx: session.is_hwpx,
+        fileBytes: bytes,
+        isDirty: false,
+        isHopDirectDirty: false,
+        undoHistoryBytes: [],
+        pendingDiffs: [],
+        selection: null,
+        excludedRegions: [],
+        docMarkdown: "",
+        tablesMeta: [],
+        sessionMasker: new PrivacySessionMasker(),
+      });
+      await hopBridge.loadDocumentIntoHop(bytes, session.file_name);
+      const rt = hopBridge.getRuntime();
+      if (rt) {
+        set({ pageCount: Math.max(1, rt.wasm.pageCount) });
+      }
+      await get().refreshDocMarkdown();
+    } finally {
+      set({ isLoadingDocument: false, loadingMessage: null });
     }
-    await get().refreshDocMarkdown();
   },
 
   openDocumentBytes: async (bytes: Uint8Array, fileName: string, originalPath?: string) => {
-    const isHwpx = bytes.length >= 4
-      && bytes[0] === 0x50
-      && bytes[1] === 0x4b
-      && bytes[2] === 0x03
-      && bytes[3] === 0x04;
-    let stagingPath = "";
+    set({ isLoadingDocument: true, loadingMessage: `${fileName} 파일을 불러오는 중...` });
     try {
-      const session = await invoke<OpenedDocSession>("create_blank_session", { isHwpx });
-      await invoke("write_file_bytes", {
-        filePath: session.staging_path,
-        bytes: Array.from(bytes),
+      const isHwpx = bytes.length >= 4
+        && bytes[0] === 0x50
+        && bytes[1] === 0x4b
+        && bytes[2] === 0x03
+        && bytes[3] === 0x04;
+      let stagingPath = "";
+      try {
+        const session = await invoke<OpenedDocSession>("create_blank_session", { isHwpx });
+        await invoke("write_file_bytes", {
+          filePath: session.staging_path,
+          bytes: Array.from(bytes),
+        });
+        stagingPath = session.staging_path;
+      } catch (err) {
+        console.warn("[DocStore] 스테이징 세션 생성 생략(정적 브라우저 모드):", err);
+      }
+      set({
+        originalPath: originalPath || null,
+        stagingPath: stagingPath || null,
+        fileName,
+        isHwpx,
+        fileBytes: bytes,
+        isDirty: false,
+        isHopDirectDirty: false,
+        undoHistoryBytes: [],
+        pendingDiffs: [],
+        selection: null,
+        excludedRegions: [],
+        docMarkdown: "",
+        tablesMeta: [],
+        sessionMasker: new PrivacySessionMasker(),
       });
-      stagingPath = session.staging_path;
-    } catch (err) {
-      console.warn("[DocStore] 스테이징 세션 생성 생략(정적 브라우저 모드):", err);
-    }
-    set({
-      originalPath: originalPath || null,
-      stagingPath: stagingPath || null,
-      fileName,
-      isHwpx,
-      fileBytes: bytes,
-      isDirty: false,
-      isHopDirectDirty: false,
-      undoHistoryBytes: [],
-      pendingDiffs: [],
-      selection: null,
-      excludedRegions: [],
-      docMarkdown: "",
-      tablesMeta: [],
-      sessionMasker: new PrivacySessionMasker(),
-    });
-    await hopBridge.loadDocumentIntoHop(bytes, fileName);
-    const rt = hopBridge.getRuntime();
-    if (rt) {
-      set({ pageCount: Math.max(1, rt.wasm.pageCount) });
-    }
-    if (stagingPath) {
-      await get().refreshDocMarkdown();
+      await hopBridge.loadDocumentIntoHop(bytes, fileName);
+      const rt = hopBridge.getRuntime();
+      if (rt) {
+        set({ pageCount: Math.max(1, rt.wasm.pageCount) });
+      }
+      if (stagingPath) {
+        await get().refreshDocMarkdown();
+      }
+    } finally {
+      set({ isLoadingDocument: false, loadingMessage: null });
     }
   },
 
@@ -341,72 +379,82 @@ export const useDocStore = create<DocState>((set, get) => ({
    * 스테이징 파일을 만들고 문서 본문/표 구조를 추출해 AI 컨텍스트(docMarkdown, tablesMeta)를 채웁니다.
    */
   adoptHopDocument: async ({ fileName, sourceBytes }) => {
-    let bytes = sourceBytes;
-    if (!bytes) bytes = hopBridge.exportHopBytes(/\.hwpx$/i.test(fileName));
-    if (!bytes || bytes.byteLength === 0) return;
-    const isHwpx = bytes.length >= 4
-      && bytes[0] === 0x50
-      && bytes[1] === 0x4b
-      && bytes[2] === 0x03
-      && bytes[3] === 0x04;
-    let stagingPath = "";
+    set({ isLoadingDocument: true, loadingMessage: `${fileName} 문서를 동기화하는 중...` });
     try {
-      const session = await invoke<OpenedDocSession>("create_blank_session", { isHwpx });
-      await invoke("write_file_bytes", {
-        filePath: session.staging_path,
-        bytes: Array.from(bytes),
+      let bytes = sourceBytes;
+      if (!bytes) bytes = hopBridge.exportHopBytes(/\.hwpx$/i.test(fileName));
+      if (!bytes || bytes.byteLength === 0) return;
+      const isHwpx = bytes.length >= 4
+        && bytes[0] === 0x50
+        && bytes[1] === 0x4b
+        && bytes[2] === 0x03
+        && bytes[3] === 0x04;
+      let stagingPath = "";
+      try {
+        const session = await invoke<OpenedDocSession>("create_blank_session", { isHwpx });
+        await invoke("write_file_bytes", {
+          filePath: session.staging_path,
+          bytes: Array.from(bytes),
+        });
+        stagingPath = session.staging_path;
+      } catch (err) {
+        console.warn("[DocStore] HOP 문서 스테이징 생략(정적 브라우저 모드):", err);
+      }
+      set({
+        originalPath: null,
+        stagingPath: stagingPath || null,
+        fileName,
+        isHwpx,
+        fileBytes: bytes,
+        isDirty: false,
+        isHopDirectDirty: false,
+        undoHistoryBytes: [],
+        pendingDiffs: [],
+        selection: null,
+        excludedRegions: [],
+        docMarkdown: "",
+        tablesMeta: [],
+        sessionMasker: new PrivacySessionMasker(),
       });
-      stagingPath = session.staging_path;
-    } catch (err) {
-      console.warn("[DocStore] HOP 문서 스테이징 생략(정적 브라우저 모드):", err);
+      const rt = hopBridge.getRuntime();
+      if (rt) set({ pageCount: Math.max(1, rt.wasm.pageCount) });
+      await get().refreshDocMarkdown();
+    } finally {
+      set({ isLoadingDocument: false, loadingMessage: null });
     }
-    set({
-      originalPath: null,
-      stagingPath: stagingPath || null,
-      fileName,
-      isHwpx,
-      fileBytes: bytes,
-      isDirty: false,
-      isHopDirectDirty: false,
-      undoHistoryBytes: [],
-      pendingDiffs: [],
-      selection: null,
-      excludedRegions: [],
-      docMarkdown: "",
-      tablesMeta: [],
-      sessionMasker: new PrivacySessionMasker(),
-    });
-    const rt = hopBridge.getRuntime();
-    if (rt) set({ pageCount: Math.max(1, rt.wasm.pageCount) });
-    await get().refreshDocMarkdown();
   },
 
   createBlankDocument: async (isHwpx: boolean) => {
-    const session = await invoke<OpenedDocSession>("create_blank_session", { isHwpx });
-    const payload = OpTranslator.toEnginePayload(session.staging_path, isHwpx, [], [], true);
-    await invoke("execute_claw_ops", {
-      isHwpx: payload.isHwpx,
-      payloadJson: payload.stdinJson,
-    });
-    const bytesArr = await invoke<number[]>("read_file_bytes", { filePath: session.staging_path });
-    const bytes = new Uint8Array(bytesArr);
-    set({
-      originalPath: null,
-      stagingPath: session.staging_path,
-      fileName: session.file_name,
-      isHwpx,
-      fileBytes: bytes,
-      isDirty: false,
-      isHopDirectDirty: false,
-      undoHistoryBytes: [],
-      pendingDiffs: [],
-      selection: null,
-      excludedRegions: [],
-      docMarkdown: "",
-      sessionMasker: new PrivacySessionMasker(),
-    });
-    await hopBridge.loadDocumentIntoHop(bytes, session.file_name);
-    await get().refreshDocMarkdown();
+    set({ isLoadingDocument: true, loadingMessage: `새 문서(.${isHwpx ? "hwpx" : "hwp"})를 생성하는 중...` });
+    try {
+      const session = await invoke<OpenedDocSession>("create_blank_session", { isHwpx });
+      const payload = OpTranslator.toEnginePayload(session.staging_path, isHwpx, [], [], true);
+      await invoke("execute_claw_ops", {
+        isHwpx: payload.isHwpx,
+        payloadJson: payload.stdinJson,
+      });
+      const bytesArr = await invoke<number[]>("read_file_bytes", { filePath: session.staging_path });
+      const bytes = new Uint8Array(bytesArr);
+      set({
+        originalPath: null,
+        stagingPath: session.staging_path,
+        fileName: session.file_name,
+        isHwpx,
+        fileBytes: bytes,
+        isDirty: false,
+        isHopDirectDirty: false,
+        undoHistoryBytes: [],
+        pendingDiffs: [],
+        selection: null,
+        excludedRegions: [],
+        docMarkdown: "",
+        sessionMasker: new PrivacySessionMasker(),
+      });
+      await hopBridge.loadDocumentIntoHop(bytes, session.file_name);
+      await get().refreshDocMarkdown();
+    } finally {
+      set({ isLoadingDocument: false, loadingMessage: null });
+    }
   },
 
   refreshDocMarkdown: async () => {

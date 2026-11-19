@@ -369,7 +369,7 @@ export function renderPictureObjectSelection(this: any): void {
     const refs = this.cursor.getSelectedPictureRefs();
     try {
       const zoom = this.viewportManager.getZoom();
-      const boxes = [];
+      const boxes: any[] = [];
       for (const r of refs) {
         const bbox = this.findPictureBbox(r);
         if (bbox) boxes.push(bbox);
@@ -911,7 +911,7 @@ export function finishPictureResizeDrag(this: any, e: MouseEvent): void {
     const isCorner = ['nw', 'ne', 'sw', 'se'].includes(state.dir);
 
     try {
-      const historyTargets = [];
+      const historyTargets: any[] = [];
       for (const r of state.multiRefs) {
         const relX = r.bboxX - origX;
         const relY = r.bboxY - origY;

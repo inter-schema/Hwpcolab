@@ -1278,7 +1278,7 @@ export class CanvasKitLayerRenderer {
       canvasKitCanonicalClipRect(node.clip, (x, y, width, height) =>
         this.canvasKit.XYWHRect(x, y, width, height),
       ),
-      this.canvasKit.ClipOp?.Intersect ?? 0,
+      (this.canvasKit.ClipOp?.Intersect ?? 0) as any,
       true,
     );
     this.renderNode(canvas, node.child, profile, replayPlane, inheritedLayer);
@@ -1990,7 +1990,7 @@ export class CanvasKitLayerRenderer {
 
     canvas.save();
     try {
-      canvas.clipRect(this.rect(op.bbox), this.canvasKit.ClipOp?.Intersect ?? 0, true);
+      canvas.clipRect(this.rect(op.bbox), (this.canvasKit.ClipOp?.Intersect ?? 0) as any, true);
       if (canvasKitImageFillModeTiles(fillMode)) {
         this.drawTiledImage(canvas, op.bbox, fillMode, tileWidth, tileHeight, drawImage);
       } else {
@@ -2453,7 +2453,7 @@ export class CanvasKitLayerRenderer {
                 displayNumber,
                 displayNumber.length,
               );
-              const numberWidth = (boxedPuaFont.getGlyphWidths(numberGlyphIds) ?? [])
+              const numberWidth = Array.from(boxedPuaFont.getGlyphWidths(numberGlyphIds) ?? [])
                 .reduce((sum, width) => sum + width, 0);
               canvas.drawRect(
                 this.canvasKit.XYWHRect(
@@ -2745,7 +2745,7 @@ export class CanvasKitLayerRenderer {
           if (glyphIds.some(glyphId => glyphId === 0)) {
             this.unsupportedOps.add('textRun:glyphMapping');
           }
-          const widths = textFont.getGlyphWidths(glyphIds) ?? [];
+          const widths = Array.from(textFont.getGlyphWidths(glyphIds) ?? []);
           const measuredWidth = widths.reduce((sum, width) => sum + width, 0);
           const scaleX = horizontalScale ?? 1;
           if (scaleX < 1) {
@@ -3536,7 +3536,7 @@ export class CanvasKitLayerRenderer {
       paint = this.makeFillPaint(color);
       const glyphIds = font.getGlyphIDs(text, Array.from(text).length);
       if (!glyphIds || glyphIds.some((glyphId) => glyphId === 0)) return false;
-      const glyphWidths = font.getGlyphWidths(glyphIds) ?? [];
+      const glyphWidths = Array.from(font.getGlyphWidths(glyphIds) ?? []);
       const measuredWidth = glyphWidths.reduce((sum, width) => sum + width, 0);
       const drawWidth = targetWidth > 0 && measuredWidth > 0 ? targetWidth : measuredWidth;
       if (targetWidth > 0 && measuredWidth > 0) {

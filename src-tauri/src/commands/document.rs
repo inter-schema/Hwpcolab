@@ -226,6 +226,86 @@ pub fn get_startup_file() -> Option<String> {
     })
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct HwpDefaultAppStatus {
+    pub is_default: bool,
+    pub supported: bool,
+}
+
+#[tauri::command]
+pub async fn get_hwp_default_app_status(app: AppHandle) -> Result<HwpDefaultAppStatus, String> {
+    let config_dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+    let flag_path = config_dir.join("default_hwp_app.json");
+    let is_default = fs::read_to_string(&flag_path)
+        .ok()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+        .and_then(|v| v.get("enabled").and_then(|b| b.as_bool()))
+        .unwrap_or(false);
+    Ok(HwpDefaultAppStatus {
+        is_default,
+        supported: true,
+    })
+}
+
+#[tauri::command]
+pub async fn set_hwp_default_app(
+    app: AppHandle,
+    enabled: bool,
+) -> Result<HwpDefaultAppStatus, String> {
+    let config_dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&config_dir).map_err(|e| e.to_string())?;
+    let flag_path = config_dir.join("default_hwp_app.json");
+    let payload = serde_json::json!({ "enabled": enabled });
+    fs::write(&flag_path, payload.to_string()).map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "windows")]
+    if let Ok(exe_path) = std::env::current_exe() {
+        let exe_str = exe_path.to_string_lossy().to_string();
+        let open_cmd = format!("\"{}\" \"%1\"", exe_str);
+        if enabled {
+            let _ = std::process::Command::new("reg")
+                .args([
+                    "add",
+                    r"HKCU\Software\Classes\HOPClaw.Document",
+                    "/ve",
+                    "/d",
+                    "Hangul Word Processor Document",
+                    "/f",
+                ])
+                .status();
+            let _ = std::process::Command::new("reg")
+                .args([
+                    "add",
+                    r"HKCU\Software\Classes\HOPClaw.Document\shell\open\command",
+                    "/ve",
+                    "/d",
+                    &open_cmd,
+                    "/f",
+                ])
+                .status();
+            for ext in [".hwp", ".hwpx"] {
+                let key = format!(r"HKCU\Software\Classes\{}", ext);
+                let _ = std::process::Command::new("reg")
+                    .args(["add", &key, "/ve", "/d", "HOPClaw.Document", "/f"])
+                    .status();
+            }
+        } else {
+            for ext in [".hwp", ".hwpx"] {
+                let key = format!(r"HKCU\Software\Classes\{}", ext);
+                let _ = std::process::Command::new("reg")
+                    .args(["delete", &key, "/ve", "/f"])
+                    .status();
+            }
+        }
+    }
+
+    Ok(HwpDefaultAppStatus {
+        is_default: enabled,
+        supported: true,
+    })
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
