@@ -1586,6 +1586,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "hopclaw-doc"
+version = "0.2.3"
+dependencies = [
+ "cfb",
+ "flate2",
+ "hopclaw-types",
+ "quick-xml 0.42.0",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "zip",
+]
+
+[[package]]
 name = "hopclaw-types"
 version = "0.2.3"
 dependencies = [
