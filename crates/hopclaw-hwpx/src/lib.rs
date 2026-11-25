@@ -1,5 +1,10 @@
+pub mod archive;
+pub mod error;
 pub mod package;
+pub mod xml_util;
 
+pub use archive::HwpxArchive;
+pub use error::HwpxError;
 pub use package::is_valid_hwpx_package;
 
 /// Embedded Hancom-verified blank HWPX template (D-06).
