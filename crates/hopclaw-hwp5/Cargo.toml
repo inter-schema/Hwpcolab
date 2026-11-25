@@ -1,0 +1,18 @@
+[package]
+name = "hopclaw-hwp5"
+version = "0.2.3"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "Pure-Rust HWP 5.0 binary container and record-level patcher for HopClaw"
+
+[dependencies]
+byteorder = "1.5"
+cfb = { workspace = true }
+flate2 = { workspace = true }
+hopclaw-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
