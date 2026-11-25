@@ -4,8 +4,10 @@ use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 
+use hopclaw_types::ParsedAttachment;
+
 use crate::error::AttachError;
-use crate::types::{ParsedAttachment, WorkerRequest, WorkerResponse};
+use crate::types::{WorkerRequest, WorkerResponse};
 
 const MAX_WORKER_STDOUT_BYTES: usize = 32 * 1024 * 1024;
 

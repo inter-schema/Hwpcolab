@@ -32,5 +32,5 @@ pub use store::{
 };
 pub use types::{
     MemoryDoc, MemoryLlmClient, MemoryMeta, NoopRedactor, PiiRedactor, RedactOutcome, SectionDiff,
-    SectionDiffToken, SourceDocRef, FIXED_MEMORY_SECTIONS,
+    SectionDiffOp, SectionDiffToken, SourceDocRef, FIXED_MEMORY_SECTIONS,
 };

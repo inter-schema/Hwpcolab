@@ -12,5 +12,6 @@ pub use preflight::{
     MAX_ATTACHMENT_FILE_BYTES, MAX_DOCX_DOCUMENT_XML_BYTES, MAX_XLSX_ENTRY_BYTES,
     MAX_XLSX_TOTAL_BYTES,
 };
-pub use types::{AttachmentKind, ParsedAttachment, WorkerRequest, WorkerResponse};
+pub use hopclaw_types::{AttachmentKind, ParsedAttachment};
+pub use types::{WorkerRequest, WorkerResponse};
 pub use worker::{spawn_and_run_worker, WorkerOptions};

@@ -9,7 +9,7 @@ use crate::preflight::{
     assert_attachment_file_size, assert_zip_expansion_within_limits, ZipExpansionLimits,
     MAX_XLSX_ENTRY_BYTES, MAX_XLSX_TOTAL_BYTES,
 };
-use crate::types::{AttachmentKind, ParsedAttachment};
+use hopclaw_types::{AttachmentKind, ParsedAttachment};
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 

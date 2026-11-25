@@ -281,7 +281,10 @@ mod tests {
 
         let tone = diffs.iter().find(|d| d.section_title == "어투·문체").unwrap();
         assert!(tone.changed);
-        assert!(tone.tokens.iter().any(|t| t.op == 1));
+        assert!(tone
+            .tokens
+            .iter()
+            .any(|t| t.op == crate::types::SectionDiffOp::Insert));
 
         let doc_type = diffs
             .iter()

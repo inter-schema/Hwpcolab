@@ -1,16 +1,16 @@
 use crate::frontmatter::parse_memory_sections;
-use crate::types::{SectionDiff, SectionDiffToken, FIXED_MEMORY_SECTIONS};
+use crate::types::{SectionDiff, SectionDiffOp, SectionDiffToken, FIXED_MEMORY_SECTIONS};
 
 /// Computes a compact character-level LCS diff with run coalescing, requiring no
 /// external diff crate. Coalesces consecutive equal/delete/insert ops into tokens
-/// compatible with `SectionDiffToken { op: -1 | 0 | 1, text }`.
+/// compatible with `SectionDiffToken { op: SectionDiffOp, text }`.
 pub fn diff_text_tokens(before: &str, after: &str) -> Vec<SectionDiffToken> {
     if before == after {
         if before.is_empty() {
             return Vec::new();
         }
         return vec![SectionDiffToken {
-            op: 0,
+            op: SectionDiffOp::Equal,
             text: before.to_string(),
         }];
     }
@@ -18,7 +18,6 @@ pub fn diff_text_tokens(before: &str, after: &str) -> Vec<SectionDiffToken> {
     let a: Vec<char> = before.chars().collect();
     let b: Vec<char> = after.chars().collect();
 
-    // Trim common prefix and suffix to keep the DP matrix minimal.
     let mut prefix = 0usize;
     while prefix < a.len() && prefix < b.len() && a[prefix] == b[prefix] {
         prefix += 1;
@@ -35,7 +34,7 @@ pub fn diff_text_tokens(before: &str, after: &str) -> Vec<SectionDiffToken> {
     let mut tokens: Vec<SectionDiffToken> = Vec::new();
     if prefix > 0 {
         tokens.push(SectionDiffToken {
-            op: 0,
+            op: SectionDiffOp::Equal,
             text: a[..prefix].iter().collect(),
         });
     }
@@ -44,17 +43,16 @@ pub fn diff_text_tokens(before: &str, after: &str) -> Vec<SectionDiffToken> {
     let b_mid = &b[prefix..b.len() - suffix];
 
     if !a_mid.is_empty() || !b_mid.is_empty() {
-        // Fallback to single delete + insert if the differing core is unusually huge.
         if a_mid.len() * b_mid.len() > 250_000 {
             if !a_mid.is_empty() {
                 tokens.push(SectionDiffToken {
-                    op: -1,
+                    op: SectionDiffOp::Delete,
                     text: a_mid.iter().collect(),
                 });
             }
             if !b_mid.is_empty() {
                 tokens.push(SectionDiffToken {
-                    op: 1,
+                    op: SectionDiffOp::Insert,
                     text: b_mid.iter().collect(),
                 });
             }
@@ -76,23 +74,23 @@ pub fn diff_text_tokens(before: &str, after: &str) -> Vec<SectionDiffToken> {
             let mut j = 0usize;
             while i < m && j < n {
                 if a_mid[i] == b_mid[j] {
-                    push_token(&mut tokens, 0, a_mid[i]);
+                    push_token(&mut tokens, SectionDiffOp::Equal, a_mid[i]);
                     i += 1;
                     j += 1;
                 } else if dp[i + 1][j] >= dp[i][j + 1] {
-                    push_token(&mut tokens, -1, a_mid[i]);
+                    push_token(&mut tokens, SectionDiffOp::Delete, a_mid[i]);
                     i += 1;
                 } else {
-                    push_token(&mut tokens, 1, b_mid[j]);
+                    push_token(&mut tokens, SectionDiffOp::Insert, b_mid[j]);
                     j += 1;
                 }
             }
             while i < m {
-                push_token(&mut tokens, -1, a_mid[i]);
+                push_token(&mut tokens, SectionDiffOp::Delete, a_mid[i]);
                 i += 1;
             }
             while j < n {
-                push_token(&mut tokens, 1, b_mid[j]);
+                push_token(&mut tokens, SectionDiffOp::Insert, b_mid[j]);
                 j += 1;
             }
         }
@@ -100,17 +98,20 @@ pub fn diff_text_tokens(before: &str, after: &str) -> Vec<SectionDiffToken> {
 
     if suffix > 0 {
         let s: String = a[a.len() - suffix..].iter().collect();
-        if let Some(last) = tokens.last_mut().filter(|t| t.op == 0) {
+        if let Some(last) = tokens.last_mut().filter(|t| t.op == SectionDiffOp::Equal) {
             last.text.push_str(&s);
         } else {
-            tokens.push(SectionDiffToken { op: 0, text: s });
+            tokens.push(SectionDiffToken {
+                op: SectionDiffOp::Equal,
+                text: s,
+            });
         }
     }
 
     tokens
 }
 
-fn push_token(tokens: &mut Vec<SectionDiffToken>, op: i8, ch: char) {
+fn push_token(tokens: &mut Vec<SectionDiffToken>, op: SectionDiffOp, ch: char) {
     if let Some(last) = tokens.last_mut().filter(|t| t.op == op) {
         last.text.push(ch);
     } else {
@@ -156,17 +157,17 @@ mod tests {
 
         let reconstructed_before: String = tokens
             .iter()
-            .filter(|t| t.op <= 0)
+            .filter(|t| t.op != SectionDiffOp::Insert)
             .map(|t| t.text.as_str())
             .collect();
         let reconstructed_after: String = tokens
             .iter()
-            .filter(|t| t.op >= 0)
+            .filter(|t| t.op != SectionDiffOp::Delete)
             .map(|t| t.text.as_str())
             .collect();
 
         assert_eq!(reconstructed_before, before);
         assert_eq!(reconstructed_after, after);
-        assert!(tokens.iter().any(|t| t.op == 1));
+        assert!(tokens.iter().any(|t| t.op == SectionDiffOp::Insert));
     }
 }

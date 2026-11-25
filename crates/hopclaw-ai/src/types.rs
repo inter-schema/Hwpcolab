@@ -6,7 +6,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::Notify;
 
-pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
+pub use hopclaw_types::{
+    AgentLoopMode, AgentStepEvent, AgentStepType, BoxFuture, DiffItem, DiffMetricsDelta,
+    DiffScope, DiffStatus, DiffTargetCoord, DiffVerificationStatus, DocFormat, ExcludedRegion,
+    LayoutComparison, LayoutIssue, LayoutReport, OrchestrateAiEditResult, ProviderId,
+    ReasoningEffort, SelectionTarget, TableCoordinateMeta, TrialStore, TrialWorkspace, UnifiedOp,
+};
+
+pub type LocalBoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
 /// Lightweight, cloneable cancellation token backed by `AtomicBool` + `Notify`.
 #[derive(Debug, Clone)]
@@ -52,24 +59,6 @@ impl CancelToken {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum ProviderId {
-    Claude,
-    Openai,
-    Gemini,
-    Ollama,
-    Baze,
-    Custom,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum AgentLoopMode {
-    Legacy,
-    V2,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
 pub enum ReasoningEffortOption {
     None,
     Low,
@@ -89,6 +78,16 @@ impl ReasoningEffortOption {
             Self::Xhigh => "xhigh",
             Self::Max => "max",
         }
+    }
+
+    pub fn from_effort(effort: Option<ReasoningEffort>) -> Option<Self> {
+        effort.map(|e| match e {
+            ReasoningEffort::None => Self::None,
+            ReasoningEffort::Low => Self::Low,
+            ReasoningEffort::Medium => Self::Medium,
+            ReasoningEffort::High => Self::High,
+            ReasoningEffort::Xhigh => Self::Xhigh,
+        })
     }
 }
 

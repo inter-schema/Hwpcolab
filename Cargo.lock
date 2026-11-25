@@ -1586,6 +1586,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "hopclaw-ai"
+version = "0.1.0"
+dependencies = [
+ "hopclaw-types",
+ "regex",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "hopclaw-attach"
+version = "0.1.0"
+dependencies = [
+ "hopclaw-types",
+ "quick-xml 0.42.0",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "uuid",
+ "zip",
+]
+
+[[package]]
+name = "hopclaw-memory"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "hex",
+ "hopclaw-types",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "hopclaw-types"
 version = "0.2.3"
 dependencies = [

@@ -1,0 +1,155 @@
+{
+  "type": "object",
+  "required": ["summary", "diffItems"],
+  "properties": {
+    "summary": {
+      "type": "string",
+      "description": "사이드바에 표시할 전체 수정 사항 요약 메시지"
+    },
+    "diffItems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["scope", "title", "beforeText", "afterText", "unifiedOps"],
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": ["paragraph", "cell", "table_structure", "style", "document"]
+          },
+          "title": { "type": "string", "description": "변경 위치 요약 (예: '표 1 (2행 3열)', '문단 2')" },
+          "beforeText": { "type": "string", "description": "변경 전 원본 텍스트 (신규 추가 시 빈 문자열)" },
+          "afterText": { "type": "string", "description": "변경 후 텍스트 (시각적 Diff 표시용)" },
+          "targetCoord": {
+            "type": "object",
+            "properties": {
+              "sec": { "type": "number" },
+              "para": { "type": "number" },
+              "tableIndex": { "type": "number" },
+              "row": { "type": "number" },
+              "col": { "type": "number" }
+            }
+          },
+          "unifiedOps": {
+            "type": "array",
+            "description": "이 DiffItem을 실제로 반영하기 위한 UnifiedOp 배열",
+            "items": {
+              "type": "object",
+              "required": ["type"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "replace_body_text",
+                    "set_paragraph_text",
+                    "append_paragraph",
+                    "append_heading",
+                    "set_cell_text",
+                    "insert_table",
+                    "insert_nested_table",
+                    "insert_table_row",
+                    "delete_table_row",
+                    "insert_table_col",
+                    "delete_table_col",
+                    "merge_cells",
+                    "unmerge_cells",
+                    "split_cell",
+                    "equalize_table",
+                    "set_cell_background",
+                    "set_cell_border",
+                    "apply_text_style",
+                    "apply_paragraph_style",
+                    "set_cell_align",
+                    "set_list_style",
+                    "insert_image",
+                    "place_seal",
+                    "set_header_footer",
+                    "insert_page_number",
+                    "insert_footnote",
+                    "set_columns",
+                    "set_col_width",
+                    "set_row_height",
+                    "set_cell_padding",
+                    "fit_table_to_page",
+                    "set_page_margin",
+                    "shrink_cell_font"
+                  ]
+                },
+                "find": { "type": "string", "description": "replace_body_text용 찾을 원본 문자열" },
+                "replace": { "type": "string", "description": "replace_body_text용 바꿀 새 문자열" },
+                "paraIndex": { "type": "number", "description": "문단 인덱스 (0-based)" },
+                "oldTextForHwp": { "type": "string", "description": "set_paragraph_text용 .hwp 원본 문단 문자열" },
+                "text": { "type": "string", "description": "문단, 제목, 표 셀, 머리말/꼬리말, 각주 텍스트" },
+                "level": { "type": "number", "enum": [1, 2, 3, 4], "description": "append_heading 개요 단계 (1~4)" },
+                "tableIndex": { "type": "number", "description": "표 인덱스 (0-based)" },
+                "row": { "type": "number", "description": "행 인덱스 (0-based)" },
+                "col": { "type": "number", "description": "열 인덱스 (0-based)" },
+                "endRow": { "type": "number", "description": "set_cell_align 끝 행 인덱스 (0-based, 범위 지정 시 포함)" },
+                "endCol": { "type": "number", "description": "set_cell_align 끝 열 인덱스 (0-based, 범위 지정 시 포함)" },
+                "valign": { "type": "string", "enum": ["TOP", "CENTER", "BOTTOM"], "description": "set_cell_align 셀 세로 정렬" },
+                "fit": { "type": "boolean", "description": "서명란/공백 패딩 길이 유지 여부" },
+                "headers": { "type": "array", "items": { "type": "string" }, "description": "insert_table 표 머리글 배열" },
+                "cols": { "type": "number", "description": "열 개수 (1~8)" },
+                "data": {
+                  "type": "array",
+                  "items": { "type": "array", "items": { "type": "string" } },
+                  "description": "insert_nested_table 2차원 셀 데이터 배열"
+                },
+                "headerRow": { "type": "boolean", "description": "insert_nested_table 첫 행을 머리글 행으로 지정할지 여부" },
+                "widthMode": { "type": "string", "enum": ["fit_cell"], "description": "insert_nested_table 너비 모드 ('fit_cell')" },
+                "rows": {
+                  "type": "array",
+                  "items": { "type": "array", "items": { "type": "string" } },
+                  "description": "insert_table 2차원 행 데이터 배열"
+                },
+                "position": { "type": "string", "enum": ["above", "below", "left", "right"] },
+                "cells": { "type": "array", "items": { "type": "string" } },
+                "fromRow": { "type": "number" },
+                "fromCol": { "type": "number" },
+                "toRow": { "type": "number" },
+                "toCol": { "type": "number" },
+                "intoRows": { "type": "number" },
+                "intoCols": { "type": "number" },
+                "mode": { "type": "string" },
+                "color": { "type": "string", "description": "HEX 색상 코드 (예: #EAEAEA)" },
+                "sides": {
+                  "oneOf": [
+                    { "type": "string", "enum": ["all"] },
+                    { "type": "array", "items": { "type": "string", "enum": ["top", "bottom", "left", "right"] } }
+                  ]
+                },
+                "widthMm": { "type": "number", "description": "너비 (mm)" },
+                "heightMm": { "type": "number", "description": "높이 (mm)" },
+                "keepTableWidth": { "type": "boolean", "description": "set_col_width 시 표 전체 너비를 유지하기 위해 나머지 열을 비례 조정할지 여부" },
+                "leftMm": { "type": "number", "description": "좌측 여백 (mm)" },
+                "rightMm": { "type": "number", "description": "우측 여백 (mm)" },
+                "topMm": { "type": "number", "description": "상단 여백 (mm)" },
+                "bottomMm": { "type": "number", "description": "하단 여백 (mm)" },
+                "marginMm": { "type": "number", "description": "상하좌우 통합 여백 (mm)" },
+                "targetWidthMm": { "type": "number", "description": "fit_table_to_page 목표 표 너비 (mm)" },
+                "minPt": { "type": "number", "description": "shrink_cell_font 최소 글자 크기 하한 (pt, 기본 8)" },
+                "lineType": { "type": "string", "enum": ["solid", "dashed", "dotted", "double"] },
+                "targetText": { "type": "string", "description": "서식을 적용할 대상 텍스트" },
+                "fontFamily": { "type": "string", "description": "한컴 A-set 폰트명 (함초롬바탕, 맑은 고딕, Pretendard 등)" },
+                "sizePt": { "type": "number", "description": "글자 크기 (pt 단위, 예: 11)" },
+                "bold": { "type": "boolean" },
+                "italic": { "type": "boolean" },
+                "underline": { "type": "boolean" },
+                "highlight": { "type": "string" },
+                "letterSpacing": { "type": "number" },
+                "charRatio": { "type": "number" },
+                "align": { "type": "string", "enum": ["LEFT", "CENTER", "RIGHT", "JUSTIFY", "DISTRIBUTE"] },
+                "indentHu": { "type": "number", "description": "들여쓰기 HWPUNIT (1pt = 100)" },
+                "lineSpacingPercent": { "type": "number", "description": "줄간격 % (기본 160)" },
+                "path": { "type": "string" },
+                "anchorText": { "type": "string" },
+                "sealImagePath": { "type": "string" },
+                "where": { "type": "string", "enum": ["header", "footer"] },
+                "count": { "type": "number", "enum": [1, 2, 3] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

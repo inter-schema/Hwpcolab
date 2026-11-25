@@ -315,13 +315,13 @@ impl MemoryStore {
         Ok(())
     }
 
-    pub async fn list_revisions(&self, id: &str) -> Result<Vec<u32>, MemoryError> {
+    pub async fn list_revisions(&self, id: &str) -> Result<Vec<u64>, MemoryError> {
         let rev_prefix = format!("{MEM_DOC_PREFIX}{id}_rev");
         let mut revs = Vec::new();
         for k in self.storage.keys().await? {
             if let Some(suffix) = k.strip_prefix(&rev_prefix) {
                 if !suffix.is_empty() && suffix.chars().all(|c| c.is_ascii_digit()) {
-                    if let Ok(rev) = suffix.parse::<u32>() {
+                    if let Ok(rev) = suffix.parse::<u64>() {
                         revs.push(rev);
                     }
                 }
@@ -334,7 +334,7 @@ impl MemoryStore {
     pub async fn get_revision(
         &self,
         id: &str,
-        rev: u32,
+        rev: u64,
     ) -> Result<Option<MemoryDoc>, MemoryError> {
         let Some(raw) = self
             .storage
@@ -349,7 +349,7 @@ impl MemoryStore {
     pub async fn rollback_to_revision(
         &self,
         id: &str,
-        rev: u32,
+        rev: u64,
     ) -> Result<MemoryDoc, MemoryError> {
         let existing = self
             .get(id)

@@ -235,7 +235,6 @@ pub fn parse_memory_markdown(raw_md: &str) -> ParsedMemoryMarkdown {
         let revision = parsed_data
             .get("revision")
             .and_then(|v| v.as_u64())
-            .map(|n| n as u32)
             .unwrap_or(1);
         let created_at = parsed_data
             .get("createdAt")

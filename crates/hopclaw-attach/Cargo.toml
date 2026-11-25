@@ -10,13 +10,14 @@ excel-calamine = []
 pdf-lopdf = []
 
 [dependencies]
-quick-xml = "0.42"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-thiserror = "2"
-tokio = { version = "1", features = ["fs", "io-util", "macros", "process", "rt-multi-thread", "sync", "time"] }
-uuid = { version = "1", features = ["v4"] }
-zip = { version = "8.6", default-features = false, features = ["deflate"] }
+hopclaw-types.workspace = true
+quick-xml.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+uuid.workspace = true
+zip.workspace = true
 
 [dev-dependencies]
-tempfile = "3"
+tempfile.workspace = true
