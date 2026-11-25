@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use hopclaw_privacy::{
     compute_sha256_8, is_valid_biz_reg_checksum, is_valid_luhn_checksum, is_valid_rrn_checksum,
     mask_memory_source_text, scan_and_redact_pii, ExcludedRegion, PrivacySessionMasker,
-    ScanAndRedactResult,
+    ScanAndRedactResult, UnifiedOp,
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -87,6 +87,23 @@ fn privacy_masker_fixture_parity() {
         let _ = masker.mask_text_for_prompt(&fc.seed_prompt, &[], true);
         let actual = masker.unmask_and_filter_json_ops(&fc.ops, &fc.excluded_regions);
         assert_eq!(actual, fc.result_ops, "filter mismatch in case {}", fc.name);
+
+        let typed_ops: Vec<UnifiedOp> = fc
+            .ops
+            .iter()
+            .map(|v| serde_json::from_value(v.clone()).unwrap())
+            .collect();
+        let typed_expected: Vec<UnifiedOp> = fc
+            .result_ops
+            .iter()
+            .map(|v| serde_json::from_value(v.clone()).unwrap())
+            .collect();
+        let typed_actual = masker.unmask_and_filter_ops(&typed_ops, &fc.excluded_regions);
+        assert_eq!(
+            typed_actual, typed_expected,
+            "typed filter mismatch in case {}",
+            fc.name
+        );
     }
 }
 

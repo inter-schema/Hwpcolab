@@ -1586,6 +1586,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "hopclaw-ops"
+version = "0.2.3"
+dependencies = [
+ "hopclaw-types",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "hopclaw-privacy"
+version = "0.2.3"
+dependencies = [
+ "hex",
+ "hopclaw-types",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "hopclaw-types"
 version = "0.2.3"
 dependencies = [

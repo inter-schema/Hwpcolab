@@ -1,48 +1,12 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
+use hopclaw_types::{ExcludedRegion, ExcludedRegionTargetType, UnifiedOp};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::regex_util::{
-    has_js_word_boundaries, next_char, replace_with_captures,
-};
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExcludedRect {
-    pub page_index: u32,
-    pub x: f64,
-    pub y: f64,
-    pub width: f64,
-    pub height: f64,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExcludedRegion {
-    pub id: String,
-    #[serde(default)]
-    pub label: String,
-    pub target_type: ExcludedTargetType,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub table_index: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub row: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub col: Option<usize>,
-    pub raw_text: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rects: Option<Vec<ExcludedRect>>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ExcludedTargetType {
-    Cell,
-    BodyText,
-}
+use crate::regex_util::{has_js_word_boundaries, next_char, replace_with_captures};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -176,17 +140,26 @@ impl PrivacySessionMasker {
         out
     }
 
+    /// Filters out ops targeting excluded cells and restores tokens in typed `UnifiedOp`s.
+    pub fn unmask_and_filter_ops(
+        &self,
+        ops: &[UnifiedOp],
+        excluded_regions: &[ExcludedRegion],
+    ) -> Vec<UnifiedOp> {
+        let excluded_cell_keys = excluded_cell_key_set(excluded_regions);
+        ops.iter()
+            .filter(|op| !op_targets_excluded_cell(op, &excluded_cell_keys))
+            .map(|op| self.unmask_op(op))
+            .collect()
+    }
+
     /// Filters out ops targeting excluded cells and unmasks tokens inside JSON-encoded `UnifiedOp` values.
     pub fn unmask_and_filter_json_ops(
         &self,
         ops: &[Value],
         excluded_regions: &[ExcludedRegion],
     ) -> Vec<Value> {
-        let excluded_cell_keys: HashSet<(usize, usize, usize)> = excluded_regions
-            .iter()
-            .filter(|r| r.target_type == ExcludedTargetType::Cell)
-            .filter_map(|r| Some((r.table_index?, r.row?, r.col?)))
-            .collect();
+        let excluded_cell_keys = excluded_cell_key_set(excluded_regions);
 
         ops.iter()
             .filter(|op| {
@@ -236,4 +209,143 @@ impl PrivacySessionMasker {
             })
             .collect()
     }
+
+    fn unmask_op(&self, op: &UnifiedOp) -> UnifiedOp {
+        let mut cloned = op.clone();
+        match &mut cloned {
+            UnifiedOp::ReplaceBodyText { find, replace } => {
+                *find = self.unmask_text(find);
+                *replace = self.unmask_text(replace);
+            }
+            UnifiedOp::SetParagraphText { text, .. }
+            | UnifiedOp::AppendParagraph { text, .. }
+            | UnifiedOp::AppendHeading { text, .. }
+            | UnifiedOp::SetCellText { text, .. }
+            | UnifiedOp::SetHeaderFooter { text, .. } => {
+                *text = self.unmask_text(text);
+            }
+            UnifiedOp::InsertTable { headers, rows, .. } => {
+                for h in headers.iter_mut() {
+                    *h = self.unmask_text(h);
+                }
+                for row in rows.iter_mut() {
+                    for cell in row.iter_mut() {
+                        *cell = self.unmask_text(cell);
+                    }
+                }
+            }
+            UnifiedOp::InsertNestedTable {
+                data: Some(rows), ..
+            } => {
+                for row in rows.iter_mut() {
+                    for cell in row.iter_mut() {
+                        *cell = self.unmask_text(cell);
+                    }
+                }
+            }
+            UnifiedOp::InsertTableRow {
+                cells: Some(cells), ..
+            }
+            | UnifiedOp::InsertTableCol {
+                cells: Some(cells), ..
+            } => {
+                for c in cells.iter_mut() {
+                    *c = self.unmask_text(c);
+                }
+            }
+            UnifiedOp::ApplyTextStyle { target_text, .. } => {
+                *target_text = self.unmask_text(target_text);
+            }
+            UnifiedOp::ApplyParagraphStyle { target_text, .. }
+            | UnifiedOp::SetListStyle { target_text, .. } => {
+                if let Some(t) = target_text.as_mut() {
+                    *t = self.unmask_text(t);
+                }
+            }
+            UnifiedOp::InsertImage { anchor_text, .. } => {
+                if let Some(a) = anchor_text.as_mut() {
+                    *a = self.unmask_text(a);
+                }
+            }
+            UnifiedOp::PlaceSeal { anchor_text, .. } => {
+                *anchor_text = self.unmask_text(anchor_text);
+            }
+            UnifiedOp::InsertFootnote {
+                anchor_text, text, ..
+            } => {
+                *anchor_text = self.unmask_text(anchor_text);
+                *text = self.unmask_text(text);
+            }
+            _ => {}
+        }
+        cloned
+    }
+}
+
+fn excluded_cell_key_set(excluded_regions: &[ExcludedRegion]) -> HashSet<(usize, usize, usize)> {
+    excluded_regions
+        .iter()
+        .filter(|r| r.target_type == ExcludedRegionTargetType::Cell)
+        .filter_map(|r| Some((r.table_index?, r.row?, r.col?)))
+        .collect()
+}
+
+fn op_targets_excluded_cell(op: &UnifiedOp, excluded: &HashSet<(usize, usize, usize)>) -> bool {
+    let coord = match op {
+        UnifiedOp::SetCellText {
+            table_index,
+            row,
+            col,
+            ..
+        }
+        | UnifiedOp::InsertNestedTable {
+            table_index,
+            row,
+            col,
+            ..
+        }
+        | UnifiedOp::UnmergeCells {
+            table_index,
+            row,
+            col,
+        }
+        | UnifiedOp::SplitCell {
+            table_index,
+            row,
+            col,
+            ..
+        }
+        | UnifiedOp::SetCellBackground {
+            table_index,
+            row,
+            col,
+            ..
+        }
+        | UnifiedOp::SetCellAlign {
+            table_index,
+            row,
+            col,
+            ..
+        }
+        | UnifiedOp::SetCellBorder {
+            table_index,
+            row,
+            col,
+            ..
+        }
+        | UnifiedOp::SetCellPadding {
+            table_index,
+            row,
+            col,
+            ..
+        }
+        | UnifiedOp::ShrinkCellFont {
+            table_index,
+            row,
+            col,
+            ..
+        } => Some((*table_index, *row, *col)),
+        _ => None,
+    };
+    coord.is_some_and(|k| excluded.contains(&k))
 }

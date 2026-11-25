@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 use std::sync::LazyLock;
 
+use hopclaw_types::{PiiCategory, PiiRedactionHit, ScanAndRedactResult};
 use regex::Regex;
-use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::masker::PrivacySessionMasker;
@@ -11,72 +11,36 @@ use crate::regex_util::{
     is_hangul_syllable, next_char, prev_char, replace_with_captures,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum PiiCategory {
-    MaskToken,
-    Rrn,
-    CorpReg,
-    BizReg,
-    Card,
-    Phone,
-    Email,
-    Account,
-    PassportDriver,
-    Vehicle,
-    Address,
-    PersonName,
-}
+const ALL_CATEGORIES_ORDERED: [PiiCategory; 12] = [
+    PiiCategory::MaskToken,
+    PiiCategory::Rrn,
+    PiiCategory::CorpReg,
+    PiiCategory::BizReg,
+    PiiCategory::Card,
+    PiiCategory::Email,
+    PiiCategory::Phone,
+    PiiCategory::Account,
+    PiiCategory::PassportDriver,
+    PiiCategory::Vehicle,
+    PiiCategory::Address,
+    PiiCategory::PersonName,
+];
 
-impl PiiCategory {
-    const ALL_ORDERED: [PiiCategory; 12] = [
-        PiiCategory::MaskToken,
-        PiiCategory::Rrn,
-        PiiCategory::CorpReg,
-        PiiCategory::BizReg,
-        PiiCategory::Card,
-        PiiCategory::Email,
-        PiiCategory::Phone,
-        PiiCategory::Account,
-        PiiCategory::PassportDriver,
-        PiiCategory::Vehicle,
-        PiiCategory::Address,
-        PiiCategory::PersonName,
-    ];
-
-    fn meta(self) -> (&'static str, &'static str) {
-        match self {
-            PiiCategory::MaskToken => ("마스크 토큰", "<민감정보>"),
-            PiiCategory::Rrn => ("주민/외국인등록번호", "<주민번호>"),
-            PiiCategory::CorpReg => ("법인등록번호", "<법인번호>"),
-            PiiCategory::BizReg => ("사업자등록번호", "<사업자번호>"),
-            PiiCategory::Card => ("카드번호", "<카드번호>"),
-            PiiCategory::Email => ("이메일", "<이메일>"),
-            PiiCategory::Phone => ("전화번호", "<전화번호>"),
-            PiiCategory::Account => ("계좌번호", "<계좌번호>"),
-            PiiCategory::PassportDriver => ("여권/운전면허번호", "<여권/면허번호>"),
-            PiiCategory::Vehicle => ("차량번호", "<차량번호>"),
-            PiiCategory::Address => ("주소", "<주소>"),
-            PiiCategory::PersonName => ("성명", "<이름>"),
-        }
+fn category_meta(cat: PiiCategory) -> (&'static str, &'static str) {
+    match cat {
+        PiiCategory::MaskToken => ("마스크 토큰", "<민감정보>"),
+        PiiCategory::Rrn => ("주민/외국인등록번호", "<주민번호>"),
+        PiiCategory::CorpReg => ("법인등록번호", "<법인번호>"),
+        PiiCategory::BizReg => ("사업자등록번호", "<사업자번호>"),
+        PiiCategory::Card => ("카드번호", "<카드번호>"),
+        PiiCategory::Email => ("이메일", "<이메일>"),
+        PiiCategory::Phone => ("전화번호", "<전화번호>"),
+        PiiCategory::Account => ("계좌번호", "<계좌번호>"),
+        PiiCategory::PassportDriver => ("여권/운전면허번호", "<여권/면허번호>"),
+        PiiCategory::Vehicle => ("차량번호", "<차량번호>"),
+        PiiCategory::Address => ("주소", "<주소>"),
+        PiiCategory::PersonName => ("성명", "<이름>"),
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PiiRedactionHit {
-    pub category: PiiCategory,
-    pub placeholder: String,
-    pub count: usize,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ScanAndRedactResult {
-    pub text: String,
-    pub hits: Vec<String>,
-    pub hit_details: Vec<PiiRedactionHit>,
-    pub total_count: usize,
 }
 
 /// Computes the lowercase 8-character hex prefix of the SHA-256 digest of `text`.
@@ -209,8 +173,9 @@ static RE_ACCOUNT_HYPHEN: LazyLock<Regex> = LazyLock::new(|| {
 });
 static RE_DATE_ONLY: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[0-9]{4}[-–][0-9]{2}[-–][0-9]{2}$").unwrap());
-static RE_DRIVER_SHAPE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^(?:[0-9]{2}|[가-힣]{2})[-–][0-9]{2}[-–][0-9]{6}[-–][0-9]{2}$").unwrap());
+static RE_DRIVER_SHAPE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?:[0-9]{2}|[가-힣]{2})[-–][0-9]{2}[-–][0-9]{6}[-–][0-9]{2}$").unwrap()
+});
 static RE_DRIVER_PREFIX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?:운전)?면허(?:번호)?\s*[:：]?\s*$").unwrap());
 static RE_ACCOUNT_CONTINUOUS: LazyLock<Regex> =
@@ -220,8 +185,9 @@ static RE_ACCOUNT_CONTINUOUS: LazyLock<Regex> =
 static RE_DRIVER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?:[0-9]{2}|[가-힣]{2})[-–][0-9]{2}[-–][0-9]{6}[-–][0-9]{2}").unwrap()
 });
-static RE_PASSPORT_LABELED: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)((?:여권(?:번호)?)\s*[:：]?\s*)[A-Z]{1,2}[0-9]{7,8}").unwrap());
+static RE_PASSPORT_LABELED: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)((?:여권(?:번호)?)\s*[:：]?\s*)[A-Z]{1,2}[0-9]{7,8}").unwrap()
+});
 static RE_PASSPORT_KR: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[MSRG][0-9]{3}[A-Z0-9][0-9]{4}|[MSRG][0-9]{8}").unwrap());
 
@@ -270,12 +236,7 @@ static RE_NAME_TITLE: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
-fn replace_simple(
-    text: &str,
-    re: &Regex,
-    placeholder: &str,
-    counter: &mut usize,
-) -> String {
+fn replace_simple(text: &str, re: &Regex, placeholder: &str, counter: &mut usize) -> String {
     replace_with_captures(
         text,
         re,
@@ -287,12 +248,7 @@ fn replace_simple(
     )
 }
 
-fn replace_no_adj_digits(
-    text: &str,
-    re: &Regex,
-    placeholder: &str,
-    counter: &mut usize,
-) -> String {
+fn replace_no_adj_digits(text: &str, re: &Regex, placeholder: &str, counter: &mut usize) -> String {
     replace_with_captures(
         text,
         re,
@@ -307,7 +263,7 @@ fn replace_no_adj_digits(
     )
 }
 
-/// Scans `input` across all 12 Korean PII steps (covering 14+ formats) and replaces
+/// Scans `input` across all 12 Korean PII categories (covering 14+ patterns) and replaces
 /// detected items with irreversible Korean placeholders.
 pub fn scan_and_redact_pii(input: &str) -> ScanAndRedactResult {
     let mut text = input.to_string();
@@ -331,11 +287,36 @@ pub fn scan_and_redact_pii(input: &str) -> ScanAndRedactResult {
     };
 
     // Step 1 (mask_token)
-    text = replace_simple(&text, &RE_TOKEN_RRN, "<주민번호>", &mut counts[idx(PiiCategory::MaskToken)]);
-    text = replace_simple(&text, &RE_TOKEN_PHONE, "<전화번호>", &mut counts[idx(PiiCategory::MaskToken)]);
-    text = replace_simple(&text, &RE_TOKEN_EMAIL, "<이메일>", &mut counts[idx(PiiCategory::MaskToken)]);
-    text = replace_simple(&text, &RE_TOKEN_ACCOUNT, "<계좌번호>", &mut counts[idx(PiiCategory::MaskToken)]);
-    text = replace_simple(&text, &RE_TOKEN_OTHER, "<민감정보>", &mut counts[idx(PiiCategory::MaskToken)]);
+    text = replace_simple(
+        &text,
+        &RE_TOKEN_RRN,
+        "<주민번호>",
+        &mut counts[idx(PiiCategory::MaskToken)],
+    );
+    text = replace_simple(
+        &text,
+        &RE_TOKEN_PHONE,
+        "<전화번호>",
+        &mut counts[idx(PiiCategory::MaskToken)],
+    );
+    text = replace_simple(
+        &text,
+        &RE_TOKEN_EMAIL,
+        "<이메일>",
+        &mut counts[idx(PiiCategory::MaskToken)],
+    );
+    text = replace_simple(
+        &text,
+        &RE_TOKEN_ACCOUNT,
+        "<계좌번호>",
+        &mut counts[idx(PiiCategory::MaskToken)],
+    );
+    text = replace_simple(
+        &text,
+        &RE_TOKEN_OTHER,
+        "<민감정보>",
+        &mut counts[idx(PiiCategory::MaskToken)],
+    );
 
     // Step 2 (rrn)
     text = replace_with_captures(
@@ -583,10 +564,10 @@ pub fn scan_and_redact_pii(input: &str) -> ScanAndRedactResult {
     let mut hit_details = Vec::new();
     let mut total_count = 0usize;
 
-    for cat in PiiCategory::ALL_ORDERED {
+    for cat in ALL_CATEGORIES_ORDERED {
         let count = counts[idx(cat)];
         if count > 0 {
-            let (label, placeholder) = cat.meta();
+            let (label, placeholder) = category_meta(cat);
             total_count += count;
             hits.push(format!("{label} {count}건 -> {placeholder}"));
             hit_details.push(PiiRedactionHit {

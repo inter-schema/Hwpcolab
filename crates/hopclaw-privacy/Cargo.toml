@@ -1,13 +1,15 @@
 [package]
 name = "hopclaw-privacy"
-version = "0.1.0"
-edition = "2021"
-license = "GPL-3.0-or-later"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
 description = "Korean PII redaction and session prompt masking for HOP-Claw"
 
 [dependencies]
-hex = "0.4"
-regex = "1"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-sha2 = "0.10"
+hex.workspace = true
+hopclaw-types.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true

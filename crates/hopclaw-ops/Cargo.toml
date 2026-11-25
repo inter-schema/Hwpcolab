@@ -1,0 +1,14 @@
+[package]
+name = "hopclaw-ops"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "UnifiedOp compiler, PolicyGuard G1-G6, and Korean official document rules for HOP-Claw"
+
+[dependencies]
+hopclaw-types.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
