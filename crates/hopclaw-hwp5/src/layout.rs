@@ -10,7 +10,7 @@ use crate::text::ensure_aligned_para_shape;
 const CTRL_HEAD_LE: &[u8; 4] = b"daeh"; // 'head' in LE
 const CTRL_FOOT_LE: &[u8; 4] = b"toof"; // 'foot' in LE
 const CTRL_COLD_LE: &[u8; 4] = b"dloc"; // 'cold' in LE
-const CTRL_ONTA_LE: &[u8; 4] = b"atno"; // 'onta' in LE
+const CTRL_ONTA_LE: &[u8; 4] = b"onta"; // 'onta' (`6f 6e 74 61`) auto-number CTRL_HEADER id
 const CTRL_FN_LE: &[u8; 4] = b"  nf"; // 'fn  ' in LE
 
 const HF_HEAD_CHAR: &[u8] = &[

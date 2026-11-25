@@ -511,3 +511,287 @@ fn edit_existing_official_report_roundtrips_via_node_extract_text() {
         "변경됨"
     );
 }
+
+#[test]
+fn regression_append_table_header_valign_and_onta_fourcc() {
+    use hopclaw_hwp5::{tag, DocInfoDoc, SectionDoc};
+
+    let tbl0 = Hwp5TableTarget {
+        table_index: 0,
+        sec: None,
+        para: None,
+        ctrl: None,
+    };
+    let plan = Hwp5EditPlan {
+        is_new_document: true,
+        steps: vec![
+            Hwp5EditStep::AppendParagraph {
+                text: "각주 기준 문장".to_string(),
+                align: None,
+            },
+            Hwp5EditStep::AppendTable {
+                headers: vec!["제목1".into(), "제목2".into()],
+                rows: vec![vec!["값1".into(), "값2".into()]],
+            },
+            Hwp5EditStep::InsertFootnote {
+                anchor_text: "기준".to_string(),
+                text: "보충 설명".to_string(),
+                para_index: None,
+            },
+            Hwp5EditStep::InsertPageNumber {
+                location: HeaderFooterLocation::Footer,
+                align: PageNumberAlign::Center,
+            },
+            Hwp5EditStep::SetCellAlign {
+                target: tbl0,
+                row: 1,
+                col: 0,
+                end_row: None,
+                end_col: None,
+                horizontal: Some(CellHAlign::Center),
+                vertical: Some(CellVAlign::Bottom),
+            },
+        ],
+    };
+
+    let res = execute_hwp5_plan(None, &plan).expect("execute plan");
+    let mut cfb = Hwp5Container::open_bytes(&res.bytes).unwrap();
+    let _di = DocInfoDoc::parse(&cfb.read_docinfo().unwrap()).unwrap();
+    let sec = SectionDoc::parse(&cfb.read_section(0).unwrap()).unwrap();
+
+    // 1. Verify LIST_HEADER bytes [2..6] valign and [6..8] header flag
+    let tbls = sec.enumerate_tables().unwrap();
+    assert_eq!(tbls.len(), 1);
+    let cells = &tbls[0].cells;
+    assert_eq!(cells.len(), 4);
+    for c in &cells[0..2] {
+        let b = &sec.records[c.list_header_rec_idx].body;
+        assert_eq!(u32::from_le_bytes(b[2..6].try_into().unwrap()), 0x0020_0000);
+        assert_eq!(u16::from_le_bytes(b[6..8].try_into().unwrap()), 4);
+    }
+    // Data cell (1,0) had vertical=Bottom applied (`2 << 21 == 0x0040_0000`), (1,1) keeps center `0x0020_0000`
+    let c10 = &sec.records[cells[2].list_header_rec_idx].body;
+    assert_eq!(u32::from_le_bytes(c10[2..6].try_into().unwrap()), 0x0040_0000);
+    assert_eq!(u16::from_le_bytes(c10[6..8].try_into().unwrap()), 0);
+    let c11 = &sec.records[cells[3].list_header_rec_idx].body;
+    assert_eq!(u32::from_le_bytes(c11[2..6].try_into().unwrap()), 0x0020_0000);
+    assert_eq!(u16::from_le_bytes(c11[6..8].try_into().unwrap()), 0);
+
+    // 2. Verify all auto-number CTRL_HEADER records start with b"onta" (`6f 6e 74 61`)
+    let onta_ctrls: Vec<_> = sec
+        .records
+        .iter()
+        .filter(|r| r.tag == tag::CTRL_HEADER && r.level == 3 && r.body.len() >= 8)
+        .collect();
+    assert_eq!(onta_ctrls.len(), 2, "expected footnote + page_number onta controls");
+    for ctrl in onta_ctrls {
+        assert_eq!(&ctrl.body[0..4], b"onta");
+    }
+
+    // Confirm Node extract_text still inspects cleanly
+    let tmp = tempfile::tempdir().unwrap();
+    let p = tmp.path().join("onta_hdr.hwp");
+    std::fs::write(&p, &res.bytes).unwrap();
+    let node_ins = run_node_inspect(&p);
+    assert_eq!(node_ins.table_count, 1);
+    assert_eq!(node_ins.cell_count, 4);
+}
+
+#[test]
+fn regression_shrink_cell_font_preserves_multi_run_styles_and_shorter_cell_text_prunes_runs() {
+    use hopclaw_hwp5::{parse_para_char_shapes, tag, DocInfoDoc, ParaHeaderRef, SectionDoc};
+
+    let tbl0 = Hwp5TableTarget {
+        table_index: 0,
+        sec: None,
+        para: None,
+        ctrl: None,
+    };
+
+    // Create a 1x1 cell, set multi-word text, style a substring bold+red (splitting into 3 runs),
+    // then shrink_cell_font and verify distinct attributes stay intact across runs.
+    let plan_multi = Hwp5EditPlan {
+        is_new_document: true,
+        steps: vec![
+            Hwp5EditStep::AppendTable {
+                headers: vec![],
+                rows: vec![vec!["Prefix BoldTail Suffix".to_string()]],
+            },
+            Hwp5EditStep::ApplyTextStyle {
+                target_text: "BoldTail".to_string(),
+                font_family: None,
+                size_hu: None,
+                bold: Some(true),
+                italic: None,
+                underline: None,
+                color: Some("#CC0000".to_string()),
+                highlight: Some(HighlightValue::Color("#FFFF00".to_string())),
+                letter_spacing: None,
+                char_ratio: None,
+            },
+            Hwp5EditStep::ShrinkCellFont {
+                target: tbl0.clone(),
+                row: 0,
+                col: 0,
+                size_hu: 800,
+                min_hu: 700,
+            },
+        ],
+    };
+    let res1 = execute_hwp5_plan(None, &plan_multi).unwrap();
+    let mut cfb1 = Hwp5Container::open_bytes(&res1.bytes).unwrap();
+    let di1 = DocInfoDoc::parse(&cfb1.read_docinfo().unwrap()).unwrap();
+    let sec1 = SectionDoc::parse(&cfb1.read_section(0).unwrap()).unwrap();
+    let t1 = &sec1.enumerate_tables().unwrap()[0];
+    let c1 = &t1.cells[0];
+    let cs_rec1 = sec1.records[c1.list_header_rec_idx + 1..c1.end_rec_idx]
+        .iter()
+        .find(|r| r.tag == tag::PARA_CHAR_SHAPE)
+        .unwrap();
+    let runs1 = parse_para_char_shapes(&cs_rec1.body).unwrap();
+    assert_eq!(runs1.len(), 3, "multi-run cell formatting must not be collapsed");
+    let cs_mid = di1.get_char_shape(runs1[1].char_shape_id as u16).unwrap();
+    let cs_end = di1.get_char_shape(runs1[2].char_shape_id as u16).unwrap();
+    // Both runs shrunk to 8pt (800 HWPUNIT), while run 1 keeps bold (bit 1) + red (#CC0000 -> 0x000000CC BGR)
+    assert_eq!(i32::from_le_bytes(cs_mid[42..46].try_into().unwrap()), 800);
+    assert_eq!(i32::from_le_bytes(cs_end[42..46].try_into().unwrap()), 800);
+    assert_ne!(u32::from_le_bytes(cs_mid[46..50].try_into().unwrap()) & 2, 0);
+    assert_eq!(u32::from_le_bytes(cs_mid[52..56].try_into().unwrap()), 0x0000_00CC);
+    assert_ne!(runs1[0].char_shape_id, runs1[1].char_shape_id);
+
+    // Overwrite the styled cell with much shorter text "Hi" (3 wchars including EOP):
+    // out-of-bounds PARA_CHAR_SHAPE runs and stale PARA_RANGE_TAG must be pruned.
+    let plan_short = Hwp5EditPlan {
+        is_new_document: false,
+        steps: vec![Hwp5EditStep::SetCellText {
+            target: tbl0,
+            row: 0,
+            col: 0,
+            text: "Hi".to_string(),
+            fit: false,
+        }],
+    };
+    let res2 = execute_hwp5_plan(Some(&res1.bytes), &plan_short).unwrap();
+    let mut cfb2 = Hwp5Container::open_bytes(&res2.bytes).unwrap();
+    let sec2 = SectionDoc::parse(&cfb2.read_section(0).unwrap()).unwrap();
+    let t2 = &sec2.enumerate_tables().unwrap()[0];
+    let c2 = &t2.cells[0];
+    let ph2 = sec2.records[c2.list_header_rec_idx + 1..c2.end_rec_idx]
+        .iter()
+        .find(|r| r.tag == tag::PARA_HEADER)
+        .unwrap();
+    let hdr2 = ParaHeaderRef::wrap(&ph2.body).unwrap();
+    let cs_rec2 = sec2.records[c2.list_header_rec_idx + 1..c2.end_rec_idx]
+        .iter()
+        .find(|r| r.tag == tag::PARA_CHAR_SHAPE)
+        .unwrap();
+    let runs2 = parse_para_char_shapes(&cs_rec2.body).unwrap();
+    assert_eq!(hdr2.char_count(), 3);
+    assert!(runs2.iter().all(|r| r.char_pos < 3));
+    assert_eq!(u16::from_le_bytes(ph2.body[12..14].try_into().unwrap()) as usize, runs2.len());
+    let rt_count = sec2.records[c2.list_header_rec_idx + 1..c2.end_rec_idx]
+        .iter()
+        .filter(|r| r.tag == tag::PARA_RANGE_TAG)
+        .count();
+    assert_eq!(rt_count, 0, "stale out-of-bounds highlight tag must be dropped");
+    assert_eq!(u16::from_le_bytes(ph2.body[14..16].try_into().unwrap()), 0);
+
+    let tmp = tempfile::tempdir().unwrap();
+    let p = tmp.path().join("short_cell.hwp");
+    std::fs::write(&p, &res2.bytes).unwrap();
+    let node_ins = run_node_inspect(&p);
+    assert_eq!(node_ins.tables.as_ref().unwrap()[0].cells[0].text.trim(), "Hi");
+}
+
+#[test]
+fn regression_split_cell_2d_subgrid_and_spanning_row() {
+    use hopclaw_hwp5::{tag, SectionDoc};
+
+    let tbl0 = Hwp5TableTarget {
+        table_index: 0,
+        sec: None,
+        para: None,
+        ctrl: None,
+    };
+
+    // Case 1: 2x2 sub-grid split on cell (0,0) of a 2x2 table -> 3x3 table with 7 cells:
+    // row 0: (0,0), (0,1), (0,2)[rowSpan=2]; row 1: (1,0), (1,1); row 2: (2,0)[colSpan=2], (2,2).
+    let plan_2d = Hwp5EditPlan {
+        is_new_document: true,
+        steps: vec![
+            Hwp5EditStep::AppendTable {
+                headers: vec![],
+                rows: vec![
+                    vec!["A".into(), "B".into()],
+                    vec!["C".into(), "D".into()],
+                ],
+            },
+            Hwp5EditStep::SplitCell {
+                target: tbl0.clone(),
+                row: 0,
+                col: 0,
+                into_rows: 2,
+                into_cols: 2,
+            },
+        ],
+    };
+    let res_2d = execute_hwp5_plan(None, &plan_2d).unwrap();
+    let mut cfb = Hwp5Container::open_bytes(&res_2d.bytes).unwrap();
+    let sec = SectionDoc::parse(&cfb.read_section(0).unwrap()).unwrap();
+    let tbl = &sec.enumerate_tables().unwrap()[0];
+    assert_eq!((tbl.rows, tbl.cols, tbl.cells.len()), (3, 3, 7));
+
+    let tbody = &sec.records[tbl.table_rec_idx].body;
+    assert_eq!(u16::from_le_bytes(tbody[18..20].try_into().unwrap()), 3);
+    assert_eq!(u16::from_le_bytes(tbody[20..22].try_into().unwrap()), 2);
+    assert_eq!(u16::from_le_bytes(tbody[22..24].try_into().unwrap()), 2);
+    let _ = tag::TABLE;
+
+    // Verify full table re-parses cleanly in Node extract_text.js
+    let tmp = tempfile::tempdir().unwrap();
+    let p1 = tmp.path().join("split_2d.hwp");
+    std::fs::write(&p1, &res_2d.bytes).unwrap();
+    let node_2d = run_node_inspect(&p1);
+    assert_eq!(node_2d.cell_count, 7);
+
+    // Case 2: cell (0,0) merged vertically over rows 0..=1, then split cell (1,1) into 2 rows:
+    // external spanning cell (0,0) must grow row_span 2 -> 3.
+    let plan_span = Hwp5EditPlan {
+        is_new_document: true,
+        steps: vec![
+            Hwp5EditStep::AppendTable {
+                headers: vec![],
+                rows: vec![
+                    vec!["SpanCol0".into(), "TopRight".into()],
+                    vec!["".into(), "BotRight".into()],
+                ],
+            },
+            Hwp5EditStep::MergeCells {
+                target: tbl0.clone(),
+                from_row: 0,
+                from_col: 0,
+                to_row: 1,
+                to_col: 0,
+            },
+            Hwp5EditStep::SplitCell {
+                target: tbl0,
+                row: 1,
+                col: 1,
+                into_rows: 2,
+                into_cols: 1,
+            },
+        ],
+    };
+    let res_span = execute_hwp5_plan(None, &plan_span).unwrap();
+    let mut cfb2 = Hwp5Container::open_bytes(&res_span.bytes).unwrap();
+    let sec2 = SectionDoc::parse(&cfb2.read_section(0).unwrap()).unwrap();
+    let tbl2 = &sec2.enumerate_tables().unwrap()[0];
+    assert_eq!((tbl2.rows, tbl2.cols, tbl2.cells.len()), (3, 2, 4));
+    assert_eq!(tbl2.cells[0].attr.row_span, 3);
+
+    let p2 = tmp.path().join("split_span.hwp");
+    std::fs::write(&p2, &res_span.bytes).unwrap();
+    let node_span = run_node_inspect(&p2);
+    assert_eq!(node_span.cell_count, 4);
+}
+

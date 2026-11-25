@@ -14,7 +14,6 @@ use crate::section::{
     decode_para_text, encode_para_text, parse_para_char_shapes, serialize_para_char_shapes,
     CharShapeRun, ParaHeaderMut, ParaHeaderRef, SectionDoc, TableCellAttr,
 };
-use crate::style::split_char_shape_runs;
 use crate::text::ensure_aligned_para_shape;
 
 const CTRL_TBL_LE: &[u8; 4] = b" lbt"; // 'tbl ' in little-endian u32
@@ -313,6 +312,55 @@ pub fn set_cell_text(
     } else {
         let (pt_bytes, wchar_len) = encode_para_text(&final_text);
         ParaHeaderMut::wrap(&mut sec.records[ph_idx].body)?.set_char_count(wchar_len, last_flag);
+        if let Some(csi) = cs_idx {
+            let runs = parse_para_char_shapes(&sec.records[csi].body)?;
+            let mut kept: Vec<CharShapeRun> = runs
+                .iter()
+                .copied()
+                .filter(|r| r.char_pos < wchar_len)
+                .collect();
+            if kept.is_empty() || kept[0].char_pos != 0 {
+                let first_cs = runs.first().map(|r| r.char_shape_id).unwrap_or(0);
+                kept = vec![CharShapeRun {
+                    char_pos: 0,
+                    char_shape_id: first_cs,
+                }];
+            }
+            let cs_count = u16::try_from(kept.len()).unwrap_or(u16::MAX);
+            sec.records[csi].body = serialize_para_char_shapes(&kept);
+            ParaHeaderMut::wrap(&mut sec.records[ph_idx].body)?.set_char_shape_count(cs_count);
+        }
+        // Keep any PARA_RANGE_TAG highlight spans in bounds when text shrinks.
+        let mut drop_range_tags = Vec::new();
+        let mut kept_rt_count = 0u16;
+        for rt_i in (ph_idx + 1)..p_end {
+            let rec = &mut sec.records[rt_i];
+            if rec.tag != tag::PARA_RANGE_TAG || rec.level != cell_level + 1 || rec.body.len() < 8 {
+                continue;
+            }
+            let start = u32::from_le_bytes(rec.body[0..4].try_into().unwrap());
+            let end = u32::from_le_bytes(rec.body[4..8].try_into().unwrap());
+            let text_max = wchar_len.saturating_sub(1);
+            if start >= text_max {
+                drop_range_tags.push(rt_i);
+            } else {
+                let clamped_end = end.min(text_max);
+                if clamped_end <= start {
+                    drop_range_tags.push(rt_i);
+                } else {
+                    rec.body[4..8].copy_from_slice(&clamped_end.to_le_bytes());
+                    kept_rt_count = kept_rt_count.saturating_add(1);
+                }
+            }
+        }
+        if !drop_range_tags.is_empty() {
+            ParaHeaderMut::wrap(&mut sec.records[ph_idx].body)?.set_range_tag_count(kept_rt_count);
+            for rt_i in drop_range_tags.into_iter().rev() {
+                sec.records.remove(rt_i);
+            }
+        }
+        // Note: `pt_idx` sits right after `PARA_HEADER` (before `PARA_CHAR_SHAPE` / `PARA_RANGE_TAG`),
+        // so removing higher-indexed stale range tags leaves `pt_idx` valid.
         if let Some(pti) = pt_idx {
             sec.records[pti].body = pt_bytes;
         } else {
@@ -601,9 +649,9 @@ pub fn append_table(
 
             let mut lh_body = vec![0u8; 34];
             lh_body[0..2].copy_from_slice(&1u16.to_le_bytes()); // nParagraphs = 1
-            lh_body[4..8].copy_from_slice(&0x0020_0000u32.to_le_bytes()); // valign center
+            lh_body[2..6].copy_from_slice(&0x0020_0000u32.to_le_bytes()); // cell attr: valign center (bits 21-22)
             if is_hdr {
-                lh_body[6..8].copy_from_slice(&4u16.to_le_bytes());
+                lh_body[6..8].copy_from_slice(&4u16.to_le_bytes()); // header/title cell flag
             }
             lh_body[8..10].copy_from_slice(&(c as u16).to_le_bytes());
             lh_body[10..12].copy_from_slice(&(r as u16).to_le_bytes());
@@ -1086,7 +1134,7 @@ pub fn unmerge_cells(
     Ok(())
 }
 
-/// Split a plain 1x1 cell into `into_rows` stacked rows (and/or `into_cols` horizontal columns).
+/// Split a plain 1x1 cell into an `into_rows x into_cols` sub-grid.
 pub fn split_cell(
     sec: &mut SectionDoc,
     target: &Hwp5TableTarget,
@@ -1110,98 +1158,130 @@ pub fn split_cell(
             cell.attr.col_span, cell.attr.row_span
         )));
     }
-    let r0 = row as u16;
-    let c0 = col as u16;
+    let r0 = cell.attr.row;
+    let c0 = cell.attr.col;
+    let extra_rows = (n_rows - 1) as u16;
+    let extra_cols = (n_cols - 1) as u16;
 
-    // Horizontal split if requested first (`into_cols >= 2`)
-    if n_cols >= 2 {
-        let extra = (n_cols - 1) as u16;
-        let sub_w = cell.attr.width / (n_cols as u32);
-        sec.records[cell.list_header_rec_idx].body[16..20].copy_from_slice(&sub_w.to_le_bytes());
+    let template: Vec<RawRecord> = sec.records[cell.list_header_rec_idx..cell.end_rec_idx].to_vec();
 
-        for c in &tbl.cells {
-            if c.attr.col == c0 && c.attr.row != r0 {
-                let lh = &mut sec.records[c.list_header_rec_idx].body;
-                lh[12..14].copy_from_slice(&(c.attr.col_span + extra).to_le_bytes());
-            } else if c.attr.col > c0 {
-                sec.records[c.list_header_rec_idx].body[8..10]
-                    .copy_from_slice(&(c.attr.col + extra).to_le_bytes());
-            }
-        }
-        {
-            let tbody = &mut sec.records[tbl.table_rec_idx].body;
-            tbody[6..8].copy_from_slice(&(tbl.cols + extra).to_le_bytes());
-            let off = 18 + row * 2;
-            let cur = u16::from_le_bytes(tbody[off..off + 2].try_into().unwrap());
-            tbody[off..off + 2].copy_from_slice(&(cur + extra).to_le_bytes());
-        }
-        let template: Vec<RawRecord> = sec.records[cell.list_header_rec_idx..cell.end_rec_idx].to_vec();
-        let mut extra_cells = Vec::new();
-        for k in 1..n_cols {
-            let mut blank = empty_cell_cluster_from_records(&template, r0, c0 + k as u16)?;
-            if let Some(lh) = blank.first_mut() {
-                let w = if k + 1 == n_cols {
-                    cell.attr.width - sub_w * (n_cols as u32 - 1)
-                } else {
-                    sub_w
-                };
-                lh.body[16..20].copy_from_slice(&w.to_le_bytes());
-            }
-            extra_cells.extend(blank);
-        }
-        sec.records
-            .splice(cell.end_rec_idx..cell.end_rec_idx, extra_cells);
-        sec.normalize_last_para_flags()?;
+    // Divide original cell width and height cleanly across the sub-grid.
+    let base_w = (cell.attr.width / (n_cols as u32)).max(1);
+    let mut sub_w = vec![base_w; n_cols];
+    if let Some(last) = sub_w.last_mut() {
+        *last = cell
+            .attr
+            .width
+            .saturating_sub(base_w * (n_cols as u32 - 1))
+            .max(1);
+    }
+    let base_h = (cell.attr.height / (n_rows as u32)).max(1);
+    let mut sub_h = vec![base_h; n_rows];
+    if let Some(last) = sub_h.last_mut() {
+        *last = cell
+            .attr
+            .height
+            .saturating_sub(base_h * (n_rows as u32 - 1))
+            .max(1);
     }
 
-    // Vertical split (`into_rows >= 2`) — matching `cell-patch.js:splitCellInPlace`
-    if n_rows >= 2 {
-        let tbl = resolve_target_table_in_section(sec, target, "split_cell")?;
-        let extra = (n_rows - 1) as u16;
-        for c in &tbl.cells {
-            if c.attr.row == r0 && c.attr.col != c0 {
-                sec.records[c.list_header_rec_idx].body[14..16]
-                    .copy_from_slice(&(c.attr.row_span + extra).to_le_bytes());
-            } else if c.attr.row > r0 {
-                sec.records[c.list_header_rec_idx].body[10..12]
-                    .copy_from_slice(&(c.attr.row + extra).to_le_bytes());
+    // Determine insertion points BEFORE mutating grid rows in place.
+    let ins_same_row_idx = cell.end_rec_idx;
+    let ins_below_rows_idx = tbl
+        .cells
+        .iter()
+        .find(|c| c.attr.row > r0)
+        .map(|c| c.list_header_rec_idx)
+        .unwrap_or_else(|| {
+            tbl.cells
+                .last()
+                .map(|c| c.end_rec_idx)
+                .unwrap_or(tbl.table_rec_idx + 1)
+        });
+
+    // Update target cell dimensions and shift/expand all sibling and spanning cells.
+    for c in &tbl.cells {
+        let lh = &mut sec.records[c.list_header_rec_idx].body;
+        if c.attr.row == r0 && c.attr.col == c0 {
+            lh[16..20].copy_from_slice(&sub_w[0].to_le_bytes());
+            lh[20..24].copy_from_slice(&sub_h[0].to_le_bytes());
+            continue;
+        }
+        if extra_rows > 0 {
+            if c.attr.row > r0 {
+                lh[10..12].copy_from_slice(&(c.attr.row + extra_rows).to_le_bytes());
+            } else if c.attr.row == r0
+                || (c.attr.row < r0 && c.attr.row + c.attr.row_span > r0)
+            {
+                lh[14..16].copy_from_slice(&(c.attr.row_span + extra_rows).to_le_bytes());
             }
         }
-        let mut new_cells = Vec::new();
-        for k in 1..n_rows {
-            new_cells.extend(clone_blank_cell_cluster(
-                &sec.records,
-                &tbl.cells,
-                r0 + k as u16,
-                c0,
-            )?);
+        if extra_cols > 0 {
+            if c.attr.col > c0 {
+                lh[8..10].copy_from_slice(&(c.attr.col + extra_cols).to_le_bytes());
+            } else if c.attr.col == c0
+                || (c.attr.col < c0 && c.attr.col + c.attr.col_span > c0)
+            {
+                lh[12..14].copy_from_slice(&(c.attr.col_span + extra_cols).to_le_bytes());
+            }
         }
-        let ins_rec_idx = tbl
-            .cells
-            .iter()
-            .find(|c| c.attr.row > r0)
-            .map(|c| c.list_header_rec_idx)
-            .unwrap_or_else(|| {
-                tbl.cells
-                    .last()
-                    .map(|c| c.end_rec_idx)
-                    .unwrap_or(tbl.table_rec_idx + 1)
-            });
+    }
 
-        {
-            let tbody = &mut sec.records[tbl.table_rec_idx].body;
-            let ins_at = 18 + (row + 1) * 2;
-            let mut entries = Vec::with_capacity((extra as usize) * 2);
-            for _ in 0..extra {
-                entries.extend_from_slice(&1u16.to_le_bytes());
+    // Update HWPTAG_TABLE dimensions and row-cell-count array.
+    {
+        let tbody = &mut sec.records[tbl.table_rec_idx].body;
+        if extra_cols > 0 {
+            tbody[6..8].copy_from_slice(&(tbl.cols + extra_cols).to_le_bytes());
+            let r0_off = 18 + (r0 as usize) * 2;
+            let cur = u16::from_le_bytes(tbody[r0_off..r0_off + 2].try_into().unwrap());
+            tbody[r0_off..r0_off + 2].copy_from_slice(&(cur + extra_cols).to_le_bytes());
+        }
+        if extra_rows > 0 {
+            let ins_at = 18 + (r0 as usize + 1) * 2;
+            let mut entries = Vec::with_capacity((extra_rows as usize) * 2);
+            for _ in 0..extra_rows {
+                entries.extend_from_slice(&(n_cols as u16).to_le_bytes());
             }
             tbody.splice(ins_at..ins_at, entries);
-            tbody[4..6].copy_from_slice(&(tbl.rows + extra).to_le_bytes());
+            tbody[4..6].copy_from_slice(&(tbl.rows + extra_rows).to_le_bytes());
         }
-        sec.records.splice(ins_rec_idx..ins_rec_idx, new_cells);
-        sec.normalize_last_para_flags()?;
     }
 
+    // Build blank sub-cells for dr == 0 (right of target cell) and dr in 1..n_rows.
+    let mut same_row_cells = Vec::new();
+    for (dc, &w) in sub_w.iter().enumerate().skip(1) {
+        let mut blank = empty_cell_cluster_from_records(&template, r0, c0 + dc as u16)?;
+        if let Some(lh) = blank.first_mut() {
+            lh.body[16..20].copy_from_slice(&w.to_le_bytes());
+            lh.body[20..24].copy_from_slice(&sub_h[0].to_le_bytes());
+        }
+        same_row_cells.extend(blank);
+    }
+
+    let mut below_rows_cells = Vec::new();
+    for (dr, &h) in sub_h.iter().enumerate().skip(1) {
+        for (dc, &w) in sub_w.iter().enumerate() {
+            let mut blank =
+                empty_cell_cluster_from_records(&template, r0 + dr as u16, c0 + dc as u16)?;
+            if let Some(lh) = blank.first_mut() {
+                lh.body[16..20].copy_from_slice(&w.to_le_bytes());
+                lh.body[20..24].copy_from_slice(&h.to_le_bytes());
+            }
+            below_rows_cells.extend(blank);
+        }
+    }
+
+    // Apply higher index first (`ins_below_rows_idx >= ins_same_row_idx`) so `ins_same_row_idx`
+    // stays valid and row-0 extra cols precede row-(r0+1..) sub-cells even when equal.
+    if !below_rows_cells.is_empty() {
+        sec.records
+            .splice(ins_below_rows_idx..ins_below_rows_idx, below_rows_cells);
+    }
+    if !same_row_cells.is_empty() {
+        sec.records
+            .splice(ins_same_row_idx..ins_same_row_idx, same_row_cells);
+    }
+    sec.normalize_last_para_flags()?;
     Ok(())
 }
 
@@ -1592,7 +1672,6 @@ pub fn shrink_cell_font(
                 run.char_shape_id = docinfo.find_or_add_char_shape(patched)? as u32;
             }
         }
-        let char_count = ParaHeaderRef::wrap(&sec.records[k].body)?.char_count();
         let merged = if let Some(first) = updated.first() {
             if updated.iter().all(|r| r.char_shape_id == first.char_shape_id) {
                 vec![CharShapeRun {
@@ -1600,7 +1679,7 @@ pub fn shrink_cell_font(
                     char_shape_id: first.char_shape_id,
                 }]
             } else {
-                split_char_shape_runs(&updated, 0, char_count, updated[0].char_shape_id)
+                updated
             }
         } else {
             updated
