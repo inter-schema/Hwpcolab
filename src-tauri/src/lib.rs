@@ -8,10 +8,21 @@ use commands::claw_bridge::*;
 use commands::document::*;
 use commands::fonts::*;
 use commands::llm_proxy::*;
+use state::AppState;
+
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            let state = match app.path().app_cache_dir() {
+                Ok(dir) => AppState::with_staging_root(dir.join("hop-staging")),
+                Err(_) => AppState::new(),
+            };
+            app.manage(state);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             pick_local_file,
             list_local_fonts,

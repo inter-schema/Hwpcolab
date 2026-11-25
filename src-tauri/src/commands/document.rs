@@ -1,22 +1,16 @@
 use crate::hwpx_package::is_valid_hwpx_package;
+use crate::state::{detect_document_format, write_bytes_atomically, AppState};
+pub use hopclaw_types::OpenedDocSession;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
-use uuid::Uuid;
+use std::path::{Path, PathBuf};
+use tauri::ipc::{InvokeBody, Request, Response};
+use tauri::{AppHandle, Manager, State};
 
 /// Recognize the ZIP local-file-header signature (not an EOCD or arbitrary PK prefix).
+#[cfg(test)]
 fn has_zip_local_file_header(bytes: &[u8]) -> bool {
     bytes.starts_with(&[0x50, 0x4b, 0x03, 0x04])
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct OpenedDocSession {
-    pub original_path: String,
-    pub staging_path: String,
-    pub file_name: String,
-    pub is_hwpx: bool,
-    pub bytes: Vec<u8>,
 }
 
 /// 1) 네이티브 파일 열기 다이얼로그 (.hwp, .hwpx, .xlsx, .pdf, .png 등)
@@ -31,96 +25,129 @@ pub async fn pick_local_file(extensions: Vec<String>) -> Result<Option<String>, 
     Ok(file.map(|f| f.path().to_string_lossy().to_string()))
 }
 
-/// 2) HWP/HWPX 문서 열기 + Shadow Staging 파일 생성 + ZIP 로컬 파일 헤더 시그니처 기반 포맷 판별
+/// 2) HWP/HWPX 문서 열기 + Shadow Staging/Disk Undo 세션 생성 + 시그니처 기반 포맷 판별
 #[tauri::command]
 pub async fn open_document_session(
     app: AppHandle,
+    state: State<'_, AppState>,
     file_path: String,
 ) -> Result<OpenedDocSession, String> {
     let src_path = PathBuf::from(&file_path);
     let bytes = fs::read(&src_path).map_err(|e| format!("파일 읽기 실패: {}", e))?;
 
-    let has_zip_signature = has_zip_local_file_header(&bytes);
     let requested_hwpx = src_path
         .extension()
         .and_then(|extension| extension.to_str())
         .map(|extension| extension.eq_ignore_ascii_case("hwpx"))
         .unwrap_or(false);
-    let is_hwpx = if has_zip_signature {
-        if !is_valid_hwpx_package(&bytes) {
-            return Err(
-                "유효한 HWPX(OWPML) 패키지가 아닙니다. 일반 ZIP 또는 손상된 문서는 열 수 없습니다."
-                    .to_string(),
-            );
-        }
-        true
-    } else {
-        if requested_hwpx {
-            return Err(
-                "HWPX 파일의 ZIP/OWPML 패키지 구조가 손상되었거나 올바르지 않습니다.".to_string(),
-            );
-        }
-        false
+
+    let format = detect_document_format(&bytes, requested_hwpx, is_valid_hwpx_package)
+        .map_err(|err| err.message)?;
+
+    let ext = match format {
+        hopclaw_types::DocFormat::Hwpx => "hwpx",
+        hopclaw_types::DocFormat::Hwp5 => "hwp",
     };
-    let ext = if is_hwpx { "hwpx" } else { "hwp" };
 
-    let staging_dir = app
-        .path()
-        .app_cache_dir()
-        .map_err(|e| e.to_string())?
-        .join("hop-staging");
-    fs::create_dir_all(&staging_dir).map_err(|e| e.to_string())?;
-
-    let staging_file_name = format!("staging_{}.{}", Uuid::new_v4(), ext);
-    let staging_path = staging_dir.join(staging_file_name);
-    fs::write(&staging_path, &bytes).map_err(|e| format!("스테이징 파일 생성 실패: {}", e))?;
+    // Ensure the app cache staging dir exists cleanly (AppHandle cache path overrides default temp root if needed).
+    if let Ok(cache_dir) = app.path().app_cache_dir() {
+        let _ = fs::create_dir_all(cache_dir.join("hop-staging"));
+    }
 
     let file_name = src_path
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| format!("untitled.{}", ext));
 
-    Ok(OpenedDocSession {
-        original_path: file_path,
-        staging_path: staging_path.to_string_lossy().to_string(),
-        file_name,
-        is_hwpx,
-        bytes,
-    })
+    state
+        .sessions
+        .open_from_bytes(file_path, file_name, format, bytes)
+        .map_err(|err| err.message)
 }
 
 /// 3) 빈 화면에서 신규 문서 세션 시작
 #[tauri::command]
 pub async fn create_blank_session(
     app: AppHandle,
+    state: State<'_, AppState>,
     is_hwpx: bool,
 ) -> Result<OpenedDocSession, String> {
-    let ext = if is_hwpx { "hwpx" } else { "hwp" };
-    let staging_dir = app
-        .path()
-        .app_cache_dir()
-        .map_err(|e| e.to_string())?
-        .join("hop-staging");
-    fs::create_dir_all(&staging_dir).map_err(|e| e.to_string())?;
-    let staging_path = staging_dir.join(format!("new_{}.{}", Uuid::new_v4(), ext));
+    if let Ok(cache_dir) = app.path().app_cache_dir() {
+        let _ = fs::create_dir_all(cache_dir.join("hop-staging"));
+    }
 
-    Ok(OpenedDocSession {
-        original_path: String::new(),
-        staging_path: staging_path.to_string_lossy().to_string(),
-        file_name: format!("새 문서.{}", ext),
-        is_hwpx,
-        bytes: Vec::new(),
-    })
+    state
+        .sessions
+        .create_blank(is_hwpx)
+        .map_err(|err| err.message)
 }
 
+/// Raw-byte IPC read returning `tauri::ipc::Response` (`ArrayBuffer` in WebView JS).
 #[tauri::command]
-pub async fn read_file_bytes(file_path: String) -> Result<Vec<u8>, String> {
-    fs::read(&file_path).map_err(|e| e.to_string())
+pub async fn read_file_bytes(file_path: String) -> Result<Response, String> {
+    let bytes = fs::read(&file_path).map_err(|e| e.to_string())?;
+    Ok(Response::new(bytes))
 }
 
+/// Decode either raw-byte IPC (`InvokeBody::Raw` + `x-file-path` header) or legacy JSON `{ filePath, bytes }`.
+pub(crate) fn parse_write_file_bytes_request(
+    body: &InvokeBody,
+    headers: &tauri::http::HeaderMap,
+) -> Result<(String, Vec<u8>), String> {
+    match body {
+        InvokeBody::Raw(bytes) => {
+            let header_val = headers
+                .get("x-file-path")
+                .or_else(|| headers.get("file-path"))
+                .ok_or_else(|| "x-file-path 헤더가 누락되었습니다.".to_string())?;
+            let path = header_val
+                .to_str()
+                .map_err(|e| format!("x-file-path 헤더 인코딩 오류: {e}"))?
+                .to_string();
+            Ok((path, bytes.clone()))
+        }
+        InvokeBody::Json(value) => {
+            let file_path = value
+                .get("filePath")
+                .or_else(|| value.get("file_path"))
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| "filePath 인자가 누락되었습니다.".to_string())?
+                .to_string();
+            let raw_bytes = value
+                .get("bytes")
+                .and_then(|v| v.as_array())
+                .ok_or_else(|| "bytes 배열 인자가 누락되었습니다.".to_string())?;
+            let mut out = Vec::with_capacity(raw_bytes.len());
+            for item in raw_bytes {
+                let b = item
+                    .as_u64()
+                    .and_then(|n| u8::try_from(n).ok())
+                    .ok_or_else(|| "bytes 배열에 유효하지 않은 바이트 값이 포함되어 있습니다.".to_string())?;
+                out.push(b);
+            }
+            Ok((file_path, out))
+        }
+    }
+}
+
+/// Dual-mode `write_file_bytes`: accepts raw binary `Request` or backward-compatible JSON `{ filePath, bytes }`.
+/// Writes atomically and snapshots a new disk revision when targeting a tracked session's staging file.
 #[tauri::command]
-pub async fn write_file_bytes(file_path: String, bytes: Vec<u8>) -> Result<(), String> {
-    fs::write(&file_path, bytes).map_err(|e| e.to_string())
+pub async fn write_file_bytes(
+    state: State<'_, AppState>,
+    request: Request<'_>,
+) -> Result<(), String> {
+    let (file_path, bytes) = parse_write_file_bytes_request(request.body(), request.headers())?;
+    let target = Path::new(&file_path);
+    if state
+        .sessions
+        .record_write_if_tracked(target, &bytes)
+        .map_err(|e| e.message)?
+        .is_none()
+    {
+        write_bytes_atomically(target, &bytes).map_err(|e| e.message)?;
+    }
+    Ok(())
 }
 
 /// Replace a destination only after the complete sibling temp file has been
@@ -420,10 +447,30 @@ mod tests {
         assert_eq!(std::fs::read(target.join("keep.txt")).unwrap(), b"keep");
         assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 2);
     }
+
     #[test]
     fn recognizes_the_binary_zip_local_file_header_signature() {
         assert!(has_zip_local_file_header(&[0x50, 0x4b, 0x03, 0x04]));
         assert!(!has_zip_local_file_header(&[0x50, 0x4b]));
         assert!(!has_zip_local_file_header(&[0x50, 0x4b, 0x05, 0x06]));
+    }
+
+    #[test]
+    fn parse_write_file_bytes_accepts_both_raw_and_json_bodies() {
+        let mut headers = tauri::http::HeaderMap::new();
+        headers.insert("x-file-path", "staging.hwpx".parse().unwrap());
+        let raw = InvokeBody::Raw(vec![1, 2, 3, 4]);
+        let (path, bytes) = parse_write_file_bytes_request(&raw, &headers).unwrap();
+        assert_eq!(path, "staging.hwpx");
+        assert_eq!(bytes, vec![1, 2, 3, 4]);
+
+        let json_body = InvokeBody::Json(serde_json::json!({
+            "filePath": "legacy.hwp",
+            "bytes": [10, 20, 30]
+        }));
+        let (j_path, j_bytes) =
+            parse_write_file_bytes_request(&json_body, &tauri::http::HeaderMap::new()).unwrap();
+        assert_eq!(j_path, "legacy.hwp");
+        assert_eq!(j_bytes, vec![10, 20, 30]);
     }
 }

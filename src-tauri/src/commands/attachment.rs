@@ -1,5 +1,6 @@
 use std::fs;
 use tauri::command;
+use tauri::ipc::Response;
 
 const MAX_ATTACHMENT_BYTES: u64 = 128 * 1024 * 1024;
 
@@ -14,7 +15,7 @@ fn validate_attachment_size(file_path: &str, size: u64) -> Result<(), String> {
 }
 
 #[command]
-pub async fn read_attachment_bytes(file_path: String) -> Result<Vec<u8>, String> {
+pub async fn read_attachment_bytes(file_path: String) -> Result<Response, String> {
     let metadata = fs::metadata(&file_path).map_err(|error| {
         format!(
             "첨부 파일 정보를 읽을 수 없습니다: {} ({})",
@@ -25,7 +26,8 @@ pub async fn read_attachment_bytes(file_path: String) -> Result<Vec<u8>, String>
         return Err(format!("첨부 경로가 일반 파일이 아닙니다: {}", file_path));
     }
     validate_attachment_size(&file_path, metadata.len())?;
-    fs::read(&file_path).map_err(|error| format!("첨부 파일 읽기 실패: {}", error))
+    let bytes = fs::read(&file_path).map_err(|error| format!("첨부 파일 읽기 실패: {}", error))?;
+    Ok(Response::new(bytes))
 }
 
 #[cfg(test)]

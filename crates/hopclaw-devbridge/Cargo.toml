@@ -1,0 +1,26 @@
+[package]
+name = "hopclaw-devbridge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Axum HTTP dev/E2E bridge providing /__hop_claw_api/:cmd and /fonts parity with vite.config.ts"
+
+[dependencies]
+axum.workspace = true
+cfb.workspace = true
+hopclaw-types.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+zip.workspace = true
+
+[dev-dependencies]
+http.workspace = true
+http-body-util.workspace = true
+tower = { workspace = true, features = ["util"] }

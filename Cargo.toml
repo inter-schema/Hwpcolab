@@ -23,6 +23,7 @@ flate2 = "1.1.10"
 fontdb = "0.23.0"
 hex = "0.4.3"
 http = "1.5.0"
+http-body-util = "0.1.5"
 quick-xml = "0.42.0"
 regex = "1.13.1"
 reqwest = { version = "0.12.28", default-features = false, features = ["json", "rustls-tls"] }
