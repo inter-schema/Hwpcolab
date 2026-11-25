@@ -1,0 +1,408 @@
+{
+  "generated_at": "2026-11-25T08:42:37.026Z",
+  "node_version": "v24.19.0",
+  "platform": "win32-x64",
+  "corpus_count": 20,
+  "entries": [
+    {
+      "id": "sample_lesson_plan_hwp",
+      "source_path": "samples/(날짜)(교시)(과목명)교수.학습과정안(이름).hwp",
+      "file_type": "hwp",
+      "bytes": 14336,
+      "section_count": 1,
+      "paragraph_count": 29,
+      "table_count": 1,
+      "cell_count": 8,
+      "outputs": {
+        "inspect_json": "outputs/sample_lesson_plan_hwp.inspect.json",
+        "markdown_md": "outputs/sample_lesson_plan_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 141.43,
+        "node_markdown_ms": 142.96
+      }
+    },
+    {
+      "id": "sample_lesson_plan_hwpx",
+      "source_path": "samples/(날짜)(교시)(과목명)교수.학습과정안(이름).hwpx",
+      "file_type": "hwpx",
+      "bytes": 9680,
+      "section_count": 1,
+      "paragraph_count": 37,
+      "table_count": 1,
+      "cell_count": 34,
+      "outputs": {
+        "inspect_json": "outputs/sample_lesson_plan_hwpx.inspect.json",
+        "markdown_md": "outputs/sample_lesson_plan_hwpx.markdown.md",
+        "hwpx_tables_json": "outputs/sample_lesson_plan_hwpx.hwpx-tables.json",
+        "hwpx_cells_json": "outputs/sample_lesson_plan_hwpx.hwpx-cells.json"
+      },
+      "timings_ms": {
+        "node_inspect_ms": 65.14,
+        "node_markdown_ms": 63.56
+      }
+    },
+    {
+      "id": "sample_ai_plan_hwpx",
+      "source_path": "samples/2026_AI_행정업무_혁신계획(기획안).hwpx",
+      "file_type": "hwpx",
+      "bytes": 9827,
+      "section_count": 1,
+      "paragraph_count": 37,
+      "table_count": 1,
+      "cell_count": 34,
+      "outputs": {
+        "inspect_json": "outputs/sample_ai_plan_hwpx.inspect.json",
+        "markdown_md": "outputs/sample_ai_plan_hwpx.markdown.md",
+        "hwpx_tables_json": "outputs/sample_ai_plan_hwpx.hwpx-tables.json",
+        "hwpx_cells_json": "outputs/sample_ai_plan_hwpx.hwpx-cells.json"
+      },
+      "timings_ms": {
+        "node_inspect_ms": 67.86,
+        "node_markdown_ms": 64.53
+      }
+    },
+    {
+      "id": "sample_official_report_hwp",
+      "source_path": "samples/demo_official_report.hwp",
+      "file_type": "hwp",
+      "bytes": 13824,
+      "section_count": 1,
+      "paragraph_count": 9,
+      "table_count": 1,
+      "cell_count": 12,
+      "outputs": {
+        "inspect_json": "outputs/sample_official_report_hwp.inspect.json",
+        "markdown_md": "outputs/sample_official_report_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 115.24,
+        "node_markdown_ms": 121.12
+      }
+    },
+    {
+      "id": "sample_official_report_hwpx",
+      "source_path": "samples/demo_official_report.hwpx",
+      "file_type": "hwpx",
+      "bytes": 131377,
+      "section_count": 1,
+      "paragraph_count": 7,
+      "table_count": 0,
+      "cell_count": 0,
+      "outputs": {
+        "inspect_json": "outputs/sample_official_report_hwpx.inspect.json",
+        "markdown_md": "outputs/sample_official_report_hwpx.markdown.md",
+        "hwpx_tables_json": "outputs/sample_official_report_hwpx.hwpx-tables.json",
+        "hwpx_cells_json": "outputs/sample_official_report_hwpx.hwpx-cells.json"
+      },
+      "timings_ms": {
+        "node_inspect_ms": 73.12,
+        "node_markdown_ms": 75.3
+      }
+    },
+    {
+      "id": "template_hancom_native_stub_hwpx",
+      "source_path": "resources/claw-hwp/scripts/templates/hancom_native_stub.hwpx",
+      "file_type": "hwpx",
+      "bytes": 131099,
+      "section_count": 1,
+      "paragraph_count": 2,
+      "table_count": 0,
+      "cell_count": 0,
+      "outputs": {
+        "inspect_json": "outputs/template_hancom_native_stub_hwpx.inspect.json",
+        "markdown_md": "outputs/template_hancom_native_stub_hwpx.markdown.md",
+        "hwpx_tables_json": "outputs/template_hancom_native_stub_hwpx.hwpx-tables.json",
+        "hwpx_cells_json": "outputs/template_hancom_native_stub_hwpx.hwpx-cells.json"
+      },
+      "timings_ms": {
+        "node_inspect_ms": 75.11,
+        "node_markdown_ms": 75.37
+      }
+    },
+    {
+      "id": "fixture_nested_depth2_hwpx",
+      "source_path": "tests/fixtures/golden-corpus/fixtures/nested_depth2.hwpx",
+      "file_type": "hwpx",
+      "bytes": 9926,
+      "section_count": 1,
+      "paragraph_count": 45,
+      "table_count": 3,
+      "cell_count": 40,
+      "outputs": {
+        "inspect_json": "outputs/fixture_nested_depth2_hwpx.inspect.json",
+        "markdown_md": "outputs/fixture_nested_depth2_hwpx.markdown.md",
+        "hwpx_tables_json": "outputs/fixture_nested_depth2_hwpx.hwpx-tables.json",
+        "hwpx_cells_json": "outputs/fixture_nested_depth2_hwpx.hwpx-cells.json"
+      },
+      "timings_ms": {
+        "node_inspect_ms": 61,
+        "node_markdown_ms": 65.87
+      }
+    },
+    {
+      "id": "rhwp_form_002_hwpx",
+      "source_path": "third_party/rhwp/rhwp-studio/public/samples/form-002.hwpx",
+      "file_type": "hwpx",
+      "bytes": 131571,
+      "section_count": 1,
+      "paragraph_count": 644,
+      "table_count": 15,
+      "cell_count": 440,
+      "outputs": {
+        "inspect_json": "outputs/rhwp_form_002_hwpx.inspect.json",
+        "markdown_md": "outputs/rhwp_form_002_hwpx.markdown.md",
+        "hwpx_tables_json": "outputs/rhwp_form_002_hwpx.hwpx-tables.json",
+        "hwpx_cells_json": "outputs/rhwp_form_002_hwpx.hwpx-cells.json"
+      },
+      "timings_ms": {
+        "node_inspect_ms": 68.88,
+        "node_markdown_ms": 67.4
+      }
+    },
+    {
+      "id": "rhwp_ktx_hwp",
+      "source_path": "third_party/rhwp/rhwp-studio/public/samples/basic/KTX.hwp",
+      "file_type": "hwp",
+      "bytes": 66048,
+      "section_count": 1,
+      "paragraph_count": 33,
+      "table_count": 5,
+      "cell_count": 375,
+      "outputs": {
+        "inspect_json": "outputs/rhwp_ktx_hwp.inspect.json",
+        "markdown_md": "outputs/rhwp_ktx_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 152.18,
+        "node_markdown_ms": 154.85
+      }
+    },
+    {
+      "id": "rhwp_biz_plan_hwp",
+      "source_path": "third_party/rhwp/rhwp-studio/public/samples/biz_plan.hwp",
+      "file_type": "hwp",
+      "bytes": 33792,
+      "section_count": 1,
+      "paragraph_count": 93,
+      "table_count": 8,
+      "cell_count": 96,
+      "outputs": {
+        "inspect_json": "outputs/rhwp_biz_plan_hwp.inspect.json",
+        "markdown_md": "outputs/rhwp_biz_plan_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 154.02,
+        "node_markdown_ms": 155.73
+      }
+    },
+    {
+      "id": "rhwp_book_review_hwp",
+      "source_path": "third_party/rhwp/rhwp-studio/public/samples/BlogForm_BookReview.hwp",
+      "file_type": "hwp",
+      "bytes": 24576,
+      "section_count": 1,
+      "paragraph_count": 2,
+      "table_count": 2,
+      "cell_count": 6,
+      "outputs": {
+        "inspect_json": "outputs/rhwp_book_review_hwp.inspect.json",
+        "markdown_md": "outputs/rhwp_book_review_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 141.81,
+        "node_markdown_ms": 142.3
+      }
+    },
+    {
+      "id": "rhwp_field_01_hwp",
+      "source_path": "third_party/rhwp/rhwp-studio/public/samples/field-01.hwp",
+      "file_type": "hwp",
+      "bytes": 514560,
+      "section_count": 3,
+      "paragraph_count": 16,
+      "table_count": 0,
+      "cell_count": 0,
+      "outputs": {
+        "inspect_json": "outputs/rhwp_field_01_hwp.inspect.json",
+        "markdown_md": "outputs/rhwp_field_01_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 143.58,
+        "node_markdown_ms": 158.34
+      }
+    },
+    {
+      "id": "rhwp_footnote_01_hwp",
+      "source_path": "third_party/rhwp/rhwp-studio/public/samples/footnote-01.hwp",
+      "file_type": "hwp",
+      "bytes": 32768,
+      "section_count": 1,
+      "paragraph_count": 40,
+      "table_count": 4,
+      "cell_count": 8,
+      "outputs": {
+        "inspect_json": "outputs/rhwp_footnote_01_hwp.inspect.json",
+        "markdown_md": "outputs/rhwp_footnote_01_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 145.15,
+        "node_markdown_ms": 144.34
+      }
+    },
+    {
+      "id": "rhwp_issue1949_nested_hwp",
+      "source_path": "third_party/rhwp/rhwp-studio/public/samples/issue1949_giant_cell_nested_tables_perf.hwp",
+      "file_type": "hwp",
+      "bytes": 303616,
+      "section_count": 1,
+      "paragraph_count": 1,
+      "table_count": 1,
+      "cell_count": 3,
+      "outputs": {
+        "inspect_json": "outputs/rhwp_issue1949_nested_hwp.inspect.json",
+        "markdown_md": "outputs/rhwp_issue1949_nested_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 231.97,
+        "node_markdown_ms": 250.45
+      }
+    },
+    {
+      "id": "rhwp_kps_ai_hwp",
+      "source_path": "third_party/rhwp/rhwp-studio/public/samples/kps-ai.hwp",
+      "file_type": "hwp",
+      "bytes": 485888,
+      "section_count": 1,
+      "paragraph_count": 841,
+      "table_count": 96,
+      "cell_count": 1771,
+      "outputs": {
+        "inspect_json": "outputs/rhwp_kps_ai_hwp.inspect.json",
+        "markdown_md": "outputs/rhwp_kps_ai_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 273.86,
+        "node_markdown_ms": 262.16
+      }
+    },
+    {
+      "id": "rhwp_number_bullet_hwp",
+      "source_path": "third_party/rhwp/rhwp-studio/public/samples/number-bullet.hwp",
+      "file_type": "hwp",
+      "bytes": 69120,
+      "section_count": 1,
+      "paragraph_count": 25,
+      "table_count": 0,
+      "cell_count": 0,
+      "outputs": {
+        "inspect_json": "outputs/rhwp_number_bullet_hwp.inspect.json",
+        "markdown_md": "outputs/rhwp_number_bullet_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 152.47,
+        "node_markdown_ms": 156.82
+      }
+    },
+    {
+      "id": "rhwp_oullim_01_hwp",
+      "source_path": "third_party/rhwp/rhwp-studio/public/samples/oullim-01.hwp",
+      "file_type": "hwp",
+      "bytes": 16896,
+      "section_count": 1,
+      "paragraph_count": 15,
+      "table_count": 3,
+      "cell_count": 27,
+      "outputs": {
+        "inspect_json": "outputs/rhwp_oullim_01_hwp.inspect.json",
+        "markdown_md": "outputs/rhwp_oullim_01_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 163.76,
+        "node_markdown_ms": 153.24
+      }
+    },
+    {
+      "id": "rhwp_para_head_num_2_hwp",
+      "source_path": "third_party/rhwp/rhwp-studio/public/samples/para-head-num-2.hwp",
+      "file_type": "hwp",
+      "bytes": 16384,
+      "section_count": 1,
+      "paragraph_count": 8,
+      "table_count": 0,
+      "cell_count": 0,
+      "outputs": {
+        "inspect_json": "outputs/rhwp_para_head_num_2_hwp.inspect.json",
+        "markdown_md": "outputs/rhwp_para_head_num_2_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 111.25,
+        "node_markdown_ms": 124.9
+      }
+    },
+    {
+      "id": "rhwp_shift_return_hwp",
+      "source_path": "third_party/rhwp/rhwp-studio/public/samples/shift-return.hwp",
+      "file_type": "hwp",
+      "bytes": 8704,
+      "section_count": 1,
+      "paragraph_count": 2,
+      "table_count": 0,
+      "cell_count": 0,
+      "outputs": {
+        "inspect_json": "outputs/rhwp_shift_return_hwp.inspect.json",
+        "markdown_md": "outputs/rhwp_shift_return_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 115.14,
+        "node_markdown_ms": 125.26
+      }
+    },
+    {
+      "id": "rhwp_tac_case_001_hwp",
+      "source_path": "third_party/rhwp/rhwp-studio/public/samples/tac-case-001.hwp",
+      "file_type": "hwp",
+      "bytes": 81920,
+      "section_count": 1,
+      "paragraph_count": 5,
+      "table_count": 1,
+      "cell_count": 4,
+      "outputs": {
+        "inspect_json": "outputs/rhwp_tac_case_001_hwp.inspect.json",
+        "markdown_md": "outputs/rhwp_tac_case_001_hwp.markdown.md",
+        "hwpx_tables_json": null,
+        "hwpx_cells_json": null
+      },
+      "timings_ms": {
+        "node_inspect_ms": 121.53,
+        "node_markdown_ms": 129.53
+      }
+    }
+  ]
+}

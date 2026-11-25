@@ -1,0 +1,3055 @@
+{
+  "fileType": "hwp",
+  "sectionCount": 1,
+  "paragraphCount": 33,
+  "tableCount": 5,
+  "cellCount": 375,
+  "imageCount": null,
+  "tables": [
+    {
+      "sec": 0,
+      "para": 29,
+      "ctrl": 0,
+      "rowCount": 3,
+      "colCount": 11,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 6,
+          "text": "호남선 (서울~천안아산 경부선과 동일)"
+        },
+        {
+          "idx": 1,
+          "row": 0,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 2,
+          "row": 0,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 3,
+          "row": 0,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 4,
+          "row": 0,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 5,
+          "row": 0,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 6,
+          "row": 1,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "서울"
+        },
+        {
+          "idx": 7,
+          "row": 1,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "서대전"
+        },
+        {
+          "idx": 8,
+          "row": 1,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "논산"
+        },
+        {
+          "idx": 9,
+          "row": 1,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "익산"
+        },
+        {
+          "idx": 10,
+          "row": 1,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "김제"
+        },
+        {
+          "idx": 11,
+          "row": 1,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "정읍"
+        },
+        {
+          "idx": 12,
+          "row": 1,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "장성"
+        },
+        {
+          "idx": 13,
+          "row": 1,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "광주"
+        },
+        {
+          "idx": 14,
+          "row": 1,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "광주송정"
+        },
+        {
+          "idx": 15,
+          "row": 1,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "나주"
+        },
+        {
+          "idx": 16,
+          "row": 1,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "목포"
+        },
+        {
+          "idx": 17,
+          "row": 2,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "시:분"
+        },
+        {
+          "idx": 18,
+          "row": 2,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "6:22"
+        },
+        {
+          "idx": 19,
+          "row": 2,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "6:51"
+        },
+        {
+          "idx": 20,
+          "row": 2,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "7:15"
+        },
+        {
+          "idx": 21,
+          "row": 2,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "-"
+        },
+        {
+          "idx": 22,
+          "row": 2,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "7:38"
+        },
+        {
+          "idx": 23,
+          "row": 2,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "-"
+        },
+        {
+          "idx": 24,
+          "row": 2,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "-"
+        },
+        {
+          "idx": 25,
+          "row": 2,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8:06"
+        },
+        {
+          "idx": 26,
+          "row": 2,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "-"
+        },
+        {
+          "idx": 27,
+          "row": 2,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8:38"
+        }
+      ]
+    },
+    {
+      "sec": 0,
+      "para": 29,
+      "ctrl": 1,
+      "rowCount": 3,
+      "colCount": 9,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 9,
+          "text": "경부선"
+        },
+        {
+          "idx": 1,
+          "row": 1,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "서울"
+        },
+        {
+          "idx": 2,
+          "row": 1,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "용산"
+        },
+        {
+          "idx": 3,
+          "row": 1,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "광명"
+        },
+        {
+          "idx": 4,
+          "row": 1,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "천안아산"
+        },
+        {
+          "idx": 5,
+          "row": 1,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "대전"
+        },
+        {
+          "idx": 6,
+          "row": 1,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "동대구"
+        },
+        {
+          "idx": 7,
+          "row": 1,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "밀양"
+        },
+        {
+          "idx": 8,
+          "row": 1,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "구포"
+        },
+        {
+          "idx": 9,
+          "row": 1,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "부산"
+        },
+        {
+          "idx": 10,
+          "row": 2,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "시:분"
+        },
+        {
+          "idx": 11,
+          "row": 2,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "5:30"
+        },
+        {
+          "idx": 12,
+          "row": 2,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "5:45"
+        },
+        {
+          "idx": 13,
+          "row": 2,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "6:24"
+        },
+        {
+          "idx": 14,
+          "row": 2,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "6:30"
+        },
+        {
+          "idx": 15,
+          "row": 2,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "7:18"
+        },
+        {
+          "idx": 16,
+          "row": 2,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "7:49"
+        },
+        {
+          "idx": 17,
+          "row": 2,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8:14"
+        },
+        {
+          "idx": 18,
+          "row": 2,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8:27"
+        }
+      ]
+    },
+    {
+      "sec": 0,
+      "para": 30,
+      "ctrl": 1,
+      "rowCount": 1,
+      "colCount": 2,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "최저운임"
+        },
+        {
+          "idx": 1,
+          "row": 0,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100원 (월~목 요금제 기준)"
+        }
+      ]
+    },
+    {
+      "sec": 0,
+      "para": 31,
+      "ctrl": 0,
+      "rowCount": 16,
+      "colCount": 15,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 3,
+          "text": "호남선 (단위:원)"
+        },
+        {
+          "idx": 1,
+          "row": 0,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 2,
+          "row": 0,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 3,
+          "row": 0,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 4,
+          "row": 0,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 5,
+          "row": 0,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 6,
+          "row": 0,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 7,
+          "row": 0,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 8,
+          "row": 0,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 9,
+          "row": 0,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 10,
+          "row": 0,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 11,
+          "row": 0,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 12,
+          "row": 0,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 13,
+          "row": 1,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "행신"
+        },
+        {
+          "idx": 14,
+          "row": 1,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 15,
+          "row": 1,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 16,
+          "row": 1,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "15,100"
+        },
+        {
+          "idx": 17,
+          "row": 1,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "24,500"
+        },
+        {
+          "idx": 18,
+          "row": 1,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "26,400"
+        },
+        {
+          "idx": 19,
+          "row": 1,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "28,800"
+        },
+        {
+          "idx": 20,
+          "row": 1,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "31,200"
+        },
+        {
+          "idx": 21,
+          "row": 1,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "32,800"
+        },
+        {
+          "idx": 22,
+          "row": 1,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "35,000"
+        },
+        {
+          "idx": 23,
+          "row": 1,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "37,100"
+        },
+        {
+          "idx": 24,
+          "row": 1,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "39,000"
+        },
+        {
+          "idx": 25,
+          "row": 1,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "40,400"
+        },
+        {
+          "idx": 26,
+          "row": 1,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "44,800"
+        },
+        {
+          "idx": 27,
+          "row": 1,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "40,000"
+        },
+        {
+          "idx": 28,
+          "row": 2,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 29,
+          "row": 2,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "용산"
+        },
+        {
+          "idx": 30,
+          "row": 2,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 31,
+          "row": 2,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "13,300"
+        },
+        {
+          "idx": 32,
+          "row": 2,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "22,700"
+        },
+        {
+          "idx": 33,
+          "row": 2,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "24,700"
+        },
+        {
+          "idx": 34,
+          "row": 2,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "27,200"
+        },
+        {
+          "idx": 35,
+          "row": 2,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "29,600"
+        },
+        {
+          "idx": 36,
+          "row": 2,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "31,200"
+        },
+        {
+          "idx": 37,
+          "row": 2,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "33,400"
+        },
+        {
+          "idx": 38,
+          "row": 2,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "36,300"
+        },
+        {
+          "idx": 39,
+          "row": 2,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "37,500"
+        },
+        {
+          "idx": 40,
+          "row": 2,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "38,900"
+        },
+        {
+          "idx": 41,
+          "row": 2,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "43,300"
+        },
+        {
+          "idx": 42,
+          "row": 2,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "38,400"
+        },
+        {
+          "idx": 43,
+          "row": 3,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 44,
+          "row": 3,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 45,
+          "row": 3,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "광명"
+        },
+        {
+          "idx": 46,
+          "row": 3,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "11,300"
+        },
+        {
+          "idx": 47,
+          "row": 3,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "20,700"
+        },
+        {
+          "idx": 48,
+          "row": 3,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "22,600"
+        },
+        {
+          "idx": 49,
+          "row": 3,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "25,100"
+        },
+        {
+          "idx": 50,
+          "row": 3,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "28,600"
+        },
+        {
+          "idx": 51,
+          "row": 3,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "29,400"
+        },
+        {
+          "idx": 52,
+          "row": 3,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "31,600"
+        },
+        {
+          "idx": 53,
+          "row": 3,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "34,500"
+        },
+        {
+          "idx": 54,
+          "row": 3,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "36,400"
+        },
+        {
+          "idx": 55,
+          "row": 3,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "37,100"
+        },
+        {
+          "idx": 56,
+          "row": 3,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "41,500"
+        },
+        {
+          "idx": 57,
+          "row": 3,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "36,700"
+        },
+        {
+          "idx": 58,
+          "row": 4,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 59,
+          "row": 4,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 60,
+          "row": 4,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 61,
+          "row": 4,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "천안아산"
+        },
+        {
+          "idx": 62,
+          "row": 4,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "9,400"
+        },
+        {
+          "idx": 63,
+          "row": 4,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "11,400"
+        },
+        {
+          "idx": 64,
+          "row": 4,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "14,000"
+        },
+        {
+          "idx": 65,
+          "row": 4,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "17,700"
+        },
+        {
+          "idx": 66,
+          "row": 4,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "19,100"
+        },
+        {
+          "idx": 67,
+          "row": 4,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "21,700"
+        },
+        {
+          "idx": 68,
+          "row": 4,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "24,700"
+        },
+        {
+          "idx": 69,
+          "row": 4,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "26,600"
+        },
+        {
+          "idx": 70,
+          "row": 4,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "27,700"
+        },
+        {
+          "idx": 71,
+          "row": 4,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "32,200"
+        },
+        {
+          "idx": 72,
+          "row": 4,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "27,300"
+        },
+        {
+          "idx": 73,
+          "row": 5,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 74,
+          "row": 5,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 75,
+          "row": 5,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 76,
+          "row": 5,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 77,
+          "row": 5,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "서대전"
+        },
+        {
+          "idx": 78,
+          "row": 5,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 79,
+          "row": 5,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 80,
+          "row": 5,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,300"
+        },
+        {
+          "idx": 81,
+          "row": 5,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "10,000"
+        },
+        {
+          "idx": 82,
+          "row": 5,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "12,700"
+        },
+        {
+          "idx": 83,
+          "row": 5,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "15,900"
+        },
+        {
+          "idx": 84,
+          "row": 5,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "18,100"
+        },
+        {
+          "idx": 85,
+          "row": 5,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "19,700"
+        },
+        {
+          "idx": 86,
+          "row": 5,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "24,300"
+        },
+        {
+          "idx": 87,
+          "row": 5,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "19,300"
+        },
+        {
+          "idx": 88,
+          "row": 6,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 89,
+          "row": 6,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 90,
+          "row": 6,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 91,
+          "row": 6,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 92,
+          "row": 6,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 93,
+          "row": 6,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "계룡"
+        },
+        {
+          "idx": 94,
+          "row": 6,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 95,
+          "row": 6,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 96,
+          "row": 6,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 97,
+          "row": 6,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "10,700"
+        },
+        {
+          "idx": 98,
+          "row": 6,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "14,000"
+        },
+        {
+          "idx": 99,
+          "row": 6,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "16,100"
+        },
+        {
+          "idx": 100,
+          "row": 6,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "17,700"
+        },
+        {
+          "idx": 101,
+          "row": 6,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "22,500"
+        },
+        {
+          "idx": 102,
+          "row": 6,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "17,400"
+        },
+        {
+          "idx": 103,
+          "row": 7,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 104,
+          "row": 7,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 105,
+          "row": 7,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 106,
+          "row": 7,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 107,
+          "row": 7,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 108,
+          "row": 7,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 109,
+          "row": 7,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "논산"
+        },
+        {
+          "idx": 110,
+          "row": 7,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 111,
+          "row": 7,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 112,
+          "row": 7,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 113,
+          "row": 7,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "11,400"
+        },
+        {
+          "idx": 114,
+          "row": 7,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "13,500"
+        },
+        {
+          "idx": 115,
+          "row": 7,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "15,100"
+        },
+        {
+          "idx": 116,
+          "row": 7,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "20,200"
+        },
+        {
+          "idx": 117,
+          "row": 7,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "14,800"
+        },
+        {
+          "idx": 118,
+          "row": 8,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 119,
+          "row": 8,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 120,
+          "row": 8,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 121,
+          "row": 8,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 122,
+          "row": 8,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 123,
+          "row": 8,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 124,
+          "row": 8,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 125,
+          "row": 8,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "익산"
+        },
+        {
+          "idx": 126,
+          "row": 8,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 127,
+          "row": 8,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 128,
+          "row": 8,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 129,
+          "row": 8,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "9,800"
+        },
+        {
+          "idx": 130,
+          "row": 8,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "11,400"
+        },
+        {
+          "idx": 131,
+          "row": 8,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "16,500"
+        },
+        {
+          "idx": 132,
+          "row": 8,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "11,100"
+        },
+        {
+          "idx": 133,
+          "row": 9,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 134,
+          "row": 9,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 135,
+          "row": 9,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 136,
+          "row": 9,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 137,
+          "row": 9,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 138,
+          "row": 9,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 139,
+          "row": 9,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 140,
+          "row": 9,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 141,
+          "row": 9,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "김제"
+        },
+        {
+          "idx": 142,
+          "row": 9,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 143,
+          "row": 9,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 144,
+          "row": 9,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 145,
+          "row": 9,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "9,700"
+        },
+        {
+          "idx": 146,
+          "row": 9,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "14,800"
+        },
+        {
+          "idx": 147,
+          "row": 9,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "9,300"
+        },
+        {
+          "idx": 148,
+          "row": 10,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 149,
+          "row": 10,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 150,
+          "row": 10,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 151,
+          "row": 10,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 152,
+          "row": 10,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 153,
+          "row": 10,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 154,
+          "row": 10,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 155,
+          "row": 10,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 156,
+          "row": 10,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 157,
+          "row": 10,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "정읍"
+        },
+        {
+          "idx": 158,
+          "row": 10,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 159,
+          "row": 10,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 160,
+          "row": 10,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 161,
+          "row": 10,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "12,100"
+        },
+        {
+          "idx": 162,
+          "row": 10,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 163,
+          "row": 11,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 164,
+          "row": 11,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 165,
+          "row": 11,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 166,
+          "row": 11,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 167,
+          "row": 11,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 168,
+          "row": 11,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 169,
+          "row": 11,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 170,
+          "row": 11,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 171,
+          "row": 11,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 172,
+          "row": 11,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 173,
+          "row": 11,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "장성"
+        },
+        {
+          "idx": 174,
+          "row": 11,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 175,
+          "row": 11,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 176,
+          "row": 11,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,900"
+        },
+        {
+          "idx": 177,
+          "row": 11,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 178,
+          "row": 12,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 179,
+          "row": 12,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 180,
+          "row": 12,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 181,
+          "row": 12,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 182,
+          "row": 12,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 183,
+          "row": 12,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 184,
+          "row": 12,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 185,
+          "row": 12,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 186,
+          "row": 12,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 187,
+          "row": 12,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 188,
+          "row": 12,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 189,
+          "row": 12,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "광주송정"
+        },
+        {
+          "idx": 190,
+          "row": 12,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 191,
+          "row": 12,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 192,
+          "row": 12,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "-"
+        },
+        {
+          "idx": 193,
+          "row": 13,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 194,
+          "row": 13,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 195,
+          "row": 13,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 196,
+          "row": 13,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 197,
+          "row": 13,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 198,
+          "row": 13,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 199,
+          "row": 13,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 200,
+          "row": 13,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 201,
+          "row": 13,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 202,
+          "row": 13,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 203,
+          "row": 13,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 204,
+          "row": 13,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 205,
+          "row": 13,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "나주"
+        },
+        {
+          "idx": 206,
+          "row": 13,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 207,
+          "row": 13,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "-"
+        },
+        {
+          "idx": 208,
+          "row": 14,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 209,
+          "row": 14,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 210,
+          "row": 14,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 211,
+          "row": 14,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 212,
+          "row": 14,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 213,
+          "row": 14,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 214,
+          "row": 14,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 215,
+          "row": 14,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 216,
+          "row": 14,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 217,
+          "row": 14,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 218,
+          "row": 14,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 219,
+          "row": 14,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 220,
+          "row": 14,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 221,
+          "row": 14,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "목포"
+        },
+        {
+          "idx": 222,
+          "row": 14,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "-"
+        },
+        {
+          "idx": 223,
+          "row": 15,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 224,
+          "row": 15,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 225,
+          "row": 15,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 226,
+          "row": 15,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 227,
+          "row": 15,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 228,
+          "row": 15,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 229,
+          "row": 15,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 230,
+          "row": 15,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 231,
+          "row": 15,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 232,
+          "row": 15,
+          "col": 9,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 233,
+          "row": 15,
+          "col": 10,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 234,
+          "row": 15,
+          "col": 11,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 235,
+          "row": 15,
+          "col": 12,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 236,
+          "row": 15,
+          "col": 13,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 237,
+          "row": 15,
+          "col": 14,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "광주"
+        }
+      ]
+    },
+    {
+      "sec": 0,
+      "para": 32,
+      "ctrl": 0,
+      "rowCount": 10,
+      "colCount": 9,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 3,
+          "text": "경부선 (단위:원)"
+        },
+        {
+          "idx": 1,
+          "row": 0,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 2,
+          "row": 0,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 3,
+          "row": 0,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 4,
+          "row": 0,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 5,
+          "row": 0,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 6,
+          "row": 0,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 7,
+          "row": 1,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "행신"
+        },
+        {
+          "idx": 8,
+          "row": 1,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 9,
+          "row": 1,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 10,
+          "row": 1,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "14,100"
+        },
+        {
+          "idx": 11,
+          "row": 1,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "22,800"
+        },
+        {
+          "idx": 12,
+          "row": 1,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "39,700"
+        },
+        {
+          "idx": 13,
+          "row": 1,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "44,200"
+        },
+        {
+          "idx": 14,
+          "row": 1,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "47,800"
+        },
+        {
+          "idx": 15,
+          "row": 1,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "49,100"
+        },
+        {
+          "idx": 16,
+          "row": 2,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 17,
+          "row": 2,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "서울"
+        },
+        {
+          "idx": 18,
+          "row": 2,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 19,
+          "row": 2,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "12,700"
+        },
+        {
+          "idx": 20,
+          "row": 2,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "21,400"
+        },
+        {
+          "idx": 21,
+          "row": 2,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "38,400"
+        },
+        {
+          "idx": 22,
+          "row": 2,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "43,000"
+        },
+        {
+          "idx": 23,
+          "row": 2,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "46,600"
+        },
+        {
+          "idx": 24,
+          "row": 2,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "47,900"
+        },
+        {
+          "idx": 25,
+          "row": 3,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 26,
+          "row": 3,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 27,
+          "row": 3,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "광명"
+        },
+        {
+          "idx": 28,
+          "row": 3,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "10,500"
+        },
+        {
+          "idx": 29,
+          "row": 3,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "19,200"
+        },
+        {
+          "idx": 30,
+          "row": 3,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "36,500"
+        },
+        {
+          "idx": 31,
+          "row": 3,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "41,000"
+        },
+        {
+          "idx": 32,
+          "row": 3,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "44,600"
+        },
+        {
+          "idx": 33,
+          "row": 3,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "46,000"
+        },
+        {
+          "idx": 34,
+          "row": 4,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 35,
+          "row": 4,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 36,
+          "row": 4,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 37,
+          "row": 4,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "천안아산"
+        },
+        {
+          "idx": 38,
+          "row": 4,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,700"
+        },
+        {
+          "idx": 39,
+          "row": 4,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "25,600"
+        },
+        {
+          "idx": 40,
+          "row": 4,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "29,400"
+        },
+        {
+          "idx": 41,
+          "row": 4,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "32,900"
+        },
+        {
+          "idx": 42,
+          "row": 4,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "34,200"
+        },
+        {
+          "idx": 43,
+          "row": 5,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 44,
+          "row": 5,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 45,
+          "row": 5,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 46,
+          "row": 5,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 47,
+          "row": 5,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "대전"
+        },
+        {
+          "idx": 48,
+          "row": 5,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "16,900"
+        },
+        {
+          "idx": 49,
+          "row": 5,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "22,100"
+        },
+        {
+          "idx": 50,
+          "row": 5,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "25,300"
+        },
+        {
+          "idx": 51,
+          "row": 5,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "26,700"
+        },
+        {
+          "idx": 52,
+          "row": 6,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 53,
+          "row": 6,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 54,
+          "row": 6,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 55,
+          "row": 6,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 56,
+          "row": 6,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 57,
+          "row": 6,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "동대구"
+        },
+        {
+          "idx": 58,
+          "row": 6,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 59,
+          "row": 6,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "9,300"
+        },
+        {
+          "idx": 60,
+          "row": 6,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "10,800"
+        },
+        {
+          "idx": 61,
+          "row": 7,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 62,
+          "row": 7,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 63,
+          "row": 7,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 64,
+          "row": 7,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 65,
+          "row": 7,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 66,
+          "row": 7,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 67,
+          "row": 7,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "밀양"
+        },
+        {
+          "idx": 68,
+          "row": 7,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 69,
+          "row": 7,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 70,
+          "row": 8,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 71,
+          "row": 8,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 72,
+          "row": 8,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 73,
+          "row": 8,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 74,
+          "row": 8,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 75,
+          "row": 8,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 76,
+          "row": 8,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 77,
+          "row": 8,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "구포"
+        },
+        {
+          "idx": 78,
+          "row": 8,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "8,100"
+        },
+        {
+          "idx": 79,
+          "row": 9,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 80,
+          "row": 9,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 81,
+          "row": 9,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 82,
+          "row": 9,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 83,
+          "row": 9,
+          "col": 4,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 84,
+          "row": 9,
+          "col": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 85,
+          "row": 9,
+          "col": 6,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 86,
+          "row": 9,
+          "col": 7,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 87,
+          "row": 9,
+          "col": 8,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "부산"
+        }
+      ]
+    }
+  ]
+}

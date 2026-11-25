@@ -1,0 +1,253 @@
+{
+  "fileType": "hwp",
+  "sectionCount": 1,
+  "paragraphCount": 15,
+  "tableCount": 3,
+  "cellCount": 27,
+  "imageCount": null,
+  "tables": [
+    {
+      "sec": 0,
+      "para": 1,
+      "ctrl": 0,
+      "rowCount": 3,
+      "colCount": 3,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 1,
+          "row": 0,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 2,
+          "row": 0,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 3,
+          "row": 1,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 4,
+          "row": 1,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 5,
+          "row": 1,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 6,
+          "row": 2,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 7,
+          "row": 2,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 8,
+          "row": 2,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "sec": 0,
+      "para": 6,
+      "ctrl": 0,
+      "rowCount": 3,
+      "colCount": 3,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 1,
+          "row": 0,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 2,
+          "row": 0,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 3,
+          "row": 1,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 4,
+          "row": 1,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 5,
+          "row": 1,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 6,
+          "row": 2,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 7,
+          "row": 2,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 8,
+          "row": 2,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "sec": 0,
+      "para": 10,
+      "ctrl": 0,
+      "rowCount": 3,
+      "colCount": 3,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 1,
+          "row": 0,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 2,
+          "row": 0,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 3,
+          "row": 1,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 4,
+          "row": 1,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 5,
+          "row": 1,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 6,
+          "row": 2,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 7,
+          "row": 2,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 8,
+          "row": 2,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        }
+      ]
+    }
+  ]
+}

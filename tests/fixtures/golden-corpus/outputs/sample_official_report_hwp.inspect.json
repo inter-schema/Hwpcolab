@@ -1,0 +1,115 @@
+{
+  "fileType": "hwp",
+  "sectionCount": 1,
+  "paragraphCount": 9,
+  "tableCount": 1,
+  "cellCount": 12,
+  "imageCount": null,
+  "tables": [
+    {
+      "sec": 0,
+      "para": 7,
+      "ctrl": 0,
+      "rowCount": 4,
+      "colCount": 3,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "과제구분"
+        },
+        {
+          "idx": 1,
+          "row": 0,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "추진내용"
+        },
+        {
+          "idx": 2,
+          "row": 0,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "소요예산(백만원)"
+        },
+        {
+          "idx": 3,
+          "row": 1,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "인프라"
+        },
+        {
+          "idx": 4,
+          "row": 1,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "정부 클라우드 전환 1단계"
+        },
+        {
+          "idx": 5,
+          "row": 1,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "500"
+        },
+        {
+          "idx": 6,
+          "row": 2,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "데이터"
+        },
+        {
+          "idx": 7,
+          "row": 2,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "마이데이터 범정부 연계"
+        },
+        {
+          "idx": 8,
+          "row": 2,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "700"
+        },
+        {
+          "idx": 9,
+          "row": 3,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "합계"
+        },
+        {
+          "idx": 10,
+          "row": 3,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "전체 예산 합산"
+        },
+        {
+          "idx": 11,
+          "row": 3,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "1,200"
+        }
+      ]
+    }
+  ]
+}

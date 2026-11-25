@@ -1,0 +1,83 @@
+{
+  "fileType": "hwp",
+  "sectionCount": 1,
+  "paragraphCount": 29,
+  "tableCount": 1,
+  "cellCount": 8,
+  "imageCount": null,
+  "tables": [
+    {
+      "sec": 0,
+      "para": 1,
+      "ctrl": 0,
+      "rowCount": 2,
+      "colCount": 4,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "일   시"
+        },
+        {
+          "idx": 1,
+          "row": 0,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "2026.10.20(화) 2교시"
+        },
+        {
+          "idx": 2,
+          "row": 0,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "대   상"
+        },
+        {
+          "idx": 3,
+          "row": 0,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "6-3(20명)"
+        },
+        {
+          "idx": 4,
+          "row": 1,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "장   소"
+        },
+        {
+          "idx": 5,
+          "row": 1,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "6-3 교실"
+        },
+        {
+          "idx": 6,
+          "row": 1,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "지도교사"
+        },
+        {
+          "idx": 7,
+          "row": 1,
+          "col": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        }
+      ]
+    }
+  ]
+}

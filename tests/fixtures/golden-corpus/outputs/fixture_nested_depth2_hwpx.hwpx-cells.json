@@ -1,0 +1,303 @@
+{
+  "ok": true,
+  "tables": [
+    {
+      "index": 0,
+      "rows": 10,
+      "cells": [
+        {
+          "row": 0,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "일   시"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "2026.10.20(화) 2교시"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "대   상"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "6-3(20명)"
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "장   소"
+        },
+        {
+          "row": 1,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "6-3 교실"
+        },
+        {
+          "row": 1,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "지도교사"
+        },
+        {
+          "row": 1,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "샘플교사"
+        },
+        {
+          "row": 2,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "단   원"
+        },
+        {
+          "row": 2,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "소수의 곱셈과 나눗셈"
+        },
+        {
+          "row": 2,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "차   시"
+        },
+        {
+          "row": 2,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "2/11"
+        },
+        {
+          "row": 3,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "성취기준"
+        },
+        {
+          "row": 3,
+          "col": 1,
+          "colSpan": 3,
+          "rowSpan": 1,
+          "text": "[6수01-15] 소수의 나눗셈의 계산 원리를 탐구하고 그 계산을 할 수 있다."
+        },
+        {
+          "row": 4,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "학습 목표"
+        },
+        {
+          "row": 4,
+          "col": 1,
+          "colSpan": 3,
+          "rowSpan": 1,
+          "text": "소수의 나눗셈을 여러 방법으로 해결하고, 몫이 변하지 않는 이유를 분수의 성질과 연결하여 설명할 수 있다."
+        },
+        {
+          "row": 5,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "학습 문제"
+        },
+        {
+          "row": 5,
+          "col": 1,
+          "colSpan": 3,
+          "rowSpan": 1,
+          "text": "왜 2.4÷0.3을 24÷3으로 바꾸어 계산해도 몫이 같을까?"
+        },
+        {
+          "row": 6,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "배움 단계"
+        },
+        {
+          "row": 6,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "배움 활동"
+        },
+        {
+          "row": 6,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "시간(분)"
+        },
+        {
+          "row": 6,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "준비물(◇)"
+        },
+        {
+          "row": 7,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "도입"
+        },
+        {
+          "row": 7,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "전시 학습 확인 및 실생활 리본 나누기 상황 제시"
+        },
+        {
+          "row": 7,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "5&apos;"
+        },
+        {
+          "row": 7,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "◇ 리본 그림 자료"
+        },
+        {
+          "row": 8,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "전개"
+        },
+        {
+          "row": 8,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "활동1: 그림과 수직선으로 2.4÷0.3 탐구하기 / 활동2: 분수의 나눗셈으로 바꾸어 24÷3과 비교하기세부과정A시간단계1L2_KeyL2_Val10분"
+        },
+        {
+          "row": 8,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "25&apos;"
+        },
+        {
+          "row": 8,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "◇ 활동지, 색연필"
+        },
+        {
+          "row": 9,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "정리"
+        },
+        {
+          "row": 9,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "몫이 변하지 않는 원리 정리 및 형성평가"
+        },
+        {
+          "row": 9,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "10&apos;"
+        },
+        {
+          "row": 9,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "※ 계산 원리 발표"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "rows": 2,
+      "cells": [
+        {
+          "row": 0,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "세부과정A"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "시간"
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "단계1L2_KeyL2_Val"
+        },
+        {
+          "row": 1,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "10분"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "rows": 1,
+      "cells": [
+        {
+          "row": 0,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "L2_Key"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "L2_Val"
+        }
+      ]
+    }
+  ]
+}

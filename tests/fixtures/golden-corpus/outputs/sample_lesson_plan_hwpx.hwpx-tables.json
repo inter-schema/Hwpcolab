@@ -1,0 +1,285 @@
+[
+  {
+    "sectionIndex": 0,
+    "tableIndex": 0,
+    "depth": 0,
+    "parentTableIndex": null,
+    "parentCell": null,
+    "rowCount": 10,
+    "colCount": 4,
+    "cells": [
+      {
+        "idx": 0,
+        "row": 0,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "일   시"
+      },
+      {
+        "idx": 1,
+        "row": 0,
+        "col": 1,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "2026.10.20(화) 2교시"
+      },
+      {
+        "idx": 2,
+        "row": 0,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "대   상"
+      },
+      {
+        "idx": 3,
+        "row": 0,
+        "col": 3,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "6-3(20명)"
+      },
+      {
+        "idx": 4,
+        "row": 1,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "장   소"
+      },
+      {
+        "idx": 5,
+        "row": 1,
+        "col": 1,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "6-3 교실"
+      },
+      {
+        "idx": 6,
+        "row": 1,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "지도교사"
+      },
+      {
+        "idx": 7,
+        "row": 1,
+        "col": 3,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "샘플교사"
+      },
+      {
+        "idx": 8,
+        "row": 2,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "단   원"
+      },
+      {
+        "idx": 9,
+        "row": 2,
+        "col": 1,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "소수의 곱셈과 나눗셈"
+      },
+      {
+        "idx": 10,
+        "row": 2,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "차   시"
+      },
+      {
+        "idx": 11,
+        "row": 2,
+        "col": 3,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "2/11"
+      },
+      {
+        "idx": 12,
+        "row": 3,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "성취기준"
+      },
+      {
+        "idx": 13,
+        "row": 3,
+        "col": 1,
+        "rowSpan": 1,
+        "colSpan": 3,
+        "text": "[6수01-15] 소수의 나눗셈의 계산 원리를 탐구하고 그 계산을 할 수 있다."
+      },
+      {
+        "idx": 14,
+        "row": 4,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "학습 목표"
+      },
+      {
+        "idx": 15,
+        "row": 4,
+        "col": 1,
+        "rowSpan": 1,
+        "colSpan": 3,
+        "text": "소수의 나눗셈을 여러 방법으로 해결하고, 몫이 변하지 않는 이유를 분수의 성질과 연결하여 설명할 수 있다."
+      },
+      {
+        "idx": 16,
+        "row": 5,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "학습 문제"
+      },
+      {
+        "idx": 17,
+        "row": 5,
+        "col": 1,
+        "rowSpan": 1,
+        "colSpan": 3,
+        "text": "왜 2.4÷0.3을 24÷3으로 바꾸어 계산해도 몫이 같을까?"
+      },
+      {
+        "idx": 18,
+        "row": 6,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "배움 단계"
+      },
+      {
+        "idx": 19,
+        "row": 6,
+        "col": 1,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "배움 활동"
+      },
+      {
+        "idx": 20,
+        "row": 6,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "시간(분)"
+      },
+      {
+        "idx": 21,
+        "row": 6,
+        "col": 3,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "준비물(◇)"
+      },
+      {
+        "idx": 22,
+        "row": 7,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "도입"
+      },
+      {
+        "idx": 23,
+        "row": 7,
+        "col": 1,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "전시 학습 확인 및 실생활 리본 나누기 상황 제시"
+      },
+      {
+        "idx": 24,
+        "row": 7,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "5&apos;"
+      },
+      {
+        "idx": 25,
+        "row": 7,
+        "col": 3,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "◇ 리본 그림 자료"
+      },
+      {
+        "idx": 26,
+        "row": 8,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "전개"
+      },
+      {
+        "idx": 27,
+        "row": 8,
+        "col": 1,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "활동1: 그림과 수직선으로 2.4÷0.3 탐구하기 / 활동2: 분수의 나눗셈으로 바꾸어 24÷3과 비교하기"
+      },
+      {
+        "idx": 28,
+        "row": 8,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "25&apos;"
+      },
+      {
+        "idx": 29,
+        "row": 8,
+        "col": 3,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "◇ 활동지, 색연필"
+      },
+      {
+        "idx": 30,
+        "row": 9,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "정리"
+      },
+      {
+        "idx": 31,
+        "row": 9,
+        "col": 1,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "몫이 변하지 않는 원리 정리 및 형성평가"
+      },
+      {
+        "idx": 32,
+        "row": 9,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "10&apos;"
+      },
+      {
+        "idx": 33,
+        "row": 9,
+        "col": 3,
+        "rowSpan": 1,
+        "colSpan": 1,
+        "text": "※ 계산 원리 발표"
+      }
+    ]
+  }
+]
