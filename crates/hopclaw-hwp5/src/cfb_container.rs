@@ -105,7 +105,9 @@ pub struct Hwp5Container {
 impl Hwp5Container {
     /// Open an HWP 5.0 document from raw CFB bytes in memory.
     pub fn open_bytes(bytes: &[u8]) -> Result<Self> {
-        let cursor = Cursor::new(bytes.to_vec());
+        let mut owned = bytes.to_vec();
+        sanitize_fat(&mut owned);
+        let cursor = Cursor::new(owned);
         let mut comp = cfb::CompoundFile::open(cursor).map_err(|err| {
             Hwp5Error::InvalidContainer(format!("failed to open CFB container: {err}"))
         })?;
@@ -258,4 +260,204 @@ fn read_stream_from(
     let mut buf = Vec::new();
     stream.read_to_end(&mut buf)?;
     Ok(buf)
+}
+
+/// Clean real-world CFB FAT quirks before passing bytes to `cfb::CompoundFile::open`:
+/// 1. SheetJS / older Hancom exporters fill trailing unused FAT slots (`>= num_sectors`)
+///    with `ENDOFCHAIN` (`0xFFFFFFFE`) rather than `FREESECT` (`0xFFFFFFFF`).
+/// 2. Legacy exporters occasionally zero-fill unallocated FAT slots (`0x00000000`) when
+///    sector 0 is itself free or the zero slot is unreferenced by any directory/stream chain,
+///    which trips `cfb`'s `sector 0 pointed to twice` check.
+fn sanitize_fat(buf: &mut [u8]) {
+    const FREESECT: u32 = 0xFFFF_FFFF;
+    const ENDOFCHAIN: u32 = 0xFFFF_FFFE;
+    const FAT_SECTOR: u32 = 0xFFFF_FFFD;
+    const DIFAT_SECTOR: u32 = 0xFFFF_FFFC;
+
+    if buf.len() < 512 {
+        return;
+    }
+    let sector_shift = u16::from_le_bytes([buf[30], buf[31]]);
+    if sector_shift != 9 && sector_shift != 12 {
+        return;
+    }
+    let sector_len = 1usize << sector_shift;
+    if buf.len() <= sector_len {
+        return;
+    }
+    let num_sectors = (buf.len() - sector_len) / sector_len;
+    let num_fat_sectors = u32::from_le_bytes(buf[44..48].try_into().unwrap()) as usize;
+    let entries_per_sec = sector_len / 4;
+
+    let mut fat_sectors = Vec::with_capacity(num_fat_sectors);
+    for i in 0..109usize {
+        if fat_sectors.len() >= num_fat_sectors {
+            break;
+        }
+        let off = 76 + i * 4;
+        let sid = u32::from_le_bytes(buf[off..off + 4].try_into().unwrap());
+        if sid == FREESECT {
+            break;
+        }
+        fat_sectors.push(sid);
+    }
+
+    let mut next_difat = u32::from_le_bytes(buf[68..72].try_into().unwrap());
+    let num_difat_sectors = u32::from_le_bytes(buf[72..76].try_into().unwrap()) as usize;
+    let mut difat_hops = 0usize;
+    while fat_sectors.len() < num_fat_sectors
+        && next_difat < num_sectors as u32
+        && difat_hops < num_difat_sectors
+    {
+        let sec_off = sector_len + (next_difat as usize) * sector_len;
+        if sec_off + sector_len > buf.len() {
+            break;
+        }
+        let slots = entries_per_sec.saturating_sub(1);
+        for i in 0..slots {
+            if fat_sectors.len() >= num_fat_sectors {
+                break;
+            }
+            let off = sec_off + i * 4;
+            let sid = u32::from_le_bytes(buf[off..off + 4].try_into().unwrap());
+            if sid == FREESECT {
+                break;
+            }
+            fat_sectors.push(sid);
+        }
+        let tail_off = sec_off + slots * 4;
+        next_difat = u32::from_le_bytes(buf[tail_off..tail_off + 4].try_into().unwrap());
+        difat_hops += 1;
+    }
+
+    // Read current FAT entries into a flat vector so we can detect unreferenced zero slots cleanly.
+    let mut fat_vals = vec![FREESECT; fat_sectors.len() * entries_per_sec];
+    for (fat_idx, &fat_sid) in fat_sectors.iter().enumerate() {
+        if (fat_sid as usize) >= num_sectors {
+            continue;
+        }
+        let sec_off = sector_len + (fat_sid as usize) * sector_len;
+        if sec_off + sector_len > buf.len() {
+            continue;
+        }
+        for local_i in 0..entries_per_sec {
+            let global_sec = fat_idx * entries_per_sec + local_i;
+            let off = sec_off + local_i * 4;
+            let val = u32::from_le_bytes(buf[off..off + 4].try_into().unwrap());
+            fat_vals[global_sec] = val;
+        }
+    }
+
+    // Count how many times sector 0 is referenced as a chain target; if sector 0 itself is
+    // free or pointed to more than once, walk chains from Directory + MiniFAT + Root to clear
+    // unreferenced 0 slots safely without touching legitimate `k -> 0` links.
+    let zero_targets = fat_vals
+        .iter()
+        .take(num_sectors)
+        .filter(|&&v| v == 0)
+        .count();
+    let sec0_free = fat_vals.first().copied().unwrap_or(FREESECT) == FREESECT;
+    let mut referenced = vec![false; num_sectors];
+    let mut dir_chain = Vec::new();
+    let mut minifat_chain = Vec::new();
+    let mut mini_starts: Vec<u32> = Vec::new();
+
+    {
+        let mut dir_sid = u32::from_le_bytes(buf[48..52].try_into().unwrap());
+        while (dir_sid as usize) < num_sectors && !referenced[dir_sid as usize] {
+            referenced[dir_sid as usize] = true;
+            dir_chain.push(dir_sid);
+            dir_sid = fat_vals[dir_sid as usize];
+        }
+        let mut mf_sid = u32::from_le_bytes(buf[60..64].try_into().unwrap());
+        while (mf_sid as usize) < num_sectors && !referenced[mf_sid as usize] {
+            referenced[mf_sid as usize] = true;
+            minifat_chain.push(mf_sid);
+            mf_sid = fat_vals[mf_sid as usize];
+        }
+        let mut mark_chain = |mut sid: u32| {
+            while (sid as usize) < num_sectors && !referenced[sid as usize] {
+                referenced[sid as usize] = true;
+                sid = fat_vals[sid as usize];
+            }
+        };
+        for &ds in &dir_chain {
+            let sec_off = sector_len + (ds as usize) * sector_len;
+            if sec_off + sector_len > buf.len() {
+                continue;
+            }
+            for e in 0..(sector_len / 128) {
+                let eo = sec_off + e * 128;
+                let etype = buf[eo + 0x42];
+                let start = u32::from_le_bytes(buf[eo + 0x74..eo + 0x78].try_into().unwrap());
+                let size = u32::from_le_bytes(buf[eo + 0x78..eo + 0x7C].try_into().unwrap());
+                if etype == 5 || (etype == 2 && size >= 4096) {
+                    mark_chain(start);
+                } else if etype == 2 && size > 0 && size < 4096 {
+                    mini_starts.push(start);
+                }
+            }
+        }
+    }
+
+    for (fat_idx, &fat_sid) in fat_sectors.iter().enumerate() {
+        if (fat_sid as usize) >= num_sectors {
+            continue;
+        }
+        let sec_off = sector_len + (fat_sid as usize) * sector_len;
+        if sec_off + sector_len > buf.len() {
+            continue;
+        }
+        for local_i in 0..entries_per_sec {
+            let global_sec = fat_idx * entries_per_sec + local_i;
+            let off = sec_off + local_i * 4;
+            let val = fat_vals[global_sec];
+            if global_sec >= num_sectors {
+                if matches!(val, 0 | ENDOFCHAIN | FAT_SECTOR | DIFAT_SECTOR) {
+                    buf[off..off + 4].copy_from_slice(&FREESECT.to_le_bytes());
+                }
+            } else if val == 0 && !referenced[global_sec] && (sec0_free || zero_targets > 1) {
+                buf[off..off + 4].copy_from_slice(&FREESECT.to_le_bytes());
+            }
+        }
+    }
+
+    // Same zero-slot normalization for MiniFAT sectors when legacy writers zero-fill unused entries.
+    if !minifat_chain.is_empty() {
+        let mut mf_vals = Vec::with_capacity(minifat_chain.len() * entries_per_sec);
+        for &mf_sid in &minifat_chain {
+            let sec_off = sector_len + (mf_sid as usize) * sector_len;
+            if sec_off + sector_len > buf.len() {
+                break;
+            }
+            for i in 0..entries_per_sec {
+                let off = sec_off + i * 4;
+                mf_vals.push(u32::from_le_bytes(buf[off..off + 4].try_into().unwrap()));
+            }
+        }
+        let mf_zeros = mf_vals.iter().filter(|&&v| v == 0).count();
+        let mf0_free = mf_vals.first().copied().unwrap_or(FREESECT) == FREESECT;
+        if mf_zeros > 1 || (mf_zeros == 1 && mf0_free) {
+            let mut mf_ref = vec![false; mf_vals.len()];
+            for mut msid in mini_starts {
+                while (msid as usize) < mf_vals.len() && !mf_ref[msid as usize] {
+                    mf_ref[msid as usize] = true;
+                    msid = mf_vals[msid as usize];
+                }
+            }
+            for (c_idx, &mf_sid) in minifat_chain.iter().enumerate() {
+                let sec_off = sector_len + (mf_sid as usize) * sector_len;
+                if sec_off + sector_len > buf.len() {
+                    break;
+                }
+                for i in 0..entries_per_sec {
+                    let g = c_idx * entries_per_sec + i;
+                    if g < mf_vals.len() && mf_vals[g] == 0 && !mf_ref[g] {
+                        let off = sec_off + i * 4;
+                        buf[off..off + 4].copy_from_slice(&FREESECT.to_le_bytes());
+                    }
+                }
+            }
+        }
+    }
 }

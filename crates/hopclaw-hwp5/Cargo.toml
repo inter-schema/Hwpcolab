@@ -7,11 +7,12 @@ description = "Pure-Rust HWP 5.0 binary container and record-level patcher for H
 
 [dependencies]
 byteorder = "1.5"
-cfb = "0.14.0"
-flate2 = "1.1.10"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-thiserror = "2"
+cfb = { workspace = true }
+flate2 = { workspace = true }
+hopclaw-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
 
 [dev-dependencies]
-tempfile = "3"
+tempfile = { workspace = true }

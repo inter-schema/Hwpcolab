@@ -70,6 +70,10 @@ impl<'a> ParaHeaderMut<'a> {
         self.body[10]
     }
 
+    pub fn set_style_id(&mut self, id: u8) {
+        self.body[10] = id;
+    }
+
     pub fn division_kind(&self) -> u8 {
         self.body[11]
     }
@@ -157,16 +161,14 @@ pub struct DecodedParaText {
 
 /// Decode `HWPTAG_PARA_TEXT` (`0x43`) bytes, preserving UTF-16 offsets across 8-wchar HWP controls.
 pub fn decode_para_text(body: &[u8]) -> Result<DecodedParaText> {
-    if body.len() % 2 != 0 {
+    if !body.len().is_multiple_of(2) {
         return Err(Hwp5Error::MalformedRecord(format!(
             "PARA_TEXT byte length {} is odd",
             body.len()
         )));
     }
-    let units: Vec<u16> = body
-        .chunks_exact(2)
-        .map(|c| u16::from_le_bytes([c[0], c[1]]))
-        .collect();
+    let (chunks, _) = body.as_chunks::<2>();
+    let units: Vec<u16> = chunks.iter().map(|c| u16::from_le_bytes(*c)).collect();
     let wchar_len = units.len();
 
     let mut text = String::new();
@@ -260,14 +262,15 @@ pub struct CharShapeRun {
 
 /// Parse `HWPTAG_PARA_CHAR_SHAPE` (`0x44`) payload into `(char_pos, char_shape_id)` runs.
 pub fn parse_para_char_shapes(body: &[u8]) -> Result<Vec<CharShapeRun>> {
-    if body.len() % 8 != 0 {
+    if !body.len().is_multiple_of(8) {
         return Err(Hwp5Error::MalformedRecord(format!(
             "PARA_CHAR_SHAPE length {} is not a multiple of 8",
             body.len()
         )));
     }
-    Ok(body
-        .chunks_exact(8)
+    let (chunks, _) = body.as_chunks::<8>();
+    Ok(chunks
+        .iter()
         .map(|c| CharShapeRun {
             char_pos: u32::from_le_bytes(c[0..4].try_into().unwrap()),
             char_shape_id: u32::from_le_bytes(c[4..8].try_into().unwrap()),

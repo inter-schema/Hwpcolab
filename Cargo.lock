@@ -1586,6 +1586,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "hopclaw-hwp5"
+version = "0.2.3"
+dependencies = [
+ "byteorder",
+ "cfb",
+ "flate2",
+ "hopclaw-types",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "hopclaw-types"
 version = "0.2.3"
 dependencies = [

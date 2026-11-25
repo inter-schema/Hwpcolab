@@ -436,15 +436,23 @@ impl DocInfoDoc {
     /// `CHAR_SHAPE`, `TAB_DEF`, `NUMBERING`, `BULLET`, `PARA_SHAPE`, `STYLE`) to match actual records.
     /// `FACE_NAME` per-script counts are left untouched unless updated through `find_or_add_face_name`.
     pub fn sync_id_mappings(&mut self) -> Result<()> {
-        let count_tag = |t: u16| self.records.iter().filter(|r| r.tag == t).count() as u32;
-        self.set_id_mapping_count(id_slot::BIN_DATA, count_tag(tag::BIN_DATA))?;
-        self.set_id_mapping_count(id_slot::BORDER_FILL, count_tag(tag::BORDER_FILL))?;
-        self.set_id_mapping_count(id_slot::CHAR_SHAPE, count_tag(tag::CHAR_SHAPE))?;
-        self.set_id_mapping_count(id_slot::TAB_DEF, count_tag(tag::TAB_DEF))?;
-        self.set_id_mapping_count(id_slot::NUMBERING, count_tag(tag::NUMBERING))?;
-        self.set_id_mapping_count(id_slot::BULLET, count_tag(tag::BULLET))?;
-        self.set_id_mapping_count(id_slot::PARA_SHAPE, count_tag(tag::PARA_SHAPE))?;
-        self.set_id_mapping_count(id_slot::STYLE, count_tag(tag::STYLE))?;
+        let pairs = [
+            (id_slot::BIN_DATA, tag::BIN_DATA),
+            (id_slot::BORDER_FILL, tag::BORDER_FILL),
+            (id_slot::CHAR_SHAPE, tag::CHAR_SHAPE),
+            (id_slot::TAB_DEF, tag::TAB_DEF),
+            (id_slot::NUMBERING, tag::NUMBERING),
+            (id_slot::BULLET, tag::BULLET),
+            (id_slot::PARA_SHAPE, tag::PARA_SHAPE),
+            (id_slot::STYLE, tag::STYLE),
+        ];
+        let counts: [(usize, u32); 8] = pairs.map(|(slot, rec_tag)| {
+            let count = self.records.iter().filter(|r| r.tag == rec_tag).count() as u32;
+            (slot, count)
+        });
+        for (slot, count) in counts {
+            self.set_id_mapping_count(slot, count)?;
+        }
         Ok(())
     }
 
@@ -742,10 +750,8 @@ fn decode_face_name(body: &[u8]) -> Option<String> {
     if byte_end > body.len() {
         return None;
     }
-    let units: Vec<u16> = body[3..byte_end]
-        .chunks_exact(2)
-        .map(|c| u16::from_le_bytes([c[0], c[1]]))
-        .collect();
+    let (chunks, _) = body[3..byte_end].as_chunks::<2>();
+    let units: Vec<u16> = chunks.iter().map(|c| u16::from_le_bytes(*c)).collect();
     Some(String::from_utf16_lossy(&units))
 }
 

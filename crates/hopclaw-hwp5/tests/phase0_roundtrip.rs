@@ -17,11 +17,22 @@ fn repo_root() -> PathBuf {
 
 fn fixture_paths() -> Vec<PathBuf> {
     let root = repo_root();
-    vec![
+    let mut paths = vec![
         root.join("assets/templates/blank.hwp"),
         root.join("samples/demo_official_report.hwp"),
         root.join("samples/(날짜)(교시)(과목명)교수.학습과정안(이름).hwp"),
-    ]
+    ];
+    let tp_dir = root.join("third_party/rhwp/rhwp-studio/public/samples");
+    if let Ok(entries) = std::fs::read_dir(tp_dir) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.extension().and_then(|e| e.to_str()) == Some("hwp") {
+                paths.push(p);
+            }
+        }
+    }
+    paths.sort();
+    paths
 }
 
 #[test]
