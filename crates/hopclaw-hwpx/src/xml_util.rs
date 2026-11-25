@@ -306,6 +306,88 @@ pub fn sync_sec_count(header_xml: &str, section_count: usize) -> Result<String, 
     set_element_attr(header_xml, "hh:head", "secCnt", &section_count.to_string())
 }
 
+/// Set or replace an attribute on a single self-closing tag string (`<hp:sz .../>`).
+pub fn set_tag_attr(tag_xml: &str, name: &str, value: &str) -> String {
+    let mut reader = Reader::from_str(tag_xml);
+    if let Ok(Event::Empty(e)) = reader.read_event() {
+        let tag_name = e.name().into_inner();
+        if let Ok(rendered) = rebuild_start_with_attr(&e, tag_name, name, value, true) {
+            return rendered;
+        }
+    }
+    tag_xml.to_string()
+}
+
+/// Extract concatenated unescaped text across all `<hp:t>` elements in an XML fragment.
+pub fn extract_t_text(xml: &str) -> Result<String, HwpxError> {
+    let mut reader = Reader::from_str(xml);
+    let mut out = String::new();
+    let mut in_t: usize = 0;
+    loop {
+        match reader.read_event()? {
+            Event::Eof => break,
+            Event::Start(ref e) if e.name().as_ref() == "hp:t" => in_t += 1,
+            Event::End(ref e) if e.name().as_ref() == "hp:t" => in_t = in_t.saturating_sub(1),
+            Event::Text(ref e) if in_t > 0 => {
+                let decoded = e.xml_content(XmlVersion::default());
+                out.push_str(&xml_unescape(&decoded));
+            }
+            _ => {}
+        }
+    }
+    Ok(out)
+}
+
+/// Replace all `id="<digits>"` attributes with fresh IDs and drop `<hp:linesegarray>` blocks.
+pub fn freshen_ids(xml: &str) -> Result<String, HwpxError> {
+    let cleaned = drop_linesegs(xml)?;
+    let mut reader = Reader::from_str(&cleaned);
+    let mut out = String::with_capacity(cleaned.len() + 32);
+    let mut cursor = 0usize;
+
+    loop {
+        let pos_before = reader.buffer_position() as usize;
+        match reader.read_event()? {
+            Event::Eof => break,
+            Event::Start(ref e) => {
+                let pos_after = reader.buffer_position() as usize;
+                let has_numeric_id = e.attributes().flatten().any(|a| {
+                    a.key.as_ref() == "id"
+                        && a.normalized_value(XmlVersion::default())
+                            .map(|v| !v.is_empty() && v.bytes().all(|b| b.is_ascii_digit()))
+                            .unwrap_or(false)
+                });
+                if has_numeric_id {
+                    out.push_str(&cleaned[cursor..pos_before]);
+                    let tag_name = e.name();
+                    let tag_str = tag_name.into_inner();
+                    out.push_str(&rebuild_start_with_attr(e, tag_str, "id", &fresh_id(), false)?);
+                    cursor = pos_after;
+                }
+            }
+            Event::Empty(ref e) => {
+                let pos_after = reader.buffer_position() as usize;
+                let has_numeric_id = e.attributes().flatten().any(|a| {
+                    a.key.as_ref() == "id"
+                        && a.normalized_value(XmlVersion::default())
+                            .map(|v| !v.is_empty() && v.bytes().all(|b| b.is_ascii_digit()))
+                            .unwrap_or(false)
+                });
+                if has_numeric_id {
+                    out.push_str(&cleaned[cursor..pos_before]);
+                    let tag_name = e.name();
+                    let tag_str = tag_name.into_inner();
+                    out.push_str(&rebuild_start_with_attr(e, tag_str, "id", &fresh_id(), true)?);
+                    cursor = pos_after;
+                }
+            }
+            _ => {}
+        }
+    }
+    out.push_str(&cleaned[cursor..]);
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

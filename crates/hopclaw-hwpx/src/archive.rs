@@ -103,6 +103,21 @@ impl HwpxArchive {
             || self.entry_order.iter().any(|n| n == name)
     }
 
+    /// Read an entry as UTF-8 text without mutating the internal cache.
+    pub fn read_text_ro(&self, name: &str) -> Result<String, HwpxError> {
+        if self.deleted.contains(name) {
+            return Err(HwpxError::MissingPart(name.to_string()));
+        }
+        if let Some(s) = self.dirty_text.get(name) {
+            return Ok(s.clone());
+        }
+        if let Some(s) = self.text_cache.get(name) {
+            return Ok(s.clone());
+        }
+        let raw = self.read_raw_bytes(name)?;
+        Ok(String::from_utf8(raw)?)
+    }
+
     /// Read an entry as UTF-8 text (from dirty buffer, cache, or original ZIP).
     pub fn read_text(&mut self, name: &str) -> Result<String, HwpxError> {
         if self.deleted.contains(name) {

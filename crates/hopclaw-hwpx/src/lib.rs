@@ -1,10 +1,15 @@
 pub mod archive;
 pub mod error;
+pub mod executor;
+pub mod model;
+pub mod ops;
 pub mod package;
 pub mod xml_util;
 
 pub use archive::HwpxArchive;
 pub use error::HwpxError;
+pub use executor::{execute_hwpx_edit_plan, execute_hwpx_edit_plan_model};
+pub use model::{HwpxDocument, HANCOM_NATIVE_STUB};
 pub use package::is_valid_hwpx_package;
 
 /// Embedded Hancom-verified blank HWPX template (D-06).
