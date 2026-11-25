@@ -4,8 +4,8 @@ use std::collections::{HashMap, HashSet};
 
 use crate::types::{
     CellBBox, CellLayoutInfo, CellProps, LayoutComparison, LayoutInspectorOptions, LayoutIssue,
-    LayoutIssueCell, LayoutIssueCode, LayoutIssueMetrics, LayoutMetricsDelta, LayoutReport,
-    LayoutSeverity, PageDef, TableCoordinateMeta, TableLayoutSummary,
+    LayoutIssueCellRef, LayoutIssueCode, LayoutIssueMetrics, LayoutIssueSeverity,
+    LayoutMetricsDelta, LayoutReport, PageDef, TableCoordinateMeta, TableLayoutInfo,
 };
 
 pub const HU_PER_PX: f64 = 75.0;
@@ -70,16 +70,16 @@ pub fn inspect_layout_from_source(
     options: LayoutInspectorOptions,
     timestamp: u64,
 ) -> LayoutReport {
-    let safety_h = options.safety_margin_horizontal;
-    let safety_v = options.safety_margin_vertical;
-    let font_pt = options.default_font_pt;
-    let line_spacing_ratio = options.line_spacing_ratio;
+    let safety_h = options.safety_margin_horizontal.unwrap_or(0.05);
+    let safety_v = options.safety_margin_vertical.unwrap_or(0.08);
+    let font_pt = options.default_font_pt.unwrap_or(10.0);
+    let line_spacing_ratio = options.line_spacing_ratio.unwrap_or(1.10);
 
     let font_px = font_pt * (96.0 / 72.0);
     let line_advance_px = font_px * line_spacing_ratio;
 
     let tables_meta = source.tables_meta();
-    let mut tables_report: Vec<TableLayoutSummary> = Vec::with_capacity(tables_meta.len());
+    let mut tables_report: Vec<TableLayoutInfo> = Vec::with_capacity(tables_meta.len());
     let mut issues: Vec<LayoutIssue> = Vec::new();
 
     for table_meta in tables_meta {
@@ -89,8 +89,9 @@ pub fn inspect_layout_from_source(
         let t_idx = table_meta.table_index;
 
         let page_def = source.page_def(sec);
-        let printable_width_mm =
-            round2((page_def.width - page_def.margin_left - page_def.margin_right) as f64 / HU_PER_MM);
+        let printable_width_mm = round2(
+            (page_def.width - page_def.margin_left - page_def.margin_right) as f64 / HU_PER_MM,
+        );
 
         let mut col_max_x: HashMap<usize, f64> = HashMap::new();
         for c in &table_meta.cells {
@@ -154,8 +155,8 @@ pub fn inspect_layout_from_source(
                 };
                 issues.push(LayoutIssue {
                     id: format!("table:{t_idx}:exceeds_page"),
-                    code: LayoutIssueCode::TableExceedsPage,
-                    severity: LayoutSeverity::Warning,
+                    code: LayoutIssueCode::TABLE_EXCEEDS_PAGE,
+                    severity: LayoutIssueSeverity::Warning,
                     message: format!(
                         "표 {t_idx}의 너비({table_width_mm}mm)가 {target_desc}을 {overflow_mm}mm 초과했습니다."
                     ),
@@ -273,12 +274,12 @@ pub fn inspect_layout_from_source(
                 let preview: String = full_text.chars().take(40).collect();
                 issues.push(LayoutIssue {
                     id: format!("cell:{sec}:{para}:{ctrl}:{cell_idx}:v_overflow"),
-                    code: LayoutIssueCode::CellOverflowV,
-                    severity: LayoutSeverity::Error,
+                    code: LayoutIssueCode::CELL_OVERFLOW_V,
+                    severity: LayoutIssueSeverity::Error,
                     message: format!(
                         "셀 [행 {row}, 열 {col}]: 내용물 높이({content_height_mm}mm)가 셀 높이({height_mm}mm)를 +{overflow_amount_mm}mm 초과했습니다. ({total_estimated_lines}줄 예상)"
                     ),
-                    cell: Some(LayoutIssueCell {
+                    cell: Some(LayoutIssueCellRef {
                         table_index: t_idx,
                         sec: Some(sec),
                         para: Some(para),
@@ -300,7 +301,7 @@ pub fn inspect_layout_from_source(
             }
         }
 
-        tables_report.push(TableLayoutSummary {
+        tables_report.push(TableLayoutInfo {
             table_index: t_idx,
             section: sec,
             para,
@@ -337,11 +338,11 @@ pub fn format_layout_report_for_prompt(report: &LayoutReport) -> String {
 
     for (i, iss) in report.issues.iter().enumerate() {
         let sev = match iss.severity {
-            LayoutSeverity::Error => "error",
-            LayoutSeverity::Warning => "warning",
+            LayoutIssueSeverity::Error => "error",
+            LayoutIssueSeverity::Warning => "warning",
         };
         match (&iss.code, &iss.cell) {
-            (LayoutIssueCode::CellOverflowV, Some(cell)) => {
+            (LayoutIssueCode::CELL_OVERFLOW_V, Some(cell)) => {
                 lines.push(format!(
                     "{}. [세로 넘침 / {}] 표 {} [행 {}, 열 {}]: 내용({}mm) > 셀({}mm) (+{}mm 초과, {}줄) | \"{}\"",
                     i + 1,
@@ -356,7 +357,7 @@ pub fn format_layout_report_for_prompt(report: &LayoutReport) -> String {
                     iss.text.as_deref().unwrap_or("")
                 ));
             }
-            (LayoutIssueCode::TableExceedsPage, _) => {
+            (LayoutIssueCode::TABLE_EXCEEDS_PAGE, _) => {
                 lines.push(format!(
                     "{}. [표 폭 초과 / {}] 표 {}: 표 너비 {}mm > 인쇄 영역 {}mm (+{}mm 여백 침범)",
                     i + 1,
@@ -369,9 +370,9 @@ pub fn format_layout_report_for_prompt(report: &LayoutReport) -> String {
             }
             _ => {
                 let code_str = match iss.code {
-                    LayoutIssueCode::CellOverflowV => "CELL_OVERFLOW_V",
-                    LayoutIssueCode::CellOverflowH => "CELL_OVERFLOW_H",
-                    LayoutIssueCode::TableExceedsPage => "TABLE_EXCEEDS_PAGE",
+                    LayoutIssueCode::CELL_OVERFLOW_V => "CELL_OVERFLOW_V",
+                    LayoutIssueCode::CELL_OVERFLOW_H => "CELL_OVERFLOW_H",
+                    LayoutIssueCode::TABLE_EXCEEDS_PAGE => "TABLE_EXCEEDS_PAGE",
                 };
                 lines.push(format!("{}. [{code_str} / {sev}] {}", i + 1, iss.message));
             }
@@ -379,6 +380,14 @@ pub fn format_layout_report_for_prompt(report: &LayoutReport) -> String {
     }
 
     lines.join("\n")
+}
+
+fn max_overflow_mm(report: &LayoutReport) -> Option<f64> {
+    report
+        .issues
+        .iter()
+        .filter_map(|iss| iss.metrics.overflow_mm.or(iss.metrics.overflow_width_mm))
+        .reduce(f64::max)
 }
 
 /// Compare `before` and `after` layout reports, matching `compareLayoutReports` in `layoutInspector.ts`.
@@ -421,16 +430,22 @@ pub fn compare_layout_reports(before: &LayoutReport, after: &LayoutReport) -> La
         parts.push("이슈 없음 (정상)".to_string());
     }
 
+    let metrics_delta = LayoutMetricsDelta {
+        before_issues_count: before.issues_count,
+        after_issues_count: after.issues_count,
+        resolved_count: resolved_issues.len(),
+        remaining_count: remaining_issues.len(),
+        new_count: new_issues.len(),
+        max_overflow_before_mm: max_overflow_mm(before),
+        max_overflow_after_mm: max_overflow_mm(after),
+    };
+
     LayoutComparison {
         ok,
         resolved_issues,
         remaining_issues,
         new_issues,
         summary_text: parts.join(", "),
-        metrics_delta: LayoutMetricsDelta {
-            before_issues_count: before.issues_count,
-            after_issues_count: after.issues_count,
-            issues_delta: after.issues_count as isize - before.issues_count as isize,
-        },
+        metrics_delta: Some(metrics_delta),
     }
 }

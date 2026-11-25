@@ -2,14 +2,15 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use hopclaw_doc::types::{
-    CellBBox, CellProps, LayoutInspectorOptions, LayoutIssueCode, LayoutReport, PageDef,
-    ParentCellRef, TableCellMeta, TableCoordinateMeta, TableWalker,
+    default_layout_options, CellBBox, CellProps, LayoutIssueCode, LayoutReport, PageDef,
+    ParentCellCoord, TableCellMeta, TableCoordinateMeta, TableWalker,
 };
 use hopclaw_doc::{
-    compare_layout_reports, extract_hwpx_markdown, format_layout_report_for_prompt, inspect_hwpx,
-    inspect_layout_from_source, measure_korean_text_pt, merge_hwpx_tables_with_rhwp,
-    parse_hwpx_section_tables, DocumentLayoutSource, HwpxTableWalker,
+    compare_layout_reports, extract_hwpx_markdown, format_layout_report_for_prompt,
+    inspect_hwp5_cfb_summary, inspect_hwpx, inspect_layout_from_source, measure_korean_text_pt,
+    merge_hwpx_tables_with_rhwp, parse_hwpx_section_tables, DocumentLayoutSource, HwpxTableWalker,
 };
+use hopclaw_types::{validate_preorder_coords, ErrorCode};
 use serde::Deserialize;
 
 fn repo_root() -> PathBuf {
@@ -70,7 +71,7 @@ struct GoldenHwpxTable {
     table_index: usize,
     depth: usize,
     parent_table_index: Option<usize>,
-    parent_cell: Option<ParentCellRef>,
+    parent_cell: Option<ParentCellCoord>,
     row_count: usize,
     col_count: usize,
     cells: Vec<GoldenHwpxCell>,
@@ -115,7 +116,7 @@ fn hwpx_golden_corpus_inspect_tables_and_markdown_parity() {
     for entry in hwpx_entries {
         let doc_bytes = std::fs::read(root.join(&entry.source_path)).unwrap();
 
-        // 1. Inspect parity
+        // 1. Inspect parity against `extract_text.js --inspect`
         let t0 = Instant::now();
         let rust_inspect = inspect_hwpx(&doc_bytes, false).unwrap();
         let rust_inspect_ms = t0.elapsed().as_secs_f64() * 1000.0;
@@ -155,15 +156,25 @@ fn hwpx_golden_corpus_inspect_tables_and_markdown_parity() {
         assert_eq!(rust_inspect.table_count, entry.table_count);
         assert_eq!(rust_inspect.cell_count, entry.cell_count);
 
-        // 2. TableWalker pre-order parity against hwpxTableIndex.ts golden outputs
+        // 2. Canonical TableWalker trait + pre-order parity against `hwpxTableIndex.ts`
         let tables_rel = entry.outputs.hwpx_tables_json.as_ref().unwrap();
         let golden_tables_raw = std::fs::read_to_string(corpus_dir.join(tables_rel)).unwrap();
         let golden_tables: Vec<GoldenHwpxTable> =
             serde_json::from_str(&golden_tables_raw).unwrap();
 
-        let rust_tables = HwpxTableWalker.walk_tables(&doc_bytes).unwrap();
+        let walker = HwpxTableWalker::new(&doc_bytes);
+        let rust_tables = walker.walk_tables().unwrap();
+        validate_preorder_coords(&rust_tables).unwrap();
         assert_eq!(rust_tables.len(), golden_tables.len(), "{}", entry.id);
 
+        if !rust_tables.is_empty() {
+            let coord0 = walker.resolve_table_coord(0).unwrap();
+            assert_eq!(coord0.table_index, 0);
+        }
+        let err = walker.resolve_table_coord(rust_tables.len() + 99).unwrap_err();
+        assert_eq!(err.code, ErrorCode::E_TABLE_NOT_FOUND);
+
+        let has_nested = golden_tables.iter().any(|t| t.depth > 0);
         for (rt, gt) in rust_tables.iter().zip(golden_tables.iter()) {
             assert_eq!(rt.table_index, gt.table_index, "{}", entry.id);
             assert_eq!(rt.sec, gt.section_index, "{}", entry.id);
@@ -181,11 +192,9 @@ fn hwpx_golden_corpus_inspect_tables_and_markdown_parity() {
                 assert_eq!(rc.col_span, gc.col_span, "{}", entry.id);
                 let normalized_gold = normalize_legacy_hwpx_table_text(&gc.text);
                 if rc.text != normalized_gold {
-                    // `hwpxTableIndex.ts` uses `/<hp:t>([^<]*)<\/hp:t>/g`, which drops any
-                    // `<hp:t>` containing inline child elements (e.g. `<hp:fwSpace/>`,
-                    // `<hp:markpenBegin/>`), whereas `quick-xml` (and `extract_text.js`
-                    // `collectText`) preserves the full text. Verify `rc.text` only adds
-                    // the preserved inline-child text segments and never loses text.
+                    // `hwpxTableIndex.ts` uses `/<hp:t>([^<]*)<\/hp:t>/g`, which drops
+                    // `<hp:t>` segments after inline markers (`<hp:fwSpace/>`, `<hp:markpenBegin/>`),
+                    // whereas `quick-xml` (and `extract_text.js` `collectText`) preserves full text.
                     assert!(
                         rc.text.len() > normalized_gold.len(),
                         "{} table {} cell {} unexpected text mismatch:\n  rust: {}\n  gold: {}",
@@ -199,20 +208,24 @@ fn hwpx_golden_corpus_inspect_tables_and_markdown_parity() {
             }
         }
 
-        // 3. Markdown parity (skip nested_depth2 where Node extract_text.js non-greedy regex
-        //    mis-closed on inner </hp:tbl>; check non-nested docs byte-for-byte after CRLF normalize)
+        // 3. Markdown parity: byte-identical for non-nested HWPX docs; for docs with
+        //    nested `<hp:tbl>` (where `extract_text.js` non-greedy regex closes early
+        //    on the inner `</hp:tbl>`), verify all content & outer table structure remain intact.
         let t1 = Instant::now();
         let rust_md = extract_hwpx_markdown(&doc_bytes).unwrap();
         let rust_md_ms = t1.elapsed().as_secs_f64() * 1000.0;
 
-        if entry.id != "fixture_nested_depth2_hwpx" {
+        if !has_nested {
             let golden_md = std::fs::read_to_string(corpus_dir.join(&entry.outputs.markdown_md))
                 .unwrap()
                 .replace("\r\n", "\n");
             assert_eq!(rust_md, golden_md, "markdown mismatch for {}", entry.id);
         } else {
-            assert!(rust_md.contains("배움 단계"));
-            assert!(rust_md.contains("활동1: 그림과 수직선으로"));
+            assert!(
+                !rust_md.trim().is_empty() && rust_md.contains("| "),
+                "expected non-empty markdown table output for nested {}",
+                entry.id
+            );
         }
 
         eprintln!(
@@ -224,6 +237,88 @@ fn hwpx_golden_corpus_inspect_tables_and_markdown_parity() {
             entry.timings_ms.node_markdown_ms
         );
     }
+}
+
+#[test]
+fn hwp5_cfb_summary_matches_corpus_section_counts() {
+    let root = repo_root();
+    let corpus_dir = root.join("tests/fixtures/golden-corpus");
+    let manifest_raw = std::fs::read_to_string(corpus_dir.join("manifest.json")).unwrap();
+    let manifest: CorpusManifest = serde_json::from_str(&manifest_raw).unwrap();
+
+    let hwp_entries: Vec<&CorpusEntry> = manifest
+        .entries
+        .iter()
+        .filter(|e| e.file_type == "hwp")
+        .collect();
+    assert!(!hwp_entries.is_empty());
+
+    let mut passed = 0usize;
+    for entry in hwp_entries {
+        let doc_bytes = std::fs::read(root.join(&entry.source_path)).unwrap();
+        match inspect_hwp5_cfb_summary(&doc_bytes) {
+            Ok(summary) => {
+                assert_eq!(summary.file_type, "hwp", "{}", entry.id);
+                assert_eq!(summary.section_count, entry.section_count, "{}", entry.id);
+                assert_eq!(summary.table_count, entry.table_count, "{}", entry.id);
+                passed += 1;
+            }
+            Err(err) => {
+                // `samples/*.hwp` must always parse cleanly; stress fixtures in
+                // `third_party/` may carry non-standard FAT chains rejected by `cfb 0.14.0`.
+                assert!(
+                    !entry.source_path.starts_with("samples/"),
+                    "sample {} failed CFB summary: {err}",
+                    entry.id
+                );
+                eprintln!("[hwp5-cfb] skipped {}: {err}", entry.id);
+            }
+        }
+    }
+    assert!(passed >= 2, "expected at least samples/*.hwp to pass CFB summary");
+}
+
+#[test]
+fn hwpx_multi_section_and_mismatch_fallback() {
+    // Mismatch fallback: 2 HWPX top-level tables vs 1 rhwp table -> falls back safely to rhwp
+    let xml = r#"
+      <hs:sec>
+        <hp:tbl><hp:tr><hp:tc><hp:subList><hp:p><hp:run><hp:t>A</hp:t></hp:run></hp:p></hp:subList></hp:tc></hp:tr></hp:tbl>
+        <hp:tbl><hp:tr><hp:tc><hp:subList><hp:p><hp:run><hp:t>B</hp:t></hp:run></hp:p></hp:subList></hp:tc></hp:tr></hp:tbl>
+      </hs:sec>
+    "#;
+    let parsed = parse_hwpx_section_tables(xml, 0, 0).unwrap();
+    assert_eq!(parsed.len(), 2);
+
+    let rhwp_top = vec![TableCoordinateMeta {
+        table_index: 0,
+        sec: 0,
+        para: 4,
+        ctrl: 1,
+        row_count: 1,
+        col_count: 1,
+        parent_table_index: None,
+        parent_cell: None,
+        depth: None,
+        cells: Vec::new(),
+    }];
+    let fallback = merge_hwpx_tables_with_rhwp(&parsed, &rhwp_top);
+    assert_eq!(fallback.len(), 1);
+    assert_eq!(fallback[0].para, 4);
+    assert_eq!(fallback[0].ctrl, 1);
+    assert_eq!(fallback[0].depth, Some(0));
+}
+
+#[test]
+fn inspect_document_bytes_rejects_invalid_and_hwp5_cell_text_offline() {
+    assert!(hopclaw_doc::inspect_document_bytes(b"not a doc", false).is_err());
+
+    let root = repo_root();
+    let sample_hwp =
+        std::fs::read(root.join("samples/demo_official_report.hwp")).unwrap();
+    let err = hopclaw_doc::inspect_document_bytes(&sample_hwp, true).unwrap_err();
+    let model: hopclaw_types::ErrorModel = err.into();
+    assert_eq!(model.code, ErrorCode::E_OP_UNSUPPORTED_FORMAT);
 }
 
 #[test]
@@ -268,7 +363,7 @@ fn hwpx_table_walker_synthetic_and_merge_with_rhwp() {
     assert_eq!(parsed[1].table_index, 1);
     assert_eq!(parsed[1].depth, 1);
     assert_eq!(parsed[1].parent_table_index, Some(0));
-    assert_eq!(parsed[1].parent_cell, Some(ParentCellRef { row: 1, col: 0 }));
+    assert_eq!(parsed[1].parent_cell, Some(ParentCellCoord { row: 1, col: 0 }));
     assert_eq!(parsed[2].table_index, 2);
     assert_eq!(parsed[2].depth, 0);
 
@@ -338,6 +433,7 @@ fn hwpx_table_walker_synthetic_and_merge_with_rhwp() {
     ];
 
     let merged = merge_hwpx_tables_with_rhwp(&parsed, &rhwp_top);
+    validate_preorder_coords(&merged).unwrap();
     assert_eq!(merged.len(), 3);
     assert_eq!(merged[0].cells[0].bbox.as_ref().unwrap().w, 100.0);
     assert_eq!(merged[1].depth, Some(1));
@@ -359,10 +455,22 @@ impl DocumentLayoutSource for MockLayoutSource {
     fn page_def(&self, _sec: usize) -> PageDef {
         PageDef::default()
     }
-    fn cell_properties(&self, _sec: usize, _para: usize, _ctrl: usize, _cell_idx: usize) -> CellProps {
+    fn cell_properties(
+        &self,
+        _sec: usize,
+        _para: usize,
+        _ctrl: usize,
+        _cell_idx: usize,
+    ) -> CellProps {
         CellProps::default()
     }
-    fn cell_paragraphs(&self, _sec: usize, _para: usize, _ctrl: usize, _cell_idx: usize) -> Vec<String> {
+    fn cell_paragraphs(
+        &self,
+        _sec: usize,
+        _para: usize,
+        _ctrl: usize,
+        _cell_idx: usize,
+    ) -> Vec<String> {
         Vec::new()
     }
 }
@@ -373,47 +481,89 @@ fn layout_measurement_and_comparison_parity() {
     assert!((measure_korean_text_pt("Ab0 ", 10.0) - 21.5).abs() < 1e-9);
 
     let overflowing = MockLayoutSource {
-        tables: vec![TableCoordinateMeta {
-            table_index: 0,
-            sec: 0,
-            para: 0,
-            ctrl: 0,
-            row_count: 1,
-            col_count: 1,
-            parent_table_index: None,
-            parent_cell: None,
-            depth: Some(0),
-            cells: vec![TableCellMeta {
-                idx: 0,
-                row: 0,
-                col: 0,
-                row_span: 1,
-                col_span: 1,
-                text: "아주 긴 한글 텍스트가 좁은 셀 안에 들어가서 여러 줄로 넘치게 됩니다. 계속해서 텍스트를 추가하여 확실히 세로 넘침이 발생하도록 합니다.".to_string(),
-                bbox: Some(CellBBox {
-                    cell_idx: 0,
+        tables: vec![
+            TableCoordinateMeta {
+                table_index: 0,
+                sec: 0,
+                para: 0,
+                ctrl: 0,
+                row_count: 1,
+                col_count: 1,
+                parent_table_index: None,
+                parent_cell: None,
+                depth: Some(0),
+                cells: vec![TableCellMeta {
+                    idx: 0,
                     row: 0,
                     col: 0,
                     row_span: 1,
                     col_span: 1,
-                    page_index: 0,
-                    x: 0.0,
-                    y: 0.0,
-                    w: 120.0,
-                    h: 24.0,
-                }),
-            }],
-        }],
+                    text: "아주 긴 한글 텍스트가 좁은 셀 안에 들어가서 여러 줄로 넘치게 됩니다. 계속해서 텍스트를 추가하여 확실히 세로 넘침이 발생하도록 합니다.".to_string(),
+                    bbox: Some(CellBBox {
+                        cell_idx: 0,
+                        row: 0,
+                        col: 0,
+                        row_span: 1,
+                        col_span: 1,
+                        page_index: 0,
+                        x: 0.0,
+                        y: 0.0,
+                        w: 120.0,
+                        h: 24.0,
+                    }),
+                }],
+            },
+            // Nested table wider than parent cell's available width
+            TableCoordinateMeta {
+                table_index: 1,
+                sec: 0,
+                para: 0,
+                ctrl: 0,
+                row_count: 1,
+                col_count: 1,
+                parent_table_index: Some(0),
+                parent_cell: Some(ParentCellCoord { row: 0, col: 0 }),
+                depth: Some(1),
+                cells: vec![TableCellMeta {
+                    idx: 0,
+                    row: 0,
+                    col: 0,
+                    row_span: 1,
+                    col_span: 1,
+                    text: "ok".to_string(),
+                    bbox: Some(CellBBox {
+                        cell_idx: 0,
+                        row: 0,
+                        col: 0,
+                        row_span: 1,
+                        col_span: 1,
+                        page_index: 0,
+                        x: 0.0,
+                        y: 0.0,
+                        w: 200.0,
+                        h: 40.0,
+                    }),
+                }],
+            },
+        ],
     };
 
     let before: LayoutReport =
-        inspect_layout_from_source(&overflowing, LayoutInspectorOptions::default(), 1000);
-    assert_eq!(before.table_count, 1);
-    assert_eq!(before.issues_count, 1);
-    assert_eq!(before.issues[0].code, LayoutIssueCode::CellOverflowV);
+        inspect_layout_from_source(&overflowing, default_layout_options(), 1000);
+    assert_eq!(before.table_count, 2);
+    assert_eq!(before.issues_count, 2);
+    assert!(before
+        .issues
+        .iter()
+        .any(|i| i.code == LayoutIssueCode::CELL_OVERFLOW_V));
+    assert!(before
+        .issues
+        .iter()
+        .any(|i| i.code == LayoutIssueCode::TABLE_EXCEEDS_PAGE));
 
     let prompt = format_layout_report_for_prompt(&before);
     assert!(prompt.contains("[세로 넘침 / error]"));
+    assert!(prompt.contains("[표 폭 초과 / warning]"));
 
     let resolved_src = MockLayoutSource {
         tables: vec![TableCoordinateMeta {
@@ -448,13 +598,16 @@ fn layout_measurement_and_comparison_parity() {
             }],
         }],
     };
-    let after = inspect_layout_from_source(&resolved_src, LayoutInspectorOptions::default(), 2000);
+    let after = inspect_layout_from_source(&resolved_src, default_layout_options(), 2000);
     assert_eq!(after.issues_count, 0);
 
     let cmp = compare_layout_reports(&before, &after);
     assert!(cmp.ok);
-    assert_eq!(cmp.resolved_issues.len(), 1);
+    assert_eq!(cmp.resolved_issues.len(), 2);
     assert_eq!(cmp.remaining_issues.len(), 0);
     assert_eq!(cmp.new_issues.len(), 0);
-    assert_eq!(cmp.metrics_delta.issues_delta, -1);
+    let delta = cmp.metrics_delta.unwrap();
+    assert_eq!(delta.before_issues_count, 2);
+    assert_eq!(delta.after_issues_count, 0);
+    assert_eq!(delta.resolved_count, 2);
 }

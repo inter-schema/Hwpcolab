@@ -8,8 +8,10 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 use zip::ZipArchive;
 
+use hopclaw_types::{validate_preorder_coords, ErrorModel};
+
 use crate::types::{
-    DocumentInspectReport, ParentCellRef, TableCellMeta, TableCoordinateMeta, TableWalker,
+    InspectDocumentResult, ParentCellCoord, TableCellMeta, TableCoordinateMeta, TableWalker,
 };
 use crate::DocError;
 
@@ -67,7 +69,7 @@ pub struct HwpxParsedTable {
     pub table_index: usize,
     pub depth: usize,
     pub parent_table_index: Option<usize>,
-    pub parent_cell: Option<ParentCellRef>,
+    pub parent_cell: Option<ParentCellCoord>,
     pub row_count: usize,
     pub col_count: usize,
     pub cells: Vec<HwpxParsedCell>,
@@ -88,7 +90,7 @@ struct ActiveTable {
     table_index: usize,
     depth: usize,
     parent_table_index: Option<usize>,
-    parent_cell: Option<ParentCellRef>,
+    parent_cell: Option<ParentCellCoord>,
     row_idx: usize,
     col_idx: usize,
     max_row: usize,
@@ -125,7 +127,7 @@ pub fn parse_hwpx_section_tables(
                             let pcell = parent
                                 .active_cell
                                 .as_ref()
-                                .map(|c| ParentCellRef { row: c.row, col: c.col });
+                                .map(|c| ParentCellCoord { row: c.row, col: c.col });
                             (Some(parent.table_index), pcell)
                         } else {
                             (None, None)
@@ -192,7 +194,7 @@ pub fn parse_hwpx_section_tables(
                             let pcell = parent
                                 .active_cell
                                 .as_ref()
-                                .map(|c| ParentCellRef { row: c.row, col: c.col });
+                                .map(|c| ParentCellCoord { row: c.row, col: c.col });
                             (Some(parent.table_index), pcell)
                         } else {
                             (None, None)
@@ -583,11 +585,19 @@ pub fn build_tables_meta_for_hwpx(
 }
 
 /// Pure-Rust `TableWalker` implementation for HWPX documents.
-#[derive(Debug, Default, Clone, Copy)]
-pub struct HwpxTableWalker;
+#[derive(Debug, Clone, Copy)]
+pub struct HwpxTableWalker<'a> {
+    bytes: &'a [u8],
+}
 
-impl TableWalker for HwpxTableWalker {
-    fn walk_tables(&self, bytes: &[u8]) -> Result<Vec<TableCoordinateMeta>, DocError> {
+impl<'a> HwpxTableWalker<'a> {
+    /// Wrap raw HWPX package bytes for canonical pre-order table traversal.
+    pub fn new(bytes: &'a [u8]) -> Self {
+        Self { bytes }
+    }
+
+    /// Convenience helper matching `walk_tables` with [`DocError`] error type.
+    pub fn walk_bytes(bytes: &[u8]) -> Result<Vec<TableCoordinateMeta>, DocError> {
         if !is_hwpx_bytes(bytes) {
             return Err(DocError::InvalidDocument(
                 "HwpxTableWalker requires ZIP/HWPX bytes".to_string(),
@@ -630,8 +640,16 @@ impl TableWalker for HwpxTableWalker {
     }
 }
 
+impl TableWalker for HwpxTableWalker<'_> {
+    fn walk_tables(&self) -> Result<Vec<TableCoordinateMeta>, ErrorModel> {
+        let tables = Self::walk_bytes(self.bytes).map_err(ErrorModel::from)?;
+        validate_preorder_coords(&tables)?;
+        Ok(tables)
+    }
+}
+
 /// Inspect an HWPX package, matching `extract_text.js --inspect` counts (`hp:p`, `hp:tbl`, `hp:tc`, `hp:pic`).
-pub fn inspect_hwpx(bytes: &[u8], with_cell_text: bool) -> Result<DocumentInspectReport, DocError> {
+pub fn inspect_hwpx(bytes: &[u8], with_cell_text: bool) -> Result<InspectDocumentResult, DocError> {
     if !is_hwpx_bytes(bytes) {
         return Err(DocError::InvalidDocument(
             "expected HWPX ZIP container".to_string(),
@@ -670,12 +688,12 @@ pub fn inspect_hwpx(bytes: &[u8], with_cell_text: bool) -> Result<DocumentInspec
     }
 
     let tables = if with_cell_text {
-        Some(HwpxTableWalker.walk_tables(bytes)?)
+        Some(HwpxTableWalker::walk_bytes(bytes)?)
     } else {
         None
     };
 
-    Ok(DocumentInspectReport {
+    Ok(InspectDocumentResult {
         file_type: "hwpx".to_string(),
         section_count: sections.len(),
         paragraph_count,

@@ -6,6 +6,7 @@ pub mod layout;
 pub mod rhwp_adapter;
 pub mod types;
 
+use hopclaw_types::{ErrorCode, ErrorModel};
 use thiserror::Error;
 
 /// Errors returned by `hopclaw-doc` operations.
@@ -28,12 +29,26 @@ pub enum DocError {
 
     #[error("unsupported feature: {0}")]
     UnsupportedFeature(String),
+
+    #[error("invalid table invariants: {0}")]
+    Contract(String),
+}
+
+impl From<DocError> for ErrorModel {
+    fn from(err: DocError) -> Self {
+        match err {
+            DocError::UnsupportedFeature(msg) => {
+                ErrorModel::new(ErrorCode::E_OP_UNSUPPORTED_FORMAT, msg)
+            }
+            other => ErrorModel::new(ErrorCode::E_DOC_INVALID, other.to_string()),
+        }
+    }
 }
 
 pub use hwpx_walker::{
     build_tables_meta_for_hwpx, extract_hwpx_markdown, inspect_hwpx, is_hwpx_bytes,
     merge_hwpx_tables_with_rhwp, parse_hwpx_section_tables, parse_hwpx_tables_from_bytes,
-    HwpxTableWalker,
+    HwpxParsedCell, HwpxParsedTable, HwpxTableWalker,
 };
 pub use layout::{
     compare_layout_reports, format_layout_report_for_prompt, inspect_layout_from_source,
@@ -41,8 +56,8 @@ pub use layout::{
 };
 pub use rhwp_adapter::{inspect_document_bytes, inspect_hwp5_cfb_summary, is_hwp5_cfb_bytes};
 pub use types::{
-    CellBBox, CellLayoutInfo, CellProps, DocumentInspectReport, LayoutComparison,
-    LayoutInspectorOptions, LayoutIssue, LayoutIssueCell, LayoutIssueCode, LayoutIssueMetrics,
-    LayoutReport, PageDef, ParentCellRef, TableCellMeta, TableCoordinateMeta, TableLayoutSummary,
-    TableWalker,
+    CellBBox, CellLayoutInfo, CellProps, InspectDocumentResult, LayoutComparison,
+    LayoutInspectorOptions, LayoutIssue, LayoutIssueCellRef, LayoutIssueCode, LayoutIssueMetrics,
+    LayoutIssueSeverity, LayoutMetricsDelta, LayoutReport, PageDef, ParentCellCoord,
+    TableCellMeta, TableCoord, TableCoordinateMeta, TableLayoutInfo, TableWalker,
 };
