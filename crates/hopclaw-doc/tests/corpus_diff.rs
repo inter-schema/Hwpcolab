@@ -322,6 +322,36 @@ fn inspect_document_bytes_rejects_invalid_and_hwp5_cell_text_offline() {
 }
 
 #[test]
+fn strangler_backend_parsing_and_shadow_diff() {
+    use hopclaw_types::EngineBackend;
+
+    assert_eq!(hopclaw_doc::parse_engine_backend(None), EngineBackend::Node);
+    assert_eq!(
+        hopclaw_doc::parse_engine_backend(Some("RUST")),
+        EngineBackend::Rust
+    );
+    assert_eq!(
+        hopclaw_doc::parse_engine_backend(Some(" shadow ")),
+        EngineBackend::Shadow
+    );
+
+    let root = repo_root();
+    let sample_hwpx =
+        std::fs::read(root.join("samples/2026_AI_행정업무_혁신계획(기획안).hwpx")).unwrap();
+    let rust_inspect = inspect_hwpx(&sample_hwpx, false).unwrap();
+    let node_json = serde_json::to_value(&rust_inspect).unwrap();
+    assert!(hopclaw_doc::inspect_shadow_diff(&node_json, &rust_inspect).is_ok());
+
+    let mut bad_json = node_json.clone();
+    bad_json["tableCount"] = serde_json::json!(99);
+    let diff = hopclaw_doc::inspect_shadow_diff(&bad_json, &rust_inspect).unwrap_err();
+    assert!(diff.contains("tableCount"));
+
+    assert!(hopclaw_doc::markdown_shadow_diff("a\r\nb\r\n", "a\nb\n").is_ok());
+    assert!(hopclaw_doc::markdown_shadow_diff("a", "ab").is_err());
+}
+
+#[test]
 fn hwpx_table_walker_synthetic_and_merge_with_rhwp() {
     let xml = r#"
       <hs:sec>

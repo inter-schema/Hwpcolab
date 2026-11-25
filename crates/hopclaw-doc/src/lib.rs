@@ -4,6 +4,7 @@
 pub mod hwpx_walker;
 pub mod layout;
 pub mod rhwp_adapter;
+pub mod strangler;
 pub mod types;
 
 use hopclaw_types::{ErrorCode, ErrorModel};
@@ -55,6 +56,9 @@ pub use layout::{
     measure_korean_text_pt, DocumentLayoutSource, HU_PER_MM, HU_PER_PX, PX_PER_MM,
 };
 pub use rhwp_adapter::{inspect_document_bytes, inspect_hwp5_cfb_summary, is_hwp5_cfb_bytes};
+pub use strangler::{
+    inspect_shadow_diff, markdown_shadow_diff, parse_engine_backend, resolve_engine_backend_from_env,
+};
 pub use types::{
     CellBBox, CellLayoutInfo, CellProps, InspectDocumentResult, LayoutComparison,
     LayoutInspectorOptions, LayoutIssue, LayoutIssueCellRef, LayoutIssueCode, LayoutIssueMetrics,
