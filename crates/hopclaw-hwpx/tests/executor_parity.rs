@@ -698,3 +698,61 @@ fn differential_parity_against_hwpx_edit_js_on_samples() {
     let node_md2 = run_node_extract_markdown(&node_file2);
     assert_eq!(rust_md2, node_md2);
 }
+
+#[test]
+fn insert_image_into_cell_after_merged_colspan_uses_cell_addr() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let png_path = dir.path().join("badge.png");
+    std::fs::write(&png_path, minimal_1x1_png()).expect("write png");
+    let png_str = png_path.to_string_lossy().to_string();
+
+    // Row 1 merges cols 0..=1 into a colSpan=2 cell, so logical col=2 is the second <hp:tc> in row 1.
+    let plan = HwpxEditPlan {
+        is_new_document: true,
+        steps: vec![
+            HwpxEditStep::InsertTable {
+                after_para_index: None,
+                headers: vec!["A".to_string(), "B".to_string(), "C".to_string()],
+                rows: vec![vec!["L".to_string(), "M".to_string(), "R".to_string()]],
+            },
+            HwpxEditStep::MergeCells {
+                table_index: 0,
+                from_row: 1,
+                from_col: 0,
+                to_row: 1,
+                to_col: 1,
+            },
+            HwpxEditStep::InsertImage {
+                path: png_str,
+                anchor_text: None,
+                width_hu: Some(2835),
+                height_hu: Some(2835),
+                cell: Some(ImageCellTarget {
+                    table_index: 0,
+                    row: 1,
+                    col: 2,
+                }),
+            },
+        ],
+    };
+
+    let bytes = execute_hwpx_edit_plan(&[], &plan).expect("insert image after colSpan merge");
+    assert!(is_valid_hwpx_package(&bytes));
+
+    let doc = HwpxDocument::open(bytes).expect("reopen edited document");
+    let loc = doc.get_table(0).expect("table 0");
+    let sec_xml = doc.archive.read_text_ro(&loc.section).expect("section xml");
+    let tbl_inner = loc.span.inner(&sec_xml);
+    let rows = hopclaw_hwpx::xml_util::scan_top_level(tbl_inner, "hp:tr").expect("rows");
+    let r1_inner = rows[1].inner(tbl_inner);
+    let tcs = hopclaw_hwpx::xml_util::scan_top_level(r1_inner, "hp:tc").expect("tcs");
+    assert_eq!(tcs.len(), 2, "merged row 1 should have 2 <hp:tc> elements");
+    assert!(
+        !tcs[0].inner(r1_inner).contains("<hp:pic"),
+        "merged cell at col 0..=1 must not receive image intended for colAddr=2"
+    );
+    assert!(
+        tcs[1].inner(r1_inner).contains("<hp:pic"),
+        "cell at colAddr=2 (second <hp:tc>) must contain inserted <hp:pic>"
+    );
+}

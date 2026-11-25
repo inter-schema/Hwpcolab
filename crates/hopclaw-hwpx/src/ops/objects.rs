@@ -8,7 +8,9 @@ use hopclaw_types::{
 
 use crate::error::HwpxError;
 use crate::model::{first_char_pr_id, run_with_text, HwpxDocument};
-use crate::ops::table::{cell_content_width, op_set_cell_align, op_set_cell_padding};
+use crate::ops::table::{
+    cell_content_width, find_cell_index_in_row, op_set_cell_align, op_set_cell_padding,
+};
 use crate::ops::text::ensure_clean_para_pr;
 use crate::xml_util::{
     drop_linesegs, extract_t_text, fresh_id, get_attr, scan_top_level, set_or_add_attr,
@@ -173,11 +175,13 @@ pub fn op_insert_image(
         let rw = rows.get(target.row).ok_or_else(|| {
             HwpxError::OutOfRange(format!("set_cell_image: row {} out of range", target.row))
         })?;
-        let tcs = scan_top_level(rw.inner(tbl_inner), "hp:tc")?;
-        let tc = tcs.get(target.col).ok_or_else(|| {
+        let r_in = rw.inner(tbl_inner);
+        let tcs = scan_top_level(r_in, "hp:tc")?;
+        let tc_idx = find_cell_index_in_row(r_in, &tcs, target.col).ok_or_else(|| {
             HwpxError::OutOfRange(format!("set_cell_image: col {} out of range", target.col))
         })?;
-        let has_margin = get_attr(tc.attrs(rw.inner(tbl_inner), "hp:tc"), "hasMargin").as_deref() == Some("1");
+        let tc = &tcs[tc_idx];
+        let has_margin = get_attr(tc.attrs(r_in, "hp:tc"), "hasMargin").as_deref() == Some("1");
         if !has_margin {
             op_set_cell_padding(
                 doc,
@@ -222,7 +226,10 @@ pub fn op_insert_image(
         let rw2 = &rows2[target.row];
         let r_in2 = rw2.inner(tbl_inner2);
         let tcs2 = scan_top_level(r_in2, "hp:tc")?;
-        let tc2 = &tcs2[target.col];
+        let tc_idx2 = find_cell_index_in_row(r_in2, &tcs2, target.col).ok_or_else(|| {
+            HwpxError::OutOfRange(format!("set_cell_image: col {} out of range", target.col))
+        })?;
+        let tc2 = &tcs2[tc_idx2];
         let tc_in2 = tc2.inner(r_in2);
         let sub = scan_top_level(tc_in2, "hp:subList")?.into_iter().next().ok_or_else(|| {
             HwpxError::InvalidArgument("set_cell_image: cell has no <hp:subList>".to_string())

@@ -100,7 +100,11 @@ pub fn set_cell_inner_text(tc_inner: &str, text: &str, fit: bool) -> Result<Stri
     Ok(splice_span(tc_inner, sub, &new_sub))
 }
 
-fn find_cell_index_in_row(row_inner: &str, tcs: &[XmlElementSpan], col: usize) -> Option<usize> {
+pub(crate) fn find_cell_index_in_row(
+    row_inner: &str,
+    tcs: &[XmlElementSpan],
+    col: usize,
+) -> Option<usize> {
     for (idx, tc) in tcs.iter().enumerate() {
         let tc_inner = tc.inner(row_inner);
         let tail = cell_tail(tc_inner);
