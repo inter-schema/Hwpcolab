@@ -1,0 +1,17 @@
+[package]
+name = "hopclaw-hwp5"
+version = "0.2.3"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "Pure-Rust HWP 5.0 binary container and record-level patcher for HopClaw"
+
+[dependencies]
+byteorder = "1.5"
+cfb = "0.14.0"
+flate2 = "1.1.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"
