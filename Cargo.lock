@@ -1622,6 +1622,8 @@ version = "0.2.3"
 dependencies = [
  "cfb",
  "fontdb",
+ "hopclaw-doc",
+ "hopclaw-hwpx",
  "hopclaw-types",
  "reqwest 0.12.28",
  "rfd",
@@ -1634,6 +1636,38 @@ dependencies = [
  "tokio",
  "unicase",
  "unicode-normalization",
+ "uuid",
+ "zip",
+]
+
+[[package]]
+name = "hopclaw-ai"
+version = "0.1.0"
+dependencies = [
+ "hopclaw-types",
+ "regex",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "hopclaw-attach"
+version = "0.1.0"
+dependencies = [
+ "hopclaw-types",
+ "quick-xml 0.42.0",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
  "uuid",
  "zip",
 ]
@@ -1657,6 +1691,89 @@ dependencies = [
  "tracing",
  "uuid",
  "zip",
+]
+
+[[package]]
+name = "hopclaw-doc"
+version = "0.2.3"
+dependencies = [
+ "cfb",
+ "flate2",
+ "hopclaw-types",
+ "quick-xml 0.42.0",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "zip",
+]
+
+[[package]]
+name = "hopclaw-hwp5"
+version = "0.2.3"
+dependencies = [
+ "byteorder",
+ "cfb",
+ "flate2",
+ "hopclaw-types",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "hopclaw-hwpx"
+version = "0.2.3"
+dependencies = [
+ "hopclaw-types",
+ "quick-xml 0.42.0",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "unicase",
+ "unicode-normalization",
+ "zip",
+]
+
+[[package]]
+name = "hopclaw-memory"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "hex",
+ "hopclaw-types",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "hopclaw-ops"
+version = "0.2.3"
+dependencies = [
+ "hopclaw-types",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "hopclaw-privacy"
+version = "0.2.3"
+dependencies = [
+ "hex",
+ "hopclaw-types",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]

@@ -1,8 +1,9 @@
+use crate::state::AppState;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, State};
 
 pub use hopclaw_types::ClawExecResult;
 use hopclaw_types::EngineBackend;
@@ -235,9 +236,13 @@ async fn extract_hwpx_markdown_rust(bytes: Vec<u8>) -> Result<String, String> {
 
 /// 1) 문서 구조 및 셀 텍스트 전수 검사 (Strangler router: node | rust | shadow)
 #[tauri::command]
-pub async fn inspect_document(app: AppHandle, file_path: String) -> Result<serde_json::Value, String> {
+pub async fn inspect_document(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    file_path: String,
+) -> Result<serde_json::Value, String> {
     let file_path = strip_unc_prefix(PathBuf::from(file_path));
-    let backend = hopclaw_doc::resolve_engine_backend_from_env();
+    let backend = state.engine_backend();
 
     match backend {
         EngineBackend::Node => inspect_document_node(&app, &file_path).await,
@@ -283,9 +288,13 @@ pub async fn inspect_document(app: AppHandle, file_path: String) -> Result<serde
 
 /// 2) 문서 마크다운 텍스트 추출 (Strangler router: node | rust | shadow)
 #[tauri::command]
-pub async fn extract_markdown(app: AppHandle, file_path: String) -> Result<String, String> {
+pub async fn extract_markdown(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    file_path: String,
+) -> Result<String, String> {
     let file_path = strip_unc_prefix(PathBuf::from(file_path));
-    let backend = hopclaw_doc::resolve_engine_backend_from_env();
+    let backend = state.engine_backend();
 
     match backend {
         EngineBackend::Node => extract_markdown_node(&app, &file_path).await,

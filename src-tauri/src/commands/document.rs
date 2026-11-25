@@ -89,6 +89,28 @@ pub async fn read_file_bytes(file_path: String) -> Result<Response, String> {
     Ok(Response::new(bytes))
 }
 
+/// Percent-decode UTF-8 sequences (`%XX`) in `x-file-path` headers (preserving literal `+`).
+fn decode_percent_utf8(input: &str) -> Result<String, String> {
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            let hi = (bytes[i + 1] as char).to_digit(16);
+            let lo = (bytes[i + 2] as char).to_digit(16);
+            if let (Some(h), Some(l)) = (hi, lo) {
+                out.push(((h << 4) | l) as u8);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8(out)
+        .map_err(|e| format!("x-file-path 헤더의 UTF-8 디코딩 오류: {e}"))
+}
+
 /// Decode either raw-byte IPC (`InvokeBody::Raw` + `x-file-path` header) or legacy JSON `{ filePath, bytes }`.
 pub(crate) fn parse_write_file_bytes_request(
     body: &InvokeBody,
@@ -100,10 +122,10 @@ pub(crate) fn parse_write_file_bytes_request(
                 .get("x-file-path")
                 .or_else(|| headers.get("file-path"))
                 .ok_or_else(|| "x-file-path 헤더가 누락되었습니다.".to_string())?;
-            let path = header_val
+            let raw_path = header_val
                 .to_str()
-                .map_err(|e| format!("x-file-path 헤더 인코딩 오류: {e}"))?
-                .to_string();
+                .map_err(|e| format!("x-file-path 헤더 인코딩 오류: {e}"))?;
+            let path = decode_percent_utf8(raw_path)?;
             Ok((path, bytes.clone()))
         }
         InvokeBody::Json(value) => {
@@ -472,5 +494,26 @@ mod tests {
             parse_write_file_bytes_request(&json_body, &tauri::http::HeaderMap::new()).unwrap();
         assert_eq!(j_path, "legacy.hwp");
         assert_eq!(j_bytes, vec![10, 20, 30]);
+    }
+
+    #[test]
+    fn parse_write_file_bytes_percent_decodes_korean_and_windows_paths() {
+        let mut headers = tauri::http::HeaderMap::new();
+        // encodeURIComponent("C:\\문서\\테스트 1+2%완료.hwpx")
+        headers.insert(
+            "x-file-path",
+            "C%3A%5C%EB%AC%B8%EC%84%9C%5C%ED%85%8C%EC%8A%A4%ED%8A%B8%201%2B2%25%EC%99%84%EB%A3%8C.hwpx"
+                .parse()
+                .unwrap(),
+        );
+        let raw = InvokeBody::Raw(vec![80, 75]);
+        let (path, bytes) = parse_write_file_bytes_request(&raw, &headers).unwrap();
+        assert_eq!(path, r"C:\문서\테스트 1+2%완료.hwpx");
+        assert_eq!(bytes, vec![80, 75]);
+
+        // Invalid UTF-8 byte sequence (%FF) must fail cleanly
+        let mut bad_headers = tauri::http::HeaderMap::new();
+        bad_headers.insert("x-file-path", "%FF%FE.hwpx".parse().unwrap());
+        assert!(parse_write_file_bytes_request(&raw, &bad_headers).is_err());
     }
 }
