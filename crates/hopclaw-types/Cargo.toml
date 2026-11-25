@@ -1,0 +1,18 @@
+[package]
+name = "hopclaw-types"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Shared Rust type contracts, EditPlan IR, TableWalker, and storage traits for HOP-Claw"
+
+[features]
+default = []
+# Gated off by default because `ts-rs` is not available in the offline registry cache yet.
+# Once `ts-rs` is vendored or fetched, add `ts-rs` as an optional dependency and wire `dep:ts-rs`.
+ts-bindings = []
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
