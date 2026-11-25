@@ -352,6 +352,69 @@ fn strangler_backend_parsing_and_shadow_diff() {
 }
 
 #[test]
+fn hwpx_nested_table_parent_cell_uses_post_sublist_cell_addr_after_merge() {
+    // Real OWPML places `<hp:subList>` before `<hp:cellAddr>` inside `<hp:tc>`.
+    // Row 0 has a colSpan=2 merged cell at col=0, so the next `<hp:tc>` has positional
+    // col_idx=1 but `<hp:cellAddr colAddr="2" rowAddr="0"/>`.
+    // Row 0 col 0 also spans 2 rows (rowSpan=2), so Row 1's first `<hp:tc>` has positional
+    // col_idx=0 but `<hp:cellAddr colAddr="2" rowAddr="1"/>`.
+    let xml = r#"
+      <hs:sec>
+        <hp:tbl id="outer">
+          <hp:tr>
+            <hp:tc>
+              <hp:subList><hp:p><hp:run><hp:t>Merged 2x2</hp:t></hp:run></hp:p></hp:subList>
+              <hp:cellAddr colAddr="0" rowAddr="0"/>
+              <hp:cellSpan colSpan="2" rowSpan="2"/>
+            </hp:tc>
+            <hp:tc>
+              <hp:subList>
+                <hp:p><hp:run>
+                  <hp:tbl id="nested_row0">
+                    <hp:tr>
+                      <hp:tc>
+                        <hp:subList><hp:p><hp:run><hp:t>R0C2</hp:t></hp:run></hp:p></hp:subList>
+                        <hp:cellAddr colAddr="0" rowAddr="0"/>
+                        <hp:cellSpan colSpan="1" rowSpan="1"/>
+                      </hp:tc>
+                    </hp:tr>
+                  </hp:tbl>
+                </hp:run></hp:p>
+              </hp:subList>
+              <hp:cellAddr colAddr="2" rowAddr="0"/>
+              <hp:cellSpan colSpan="1" rowSpan="1"/>
+            </hp:tc>
+          </hp:tr>
+          <hp:tr>
+            <hp:tc>
+              <hp:subList>
+                <hp:p><hp:run><hp:tbl id="nested_empty"/></hp:run></hp:p>
+              </hp:subList>
+              <hp:cellAddr colAddr="2" rowAddr="1"/>
+              <hp:cellSpan colSpan="1" rowSpan="1"/>
+            </hp:tc>
+          </hp:tr>
+        </hp:tbl>
+      </hs:sec>
+    "#;
+
+    let tables = parse_hwpx_section_tables(xml, 0, 0).unwrap();
+    assert_eq!(tables.len(), 3);
+    assert_eq!(tables[0].row_count, 2);
+    assert_eq!(tables[0].col_count, 3);
+
+    // Nested table inside (row=0, col=2) even though positional col_idx was 1
+    assert_eq!(tables[1].depth, 1);
+    assert_eq!(tables[1].parent_table_index, Some(0));
+    assert_eq!(tables[1].parent_cell, Some(ParentCellCoord { row: 0, col: 2 }));
+
+    // Empty nested table inside (row=1, col=2) even though positional col_idx was 0
+    assert_eq!(tables[2].depth, 1);
+    assert_eq!(tables[2].parent_table_index, Some(0));
+    assert_eq!(tables[2].parent_cell, Some(ParentCellCoord { row: 1, col: 2 }));
+}
+
+#[test]
 fn hwpx_table_walker_synthetic_and_merge_with_rhwp() {
     let xml = r#"
       <hs:sec>

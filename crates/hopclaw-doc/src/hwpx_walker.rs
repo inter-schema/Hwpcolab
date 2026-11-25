@@ -83,6 +83,7 @@ struct ActiveCell {
     col_span: usize,
     text: String,
     sublist_depth: usize,
+    child_slot_indices: Vec<usize>,
 }
 
 struct ActiveTable {
@@ -123,16 +124,24 @@ pub fn parse_hwpx_section_tables(
                 match name.as_ref() {
                     "hp:tbl" => {
                         let depth = stack.len();
-                        let (parent_table_index, parent_cell) = if let Some(parent) = stack.last() {
-                            let pcell = parent
-                                .active_cell
-                                .as_ref()
-                                .map(|c| ParentCellCoord { row: c.row, col: c.col });
-                            (Some(parent.table_index), pcell)
-                        } else {
-                            (None, None)
-                        };
                         let slot_idx = slots.len();
+                        let (parent_table_index, parent_cell) =
+                            if let Some(parent) = stack.last_mut() {
+                                let pcell = if let Some(cell) = parent.active_cell.as_mut() {
+                                    // Record child slot so `End("hp:tc")` can backfill the final
+                                    // `<hp:cellAddr>` even when `<hp:subList>` precedes `<hp:cellAddr>`.
+                                    cell.child_slot_indices.push(slot_idx);
+                                    Some(ParentCellCoord {
+                                        row: cell.row,
+                                        col: cell.col,
+                                    })
+                                } else {
+                                    None
+                                };
+                                (Some(parent.table_index), pcell)
+                            } else {
+                                (None, None)
+                            };
                         let table_index = start_index_offset + slot_idx;
                         slots.push(None);
                         stack.push(ActiveTable {
@@ -165,6 +174,7 @@ pub fn parse_hwpx_section_tables(
                                 col_span: 1,
                                 text: String::new(),
                                 sublist_depth: 0,
+                                child_slot_indices: Vec::new(),
                             });
                         }
                     }
@@ -190,16 +200,22 @@ pub fn parse_hwpx_section_tables(
                     "hp:cellSpan" => apply_cell_span(&mut stack, e),
                     "hp:tbl" => {
                         let depth = stack.len();
-                        let (parent_table_index, parent_cell) = if let Some(parent) = stack.last() {
-                            let pcell = parent
-                                .active_cell
-                                .as_ref()
-                                .map(|c| ParentCellCoord { row: c.row, col: c.col });
-                            (Some(parent.table_index), pcell)
-                        } else {
-                            (None, None)
-                        };
                         let slot_idx = slots.len();
+                        let (parent_table_index, parent_cell) =
+                            if let Some(parent) = stack.last_mut() {
+                                let pcell = if let Some(cell) = parent.active_cell.as_mut() {
+                                    cell.child_slot_indices.push(slot_idx);
+                                    Some(ParentCellCoord {
+                                        row: cell.row,
+                                        col: cell.col,
+                                    })
+                                } else {
+                                    None
+                                };
+                                (Some(parent.table_index), pcell)
+                            } else {
+                                (None, None)
+                            };
                         let table_index = start_index_offset + slot_idx;
                         slots.push(Some(HwpxParsedTable {
                             section_index,
@@ -242,6 +258,15 @@ pub fn parse_hwpx_section_tables(
                     "hp:tc" => {
                         if let Some(tbl) = stack.last_mut() {
                             if let Some(cell) = tbl.active_cell.take() {
+                                let final_coord = ParentCellCoord {
+                                    row: cell.row,
+                                    col: cell.col,
+                                };
+                                for child_slot in cell.child_slot_indices {
+                                    if let Some(Some(child_tbl)) = slots.get_mut(child_slot) {
+                                        child_tbl.parent_cell = Some(final_coord);
+                                    }
+                                }
                                 tbl.max_row = tbl.max_row.max(cell.row + cell.row_span);
                                 tbl.max_col = tbl.max_col.max(cell.col + cell.col_span);
                                 tbl.cells.push(HwpxParsedCell {
