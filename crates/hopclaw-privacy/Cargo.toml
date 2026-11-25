@@ -1,0 +1,15 @@
+[package]
+name = "hopclaw-privacy"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Korean PII redaction and session prompt masking for HOP-Claw"
+
+[dependencies]
+hex.workspace = true
+hopclaw-types.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true

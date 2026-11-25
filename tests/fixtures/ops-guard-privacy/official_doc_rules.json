@@ -1,0 +1,147 @@
+{
+  "cases": [
+    {
+      "name": "all_8_outline_levels_plus_plain_and_blank",
+      "paragraphs": [
+        "1. 추진 배경 및 목적",
+        "   ",
+        "가. 기본 방침",
+        "1) 세부 추진 과제",
+        "가) 기관별 협조 사항",
+        "(1) 현장 점검 일정",
+        "(가) 안전 점검 체크리스트 가나다라마바사아자차카타파하",
+        "① 주요 점검 항목",
+        "㉮ 시설물 안전 관리",
+        "일반 본문 문단입니다."
+      ],
+      "expected": [
+        {
+          "type": "apply_paragraph_style",
+          "paraIndex": 0,
+          "targetText": "1. 추진 배경 및 목적",
+          "align": "JUSTIFY",
+          "lineSpacingPercent": 160,
+          "indentHu": 0
+        },
+        {
+          "type": "apply_text_style",
+          "targetText": "1. 추진 배경 및 목적",
+          "fontFamily": "함초롬바탕",
+          "sizePt": 11
+        },
+        {
+          "type": "apply_paragraph_style",
+          "paraIndex": 2,
+          "targetText": "가. 기본 방침",
+          "align": "JUSTIFY",
+          "lineSpacingPercent": 160,
+          "indentHu": 1000
+        },
+        {
+          "type": "apply_text_style",
+          "targetText": "가. 기본 방침",
+          "fontFamily": "함초롬바탕",
+          "sizePt": 11
+        },
+        {
+          "type": "apply_paragraph_style",
+          "paraIndex": 3,
+          "targetText": "1) 세부 추진 과제",
+          "align": "JUSTIFY",
+          "lineSpacingPercent": 160,
+          "indentHu": 2000
+        },
+        {
+          "type": "apply_text_style",
+          "targetText": "1) 세부 추진 과제",
+          "fontFamily": "함초롬바탕",
+          "sizePt": 11
+        },
+        {
+          "type": "apply_paragraph_style",
+          "paraIndex": 4,
+          "targetText": "가) 기관별 협조 사항",
+          "align": "JUSTIFY",
+          "lineSpacingPercent": 160,
+          "indentHu": 3000
+        },
+        {
+          "type": "apply_text_style",
+          "targetText": "가) 기관별 협조 사항",
+          "fontFamily": "함초롬바탕",
+          "sizePt": 11
+        },
+        {
+          "type": "apply_paragraph_style",
+          "paraIndex": 5,
+          "targetText": "(1) 현장 점검 일정",
+          "align": "JUSTIFY",
+          "lineSpacingPercent": 160,
+          "indentHu": 4000
+        },
+        {
+          "type": "apply_text_style",
+          "targetText": "(1) 현장 점검 일정",
+          "fontFamily": "함초롬바탕",
+          "sizePt": 11
+        },
+        {
+          "type": "apply_paragraph_style",
+          "paraIndex": 6,
+          "targetText": "(가) 안전 점검 체크리스트 가나다라",
+          "align": "JUSTIFY",
+          "lineSpacingPercent": 160,
+          "indentHu": 5000
+        },
+        {
+          "type": "apply_text_style",
+          "targetText": "(가) 안전 점검 체크리스트 가나다라",
+          "fontFamily": "함초롬바탕",
+          "sizePt": 11
+        },
+        {
+          "type": "apply_paragraph_style",
+          "paraIndex": 7,
+          "targetText": "① 주요 점검 항목",
+          "align": "JUSTIFY",
+          "lineSpacingPercent": 160,
+          "indentHu": 6000
+        },
+        {
+          "type": "apply_text_style",
+          "targetText": "① 주요 점검 항목",
+          "fontFamily": "함초롬바탕",
+          "sizePt": 11
+        },
+        {
+          "type": "apply_paragraph_style",
+          "paraIndex": 8,
+          "targetText": "㉮ 시설물 안전 관리",
+          "align": "JUSTIFY",
+          "lineSpacingPercent": 160,
+          "indentHu": 7000
+        },
+        {
+          "type": "apply_text_style",
+          "targetText": "㉮ 시설물 안전 관리",
+          "fontFamily": "함초롬바탕",
+          "sizePt": 11
+        },
+        {
+          "type": "apply_paragraph_style",
+          "paraIndex": 9,
+          "targetText": "일반 본문 문단입니다.",
+          "align": "JUSTIFY",
+          "lineSpacingPercent": 160,
+          "indentHu": 0
+        },
+        {
+          "type": "apply_text_style",
+          "targetText": "일반 본문 문단입니다.",
+          "fontFamily": "함초롬바탕",
+          "sizePt": 11
+        }
+      ]
+    }
+  ]
+}

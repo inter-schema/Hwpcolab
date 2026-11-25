@@ -1,0 +1,181 @@
+{
+  "maskCases": [
+    {
+      "name": "labeled_korean_account",
+      "input": "입금계좌번호: 110-123-456789",
+      "excludedRegions": [],
+      "autoMaskPii": true,
+      "masked": "입금계좌번호: [[PII_ACCOUNT_1]]",
+      "unmasked": "입금계좌번호: 110-123-456789"
+    },
+    {
+      "name": "labeled_continuous_account",
+      "input": "계좌 123456789012",
+      "excludedRegions": [],
+      "autoMaskPii": true,
+      "masked": "계좌 [[PII_ACCOUNT_1]]",
+      "unmasked": "계좌 123456789012"
+    },
+    {
+      "name": "unlabeled_numbers_not_masked",
+      "input": "학번 110-123-456789, 문서번호 123456789012",
+      "excludedRegions": [],
+      "autoMaskPii": true,
+      "masked": "학번 110-123-456789, 문서번호 123456789012",
+      "unmasked": "학번 110-123-456789, 문서번호 123456789012"
+    },
+    {
+      "name": "auto_mask_disabled",
+      "input": "계좌번호: 110-123-456789, 주민번호 900101-1234567",
+      "excludedRegions": [],
+      "autoMaskPii": false,
+      "masked": "계좌번호: 110-123-456789, 주민번호 900101-1234567",
+      "unmasked": "계좌번호: 110-123-456789, 주민번호 900101-1234567"
+    },
+    {
+      "name": "excluded_regions_and_pii_all_types",
+      "input": "비밀문구 A와 비밀문구 A 반복, 주민번호900101-1234567, 전화 010-1234-5678, 이메일 user@example.com, Bank account no. 110-222-333444, 짧은계좌 123-456",
+      "excludedRegions": [
+        {
+          "id": "r1",
+          "label": "비밀",
+          "targetType": "body_text",
+          "rawText": "비밀문구 A"
+        },
+        {
+          "id": "r2",
+          "label": "공백",
+          "targetType": "body_text",
+          "rawText": "   "
+        }
+      ],
+      "autoMaskPii": true,
+      "masked": "[[AI_EXCLUDED_1]]와 [[AI_EXCLUDED_1]] 반복, 주민번호[[PII_RRN_2]], 전화 [[PII_PHONE_3]], 이메일 [[PII_EMAIL_4]], Bank account no. [[PII_ACCOUNT_5]], 짧은계좌 123-456",
+      "unmasked": "비밀문구 A와 비밀문구 A 반복, 주민번호900101-1234567, 전화 010-1234-5678, 이메일 user@example.com, Bank account no. 110-222-333444, 짧은계좌 123-456"
+    },
+    {
+      "name": "account_over_16_digits_not_masked",
+      "input": "계좌번호: 12345678901234567",
+      "excludedRegions": [],
+      "autoMaskPii": true,
+      "masked": "계좌번호: 12345678901234567",
+      "unmasked": "계좌번호: 12345678901234567"
+    }
+  ],
+  "filterCases": [
+    {
+      "name": "nested_table_and_multi_field_unmask",
+      "seedPrompt": "연락처: 010-1234-5678",
+      "excludedRegions": [
+        {
+          "id": "ex1",
+          "label": "ex",
+          "targetType": "cell",
+          "tableIndex": 0,
+          "row": 1,
+          "col": 1,
+          "rawText": "D"
+        }
+      ],
+      "ops": [
+        {
+          "type": "insert_nested_table",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "rows": 1,
+          "cols": 1,
+          "data": [
+            [
+              "[[PII_PHONE_1]]"
+            ]
+          ]
+        },
+        {
+          "type": "insert_nested_table",
+          "tableIndex": 0,
+          "row": 1,
+          "col": 1,
+          "rows": 1,
+          "cols": 1,
+          "data": [
+            [
+              "test"
+            ]
+          ]
+        },
+        {
+          "type": "replace_body_text",
+          "find": "[[PII_PHONE_1]]",
+          "replace": "신규 [[PII_PHONE_1]]"
+        },
+        {
+          "type": "insert_table",
+          "headers": [
+            "번호",
+            "[[PII_PHONE_1]]"
+          ],
+          "rows": [
+            [
+              "[[PII_PHONE_1]]",
+              "정상"
+            ]
+          ]
+        },
+        {
+          "type": "insert_table_row",
+          "tableIndex": 0,
+          "row": 0,
+          "position": "below",
+          "cells": [
+            "[[PII_PHONE_1]]",
+            "A"
+          ]
+        }
+      ],
+      "resultOps": [
+        {
+          "type": "insert_nested_table",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "rows": 1,
+          "cols": 1,
+          "data": [
+            [
+              "010-1234-5678"
+            ]
+          ]
+        },
+        {
+          "type": "replace_body_text",
+          "find": "010-1234-5678",
+          "replace": "신규 010-1234-5678"
+        },
+        {
+          "type": "insert_table",
+          "headers": [
+            "번호",
+            "010-1234-5678"
+          ],
+          "rows": [
+            [
+              "010-1234-5678",
+              "정상"
+            ]
+          ]
+        },
+        {
+          "type": "insert_table_row",
+          "tableIndex": 0,
+          "row": 0,
+          "position": "below",
+          "cells": [
+            "010-1234-5678",
+            "A"
+          ]
+        }
+      ]
+    }
+  ]
+}

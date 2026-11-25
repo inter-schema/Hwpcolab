@@ -1,0 +1,1911 @@
+{
+  "negativeConstraintCases": [
+    {
+      "prompt": "날짜 셀은 바꾸지 마",
+      "expected": [
+        "날짜"
+      ]
+    },
+    {
+      "prompt": "단원명은 건드리지 마",
+      "expected": [
+        "단원명"
+      ]
+    },
+    {
+      "prompt": "제목 칸은 그대로 둬",
+      "expected": [
+        "제목"
+      ]
+    },
+    {
+      "prompt": "이 셀은 수정하지 마",
+      "expected": []
+    },
+    {
+      "prompt": "비고는 제외하고 작성해",
+      "expected": [
+        "비고"
+      ]
+    },
+    {
+      "prompt": "",
+      "expected": []
+    }
+  ],
+  "lintCases": [
+    {
+      "name": "nested_table_hwp_rejected",
+      "ops": [
+        {
+          "type": "insert_nested_table",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "rows": 2,
+          "cols": 2
+        }
+      ],
+      "context": {
+        "userPrompt": "표 안에 표 넣어줘",
+        "isHwpx": false,
+        "tablesMeta": [
+          {
+            "tableIndex": 0,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 3,
+            "colCount": 3,
+            "depth": 0,
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "A"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "날짜"
+              },
+              {
+                "idx": 2,
+                "row": 0,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "C"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "D"
+              },
+              {
+                "idx": 4,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "E"
+              },
+              {
+                "idx": 5,
+                "row": 1,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "F"
+              },
+              {
+                "idx": 6,
+                "row": 2,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "G"
+              },
+              {
+                "idx": 7,
+                "row": 2,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "H"
+              },
+              {
+                "idx": 8,
+                "row": 2,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "I"
+              }
+            ]
+          },
+          {
+            "tableIndex": 1,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 2,
+            "colCount": 2,
+            "depth": 1,
+            "parentTableIndex": 0,
+            "parentCell": {
+              "row": 1,
+              "col": 1
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N1"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N2"
+              },
+              {
+                "idx": 2,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N3"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N4"
+              }
+            ]
+          },
+          {
+            "tableIndex": 2,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 1,
+            "colCount": 1,
+            "depth": 2,
+            "parentTableIndex": 1,
+            "parentCell": {
+              "row": 0,
+              "col": 0
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "Deep"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "passed": false,
+        "rejectedOps": [
+          {
+            "op": {
+              "type": "insert_nested_table",
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "rows": 2,
+              "cols": 2
+            },
+            "reason": "HWP 바이너리는 중첩 표 미지원 — HWPX로 저장 후 시도"
+          }
+        ],
+        "sanitizedOps": [],
+        "warnings": []
+      }
+    },
+    {
+      "name": "nested_table_size_exceeds_8x8",
+      "ops": [
+        {
+          "type": "insert_nested_table",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "rows": 9,
+          "cols": 2
+        }
+      ],
+      "context": {
+        "userPrompt": "중첩 표 삽입",
+        "isHwpx": true,
+        "tablesMeta": [
+          {
+            "tableIndex": 0,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 3,
+            "colCount": 3,
+            "depth": 0,
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "A"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "날짜"
+              },
+              {
+                "idx": 2,
+                "row": 0,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "C"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "D"
+              },
+              {
+                "idx": 4,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "E"
+              },
+              {
+                "idx": 5,
+                "row": 1,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "F"
+              },
+              {
+                "idx": 6,
+                "row": 2,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "G"
+              },
+              {
+                "idx": 7,
+                "row": 2,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "H"
+              },
+              {
+                "idx": 8,
+                "row": 2,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "I"
+              }
+            ]
+          },
+          {
+            "tableIndex": 1,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 2,
+            "colCount": 2,
+            "depth": 1,
+            "parentTableIndex": 0,
+            "parentCell": {
+              "row": 1,
+              "col": 1
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N1"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N2"
+              },
+              {
+                "idx": 2,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N3"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N4"
+              }
+            ]
+          },
+          {
+            "tableIndex": 2,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 1,
+            "colCount": 1,
+            "depth": 2,
+            "parentTableIndex": 1,
+            "parentCell": {
+              "row": 0,
+              "col": 0
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "Deep"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "passed": false,
+        "rejectedOps": [
+          {
+            "op": {
+              "type": "insert_nested_table",
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "rows": 9,
+              "cols": 2
+            },
+            "reason": "중첩 표 크기 제한 위반: 행과 열은 각각 1 이상 8 이하이어야 합니다 (요청: 9×2)."
+          }
+        ],
+        "sanitizedOps": [],
+        "warnings": []
+      }
+    },
+    {
+      "name": "nested_table_invalid_width_mode",
+      "ops": [
+        {
+          "type": "insert_nested_table",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "rows": 2,
+          "cols": 2,
+          "widthMode": "stretch_page"
+        }
+      ],
+      "context": {
+        "userPrompt": "중첩 표 삽입",
+        "isHwpx": true,
+        "tablesMeta": [
+          {
+            "tableIndex": 0,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 3,
+            "colCount": 3,
+            "depth": 0,
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "A"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "날짜"
+              },
+              {
+                "idx": 2,
+                "row": 0,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "C"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "D"
+              },
+              {
+                "idx": 4,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "E"
+              },
+              {
+                "idx": 5,
+                "row": 1,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "F"
+              },
+              {
+                "idx": 6,
+                "row": 2,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "G"
+              },
+              {
+                "idx": 7,
+                "row": 2,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "H"
+              },
+              {
+                "idx": 8,
+                "row": 2,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "I"
+              }
+            ]
+          },
+          {
+            "tableIndex": 1,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 2,
+            "colCount": 2,
+            "depth": 1,
+            "parentTableIndex": 0,
+            "parentCell": {
+              "row": 1,
+              "col": 1
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N1"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N2"
+              },
+              {
+                "idx": 2,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N3"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N4"
+              }
+            ]
+          },
+          {
+            "tableIndex": 2,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 1,
+            "colCount": 1,
+            "depth": 2,
+            "parentTableIndex": 1,
+            "parentCell": {
+              "row": 0,
+              "col": 0
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "Deep"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "passed": false,
+        "rejectedOps": [
+          {
+            "op": {
+              "type": "insert_nested_table",
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "rows": 2,
+              "cols": 2,
+              "widthMode": "stretch_page"
+            },
+            "reason": "지원되지 않는 widthMode입니다 ('fit_cell'만 허용됨, 요청: stretch_page)."
+          }
+        ],
+        "sanitizedOps": [],
+        "warnings": []
+      }
+    },
+    {
+      "name": "nested_table_depth_exceeded",
+      "ops": [
+        {
+          "type": "insert_nested_table",
+          "tableIndex": 2,
+          "row": 0,
+          "col": 0,
+          "rows": 1,
+          "cols": 1
+        }
+      ],
+      "context": {
+        "userPrompt": "깊은 중첩 표 삽입",
+        "isHwpx": true,
+        "tablesMeta": [
+          {
+            "tableIndex": 0,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 3,
+            "colCount": 3,
+            "depth": 0,
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "A"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "날짜"
+              },
+              {
+                "idx": 2,
+                "row": 0,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "C"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "D"
+              },
+              {
+                "idx": 4,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "E"
+              },
+              {
+                "idx": 5,
+                "row": 1,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "F"
+              },
+              {
+                "idx": 6,
+                "row": 2,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "G"
+              },
+              {
+                "idx": 7,
+                "row": 2,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "H"
+              },
+              {
+                "idx": 8,
+                "row": 2,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "I"
+              }
+            ]
+          },
+          {
+            "tableIndex": 1,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 2,
+            "colCount": 2,
+            "depth": 1,
+            "parentTableIndex": 0,
+            "parentCell": {
+              "row": 1,
+              "col": 1
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N1"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N2"
+              },
+              {
+                "idx": 2,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N3"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N4"
+              }
+            ]
+          },
+          {
+            "tableIndex": 2,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 1,
+            "colCount": 1,
+            "depth": 2,
+            "parentTableIndex": 1,
+            "parentCell": {
+              "row": 0,
+              "col": 0
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "Deep"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "passed": false,
+        "rejectedOps": [
+          {
+            "op": {
+              "type": "insert_nested_table",
+              "tableIndex": 2,
+              "row": 0,
+              "col": 0,
+              "rows": 1,
+              "cols": 1
+            },
+            "reason": "중첩 깊이 초과: 최대 중첩 깊이는 2단계까지만 허용됩니다 (현재 표 depth=2)."
+          }
+        ],
+        "sanitizedOps": [],
+        "warnings": []
+      }
+    },
+    {
+      "name": "nested_table_cell_out_of_range",
+      "ops": [
+        {
+          "type": "insert_nested_table",
+          "tableIndex": 0,
+          "row": 5,
+          "col": 0,
+          "rows": 2,
+          "cols": 2
+        }
+      ],
+      "context": {
+        "userPrompt": "중첩 표 삽입",
+        "isHwpx": true,
+        "tablesMeta": [
+          {
+            "tableIndex": 0,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 3,
+            "colCount": 3,
+            "depth": 0,
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "A"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "날짜"
+              },
+              {
+                "idx": 2,
+                "row": 0,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "C"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "D"
+              },
+              {
+                "idx": 4,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "E"
+              },
+              {
+                "idx": 5,
+                "row": 1,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "F"
+              },
+              {
+                "idx": 6,
+                "row": 2,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "G"
+              },
+              {
+                "idx": 7,
+                "row": 2,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "H"
+              },
+              {
+                "idx": 8,
+                "row": 2,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "I"
+              }
+            ]
+          },
+          {
+            "tableIndex": 1,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 2,
+            "colCount": 2,
+            "depth": 1,
+            "parentTableIndex": 0,
+            "parentCell": {
+              "row": 1,
+              "col": 1
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N1"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N2"
+              },
+              {
+                "idx": 2,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N3"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N4"
+              }
+            ]
+          },
+          {
+            "tableIndex": 2,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 1,
+            "colCount": 1,
+            "depth": 2,
+            "parentTableIndex": 1,
+            "parentCell": {
+              "row": 0,
+              "col": 0
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "Deep"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "passed": false,
+        "rejectedOps": [
+          {
+            "op": {
+              "type": "insert_nested_table",
+              "tableIndex": 0,
+              "row": 5,
+              "col": 0,
+              "rows": 2,
+              "cols": 2
+            },
+            "reason": "대상 셀이 표 범위를 벗어납니다 (tableIndex: 0, 요청: [5, 0], 표 크기: 3×3)."
+          }
+        ],
+        "sanitizedOps": [],
+        "warnings": []
+      }
+    },
+    {
+      "name": "nested_table_excluded_region_g2",
+      "ops": [
+        {
+          "type": "insert_nested_table",
+          "tableIndex": 0,
+          "row": 1,
+          "col": 1,
+          "rows": 2,
+          "cols": 2
+        }
+      ],
+      "context": {
+        "userPrompt": "중첩 표 삽입",
+        "isHwpx": true,
+        "tablesMeta": [
+          {
+            "tableIndex": 0,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 3,
+            "colCount": 3,
+            "depth": 0,
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "A"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "날짜"
+              },
+              {
+                "idx": 2,
+                "row": 0,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "C"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "D"
+              },
+              {
+                "idx": 4,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "E"
+              },
+              {
+                "idx": 5,
+                "row": 1,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "F"
+              },
+              {
+                "idx": 6,
+                "row": 2,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "G"
+              },
+              {
+                "idx": 7,
+                "row": 2,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "H"
+              },
+              {
+                "idx": 8,
+                "row": 2,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "I"
+              }
+            ]
+          },
+          {
+            "tableIndex": 1,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 2,
+            "colCount": 2,
+            "depth": 1,
+            "parentTableIndex": 0,
+            "parentCell": {
+              "row": 1,
+              "col": 1
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N1"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N2"
+              },
+              {
+                "idx": 2,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N3"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N4"
+              }
+            ]
+          },
+          {
+            "tableIndex": 2,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 1,
+            "colCount": 1,
+            "depth": 2,
+            "parentTableIndex": 1,
+            "parentCell": {
+              "row": 0,
+              "col": 0
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "Deep"
+              }
+            ]
+          }
+        ],
+        "excludedRegions": [
+          {
+            "id": "ex1",
+            "label": "ex1",
+            "targetType": "cell",
+            "tableIndex": 0,
+            "row": 1,
+            "col": 1,
+            "rawText": "E"
+          }
+        ]
+      },
+      "expected": {
+        "passed": false,
+        "rejectedOps": [
+          {
+            "op": {
+              "type": "insert_nested_table",
+              "tableIndex": 0,
+              "row": 1,
+              "col": 1,
+              "rows": 2,
+              "cols": 2
+            },
+            "reason": "G2 위반: 셀 (0번 표 [1, 1])은 사용자가 AI 수정 제외로 지정한 영역입니다."
+          }
+        ],
+        "sanitizedOps": [],
+        "warnings": []
+      }
+    },
+    {
+      "name": "nested_table_valid_g3_markdown_sanitized",
+      "ops": [
+        {
+          "type": "insert_nested_table",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "rows": 2,
+          "cols": 2,
+          "data": [
+            [
+              "**헤더1**",
+              "*헤더2*"
+            ],
+            [
+              "값1",
+              "**값2**"
+            ]
+          ],
+          "headerRow": true,
+          "widthMode": "fit_cell"
+        }
+      ],
+      "context": {
+        "userPrompt": "표 안에 하위 표 만들어줘",
+        "isHwpx": true,
+        "tablesMeta": [
+          {
+            "tableIndex": 0,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 3,
+            "colCount": 3,
+            "depth": 0,
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "A"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "날짜"
+              },
+              {
+                "idx": 2,
+                "row": 0,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "C"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "D"
+              },
+              {
+                "idx": 4,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "E"
+              },
+              {
+                "idx": 5,
+                "row": 1,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "F"
+              },
+              {
+                "idx": 6,
+                "row": 2,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "G"
+              },
+              {
+                "idx": 7,
+                "row": 2,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "H"
+              },
+              {
+                "idx": 8,
+                "row": 2,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "I"
+              }
+            ]
+          },
+          {
+            "tableIndex": 1,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 2,
+            "colCount": 2,
+            "depth": 1,
+            "parentTableIndex": 0,
+            "parentCell": {
+              "row": 1,
+              "col": 1
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N1"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N2"
+              },
+              {
+                "idx": 2,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N3"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N4"
+              }
+            ]
+          },
+          {
+            "tableIndex": 2,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 1,
+            "colCount": 1,
+            "depth": 2,
+            "parentTableIndex": 1,
+            "parentCell": {
+              "row": 0,
+              "col": 0
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "Deep"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "passed": true,
+        "rejectedOps": [],
+        "sanitizedOps": [
+          {
+            "type": "insert_nested_table",
+            "tableIndex": 0,
+            "row": 0,
+            "col": 0,
+            "rows": 2,
+            "cols": 2,
+            "data": [
+              [
+                "헤더1",
+                "헤더2"
+              ],
+              [
+                "값1",
+                "값2"
+              ]
+            ],
+            "headerRow": true,
+            "widthMode": "fit_cell"
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "name": "g1_allows_user_requested_style_with_overflow",
+      "ops": [
+        {
+          "type": "apply_text_style",
+          "targetText": "제목입니다",
+          "sizePt": 14,
+          "bold": true
+        }
+      ],
+      "context": {
+        "userPrompt": "제목 글자 크기를 14pt 굵게 변경해줘",
+        "layoutReport": {
+          "timestamp": 0,
+          "tableCount": 1,
+          "issuesCount": 1,
+          "tables": [],
+          "issues": [
+            {
+              "id": "iss-1",
+              "code": "CELL_OVERFLOW_V",
+              "severity": "warning",
+              "message": "오버플로",
+              "cell": {
+                "tableIndex": 0,
+                "row": 0,
+                "col": 0,
+                "cellIdx": 0
+              },
+              "metrics": {}
+            }
+          ]
+        }
+      },
+      "expected": {
+        "passed": true,
+        "rejectedOps": [],
+        "sanitizedOps": [
+          {
+            "type": "apply_text_style",
+            "targetText": "제목입니다",
+            "sizePt": 14,
+            "bold": true
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "name": "g1_blocks_font_increase_on_clipping_complaint",
+      "ops": [
+        {
+          "type": "apply_text_style",
+          "targetText": "내용",
+          "sizePt": 13
+        }
+      ],
+      "context": {
+        "userPrompt": "글자가 잘려 보이는데 해결해줘",
+        "layoutReport": {
+          "timestamp": 0,
+          "tableCount": 0,
+          "issuesCount": 0,
+          "tables": [],
+          "issues": []
+        }
+      },
+      "expected": {
+        "passed": false,
+        "rejectedOps": [
+          {
+            "op": {
+              "type": "apply_text_style",
+              "targetText": "내용",
+              "sizePt": 13
+            },
+            "reason": "G1 위반: 사용자가 잘림/오버플로 문제 해결을 요청한 상황에서 글자 크기를 키우면 잘림이 악화됩니다. 대신 set_row_height, set_col_width, fit_table_to_page 또는 shrink_cell_font를 사용하세요."
+          }
+        ],
+        "sanitizedOps": [],
+        "warnings": []
+      }
+    },
+    {
+      "name": "g1_allows_font_increase_with_dimension_expansion",
+      "ops": [
+        {
+          "type": "apply_text_style",
+          "targetText": "내용",
+          "sizePt": 13
+        },
+        {
+          "type": "set_row_height",
+          "tableIndex": 0,
+          "row": 0,
+          "heightMm": 20
+        }
+      ],
+      "context": {
+        "userPrompt": "글자가 잘려 보이는데 해결해줘"
+      },
+      "expected": {
+        "passed": true,
+        "rejectedOps": [],
+        "sanitizedOps": [
+          {
+            "type": "apply_text_style",
+            "targetText": "내용",
+            "sizePt": 13
+          },
+          {
+            "type": "set_row_height",
+            "tableIndex": 0,
+            "row": 0,
+            "heightMm": 20
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "name": "g2_set_cell_align_range_hits_excluded",
+      "ops": [
+        {
+          "type": "set_cell_align",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "endRow": 1,
+          "endCol": 1,
+          "align": "CENTER",
+          "valign": "CENTER"
+        }
+      ],
+      "context": {
+        "userPrompt": "표 1 정렬 가운데로 맞춰줘",
+        "excludedRegions": [
+          {
+            "id": "ex-1",
+            "label": "셀 [1, 1]",
+            "targetType": "cell",
+            "tableIndex": 0,
+            "row": 1,
+            "col": 1,
+            "rawText": "E"
+          }
+        ]
+      },
+      "expected": {
+        "passed": false,
+        "rejectedOps": [
+          {
+            "op": {
+              "type": "set_cell_align",
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "endRow": 1,
+              "endCol": 1,
+              "align": "CENTER",
+              "valign": "CENTER"
+            },
+            "reason": "G2 위반: 셀 (0번 표 [1, 1])은 사용자가 AI 수정 제외로 지정한 영역입니다."
+          }
+        ],
+        "sanitizedOps": [],
+        "warnings": []
+      }
+    },
+    {
+      "name": "g2_set_cell_align_range_misses_excluded",
+      "ops": [
+        {
+          "type": "set_cell_align",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "endRow": 0,
+          "endCol": 2,
+          "align": "CENTER",
+          "valign": "CENTER"
+        }
+      ],
+      "context": {
+        "userPrompt": "표 1 첫 행 정렬해줘",
+        "excludedRegions": [
+          {
+            "id": "ex-1",
+            "label": "셀 [1, 1]",
+            "targetType": "cell",
+            "tableIndex": 0,
+            "row": 1,
+            "col": 1,
+            "rawText": "E"
+          }
+        ]
+      },
+      "expected": {
+        "passed": true,
+        "rejectedOps": [],
+        "sanitizedOps": [
+          {
+            "type": "set_cell_align",
+            "tableIndex": 0,
+            "row": 0,
+            "col": 0,
+            "endRow": 0,
+            "endCol": 2,
+            "align": "CENTER",
+            "valign": "CENTER"
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "name": "g2_negative_constraint_blocks_table_cell_meta",
+      "ops": [
+        {
+          "type": "set_cell_text",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 1,
+          "text": "2026-12-01"
+        }
+      ],
+      "context": {
+        "userPrompt": "날짜 셀은 바꾸지 마",
+        "tablesMeta": [
+          {
+            "tableIndex": 0,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 3,
+            "colCount": 3,
+            "depth": 0,
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "A"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "날짜"
+              },
+              {
+                "idx": 2,
+                "row": 0,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "C"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "D"
+              },
+              {
+                "idx": 4,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "E"
+              },
+              {
+                "idx": 5,
+                "row": 1,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "F"
+              },
+              {
+                "idx": 6,
+                "row": 2,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "G"
+              },
+              {
+                "idx": 7,
+                "row": 2,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "H"
+              },
+              {
+                "idx": 8,
+                "row": 2,
+                "col": 2,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "I"
+              }
+            ]
+          },
+          {
+            "tableIndex": 1,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 2,
+            "colCount": 2,
+            "depth": 1,
+            "parentTableIndex": 0,
+            "parentCell": {
+              "row": 1,
+              "col": 1
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N1"
+              },
+              {
+                "idx": 1,
+                "row": 0,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N2"
+              },
+              {
+                "idx": 2,
+                "row": 1,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N3"
+              },
+              {
+                "idx": 3,
+                "row": 1,
+                "col": 1,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "N4"
+              }
+            ]
+          },
+          {
+            "tableIndex": 2,
+            "sec": 0,
+            "para": 0,
+            "ctrl": 0,
+            "rowCount": 1,
+            "colCount": 1,
+            "depth": 2,
+            "parentTableIndex": 1,
+            "parentCell": {
+              "row": 0,
+              "col": 0
+            },
+            "cells": [
+              {
+                "idx": 0,
+                "row": 0,
+                "col": 0,
+                "rowSpan": 1,
+                "colSpan": 1,
+                "text": "Deep"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "passed": false,
+        "rejectedOps": [
+          {
+            "op": {
+              "type": "set_cell_text",
+              "tableIndex": 0,
+              "row": 0,
+              "col": 1,
+              "text": "2026-12-01"
+            },
+            "reason": "G2 위반: 사용자가 수정을 금지한 대상(\"날짜\")이 포함된 연산입니다."
+          }
+        ],
+        "sanitizedOps": [],
+        "warnings": []
+      }
+    },
+    {
+      "name": "g4_setup_document_existing_rejected",
+      "ops": [
+        {
+          "type": "setup_document"
+        }
+      ],
+      "context": {
+        "userPrompt": "문서 초기화",
+        "isNewDocument": false
+      },
+      "expected": {
+        "passed": false,
+        "rejectedOps": [
+          {
+            "op": {
+              "type": "setup_document"
+            },
+            "reason": "G4 위반: 기존 문서에 setup_document를 실행하면 전체 서식이 초기화됩니다."
+          }
+        ],
+        "sanitizedOps": [],
+        "warnings": []
+      }
+    },
+    {
+      "name": "g4_setup_document_new_allowed",
+      "ops": [
+        {
+          "type": "setup_document"
+        }
+      ],
+      "context": {
+        "userPrompt": "문서 초기화",
+        "isNewDocument": true
+      },
+      "expected": {
+        "passed": true,
+        "rejectedOps": [],
+        "sanitizedOps": [
+          {
+            "type": "setup_document"
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "name": "g6_clamps_min_font_8pt",
+      "ops": [
+        {
+          "type": "apply_text_style",
+          "targetText": "작은글씨",
+          "sizePt": 6
+        },
+        {
+          "type": "shrink_cell_font",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "sizePt": 5,
+          "minPt": 4
+        }
+      ],
+      "context": {
+        "userPrompt": "작게"
+      },
+      "expected": {
+        "passed": true,
+        "rejectedOps": [],
+        "sanitizedOps": [
+          {
+            "type": "apply_text_style",
+            "targetText": "작은글씨",
+            "sizePt": 8
+          },
+          {
+            "type": "shrink_cell_font",
+            "tableIndex": 0,
+            "row": 0,
+            "col": 0,
+            "sizePt": 8,
+            "minPt": 8
+          }
+        ],
+        "warnings": [
+          "G6 준수: apply_text_style의 글자 크기(6pt)가 최소 하한(8pt) 미만이어서 8pt로 자동 보정되었습니다.",
+          "G6 준수: shrink_cell_font의 글자 크기(5pt)가 최소 하한(8pt) 미만이어서 8pt로 자동 보정되었습니다."
+        ]
+      }
+    }
+  ]
+}
