@@ -1,0 +1,249 @@
+{
+  "ok": true,
+  "tables": [
+    {
+      "index": 0,
+      "rows": 10,
+      "cells": [
+        {
+          "row": 0,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "일   시"
+        },
+        {
+          "row": 0,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "2026.10.20(화) 2교시"
+        },
+        {
+          "row": 0,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "대   상"
+        },
+        {
+          "row": 0,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "전 부서(행정/기획)"
+        },
+        {
+          "row": 1,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "장   소"
+        },
+        {
+          "row": 1,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "대회의실 및 로컬 업무망"
+        },
+        {
+          "row": 1,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "지도교사"
+        },
+        {
+          "row": 1,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "홍길동 주무관"
+        },
+        {
+          "row": 2,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "단   원"
+        },
+        {
+          "row": 2,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "로컬 AI 기반 공문서 작성 자동화 및 보안 환경 구축"
+        },
+        {
+          "row": 2,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "차   시"
+        },
+        {
+          "row": 2,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "1단계 (기반 구축)"
+        },
+        {
+          "row": 3,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "성취기준"
+        },
+        {
+          "row": 3,
+          "col": 1,
+          "colSpan": 3,
+          "rowSpan": 1,
+          "text": "외부 유출 없는 로컬 WASM/사이드카 기반 한글 문서 자동 교정 및 표 서식 표준화"
+        },
+        {
+          "row": 4,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "학습 목표"
+        },
+        {
+          "row": 4,
+          "col": 1,
+          "colSpan": 3,
+          "rowSpan": 1,
+          "text": "1. 공문서 개조식 어투 자동 변환 / 2. 표 셀 레이아웃 실측 및 리사이징 / 3. HWPX 중첩 표 지원"
+        },
+        {
+          "row": 5,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "학습 문제"
+        },
+        {
+          "row": 5,
+          "col": 1,
+          "colSpan": 3,
+          "rowSpan": 1,
+          "text": "기존 HWP 바이너리 손상 제약을 극복하고 HWPX 표준 계층 구조를 안전하게 갱신"
+        },
+        {
+          "row": 6,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "추진 단계"
+        },
+        {
+          "row": 6,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "세부 과업"
+        },
+        {
+          "row": 6,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "소요 일정"
+        },
+        {
+          "row": 6,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "주관 부서"
+        },
+        {
+          "row": 7,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "기반 구축"
+        },
+        {
+          "row": 7,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "로컬 AI 에디터 배포 및 12종 PII 가명화 체계 정립"
+        },
+        {
+          "row": 7,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "5&apos;"
+        },
+        {
+          "row": 7,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "디지털혁신팀"
+        },
+        {
+          "row": 8,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "실증 확산"
+        },
+        {
+          "row": 8,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "부서별 보고서 서식 자동화, 표 안의 표(중첩 표) 생성 및 Smart Diff 검토"
+        },
+        {
+          "row": 8,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "25&apos;"
+        },
+        {
+          "row": 8,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "행정운영처"
+        },
+        {
+          "row": 9,
+          "col": 0,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "종합 고도화"
+        },
+        {
+          "row": 9,
+          "col": 1,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "몫이 변하지 않는 원리 종합 고도화 및 형성평가"
+        },
+        {
+          "row": 9,
+          "col": 2,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "10&apos;"
+        },
+        {
+          "row": 9,
+          "col": 3,
+          "colSpan": 1,
+          "rowSpan": 1,
+          "text": "성과 보고회"
+        }
+      ]
+    }
+  ]
+}

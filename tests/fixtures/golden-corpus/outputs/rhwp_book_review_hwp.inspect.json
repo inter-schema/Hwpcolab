@@ -1,0 +1,76 @@
+{
+  "fileType": "hwp",
+  "sectionCount": 1,
+  "paragraphCount": 2,
+  "tableCount": 2,
+  "cellCount": 6,
+  "imageCount": null,
+  "tables": [
+    {
+      "sec": 0,
+      "para": 0,
+      "ctrl": 2,
+      "rowCount": 1,
+      "colCount": 2,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 1,
+          "row": 0,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "sec": 0,
+      "para": 1,
+      "ctrl": 0,
+      "rowCount": 4,
+      "colCount": 1,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": " "
+        },
+        {
+          "idx": 1,
+          "row": 1,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": " "
+        },
+        {
+          "idx": 2,
+          "row": 2,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": " "
+        },
+        {
+          "idx": 3,
+          "row": 3,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": " "
+        }
+      ]
+    }
+  ]
+}

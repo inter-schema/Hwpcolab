@@ -1,0 +1,51 @@
+{
+  "fileType": "hwp",
+  "sectionCount": 1,
+  "paragraphCount": 5,
+  "tableCount": 1,
+  "cellCount": 4,
+  "imageCount": null,
+  "tables": [
+    {
+      "sec": 0,
+      "para": 1,
+      "ctrl": 0,
+      "rowCount": 2,
+      "colCount": 2,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "1"
+        },
+        {
+          "idx": 1,
+          "row": 0,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "2"
+        },
+        {
+          "idx": 2,
+          "row": 1,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "3 tacglkj"
+        },
+        {
+          "idx": 3,
+          "row": 1,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "4 tacglkj"
+        }
+      ]
+    }
+  ]
+}

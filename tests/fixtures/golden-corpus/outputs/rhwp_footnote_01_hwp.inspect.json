@@ -1,0 +1,110 @@
+{
+  "fileType": "hwp",
+  "sectionCount": 1,
+  "paragraphCount": 40,
+  "tableCount": 4,
+  "cellCount": 8,
+  "imageCount": null,
+  "tables": [
+    {
+      "sec": 0,
+      "para": 0,
+      "ctrl": 3,
+      "rowCount": 1,
+      "colCount": 1,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "3D 프린팅 기술의 등장과\n기술 발전에 따른 문제점과 정부의 대처 방안"
+        }
+      ]
+    },
+    {
+      "sec": 0,
+      "para": 1,
+      "ctrl": 0,
+      "rowCount": 1,
+      "colCount": 3,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "Ⅰ"
+        },
+        {
+          "idx": 1,
+          "row": 0,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 2,
+          "row": 0,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "3D 프린팅 기술의 등장"
+        }
+      ]
+    },
+    {
+      "sec": 0,
+      "para": 11,
+      "ctrl": 0,
+      "rowCount": 1,
+      "colCount": 3,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "Ⅱ"
+        },
+        {
+          "idx": 1,
+          "row": 0,
+          "col": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": ""
+        },
+        {
+          "idx": 2,
+          "row": 0,
+          "col": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "기술발전에 따른 예상되는 사회적 변화와 문제점"
+        }
+      ]
+    },
+    {
+      "sec": 0,
+      "para": 38,
+      "ctrl": 1,
+      "rowCount": 1,
+      "colCount": 1,
+      "cells": [
+        {
+          "idx": 0,
+          "row": 0,
+          "col": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "text": "3D 프린팅 기술의 미래와 전망"
+        }
+      ]
+    }
+  ]
+}

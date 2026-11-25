@@ -1,19 +1,14 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tauri::{AppHandle, Manager};
-use serde::{Deserialize, Serialize};
+
+pub use hopclaw_types::ClawExecResult;
+use hopclaw_types::EngineBackend;
 
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ClawExecResult {
-    pub ok: bool,
-    pub stdout_json: serde_json::Value,
-    pub stderr: String,
-}
 
 fn resolve_node_binary() -> PathBuf {
     #[cfg(target_os = "windows")]
@@ -174,16 +169,13 @@ fn resolve_script_path(app: &AppHandle, script_name: &str) -> Result<PathBuf, St
     Ok(strip_unc_prefix(p))
 }
 
-/// 1) 문서 구조 및 셀 텍스트 전수 검사 (extract_text.js --inspect --with-cell-text)
-#[tauri::command]
-pub async fn inspect_document(app: AppHandle, file_path: String) -> Result<serde_json::Value, String> {
-    let script = resolve_script_path(&app, "extract_text.js")?;
-    let file_path = strip_unc_prefix(PathBuf::from(file_path));
+async fn inspect_document_node(app: &AppHandle, file_path: &Path) -> Result<serde_json::Value, String> {
+    let script = resolve_script_path(app, "extract_text.js")?;
     let output = new_node_command()
         .arg(&script)
         .arg("--inspect")
         .arg("--with-cell-text")
-        .arg(&file_path)
+        .arg(file_path)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
@@ -194,19 +186,17 @@ pub async fn inspect_document(app: AppHandle, file_path: String) -> Result<serde
         return Err(String::from_utf8_lossy(&output.stderr).to_string());
     }
     let stdout_str = String::from_utf8_lossy(&output.stdout);
-    serde_json::from_str(&stdout_str).map_err(|e| format!("Invalid JSON from inspect: {} (raw: {})", e, stdout_str))
+    serde_json::from_str(&stdout_str)
+        .map_err(|e| format!("Invalid JSON from inspect: {} (raw: {})", e, stdout_str))
 }
 
-/// 2) 문서 마크다운 텍스트 추출 (extract_text.js --format markdown)
-#[tauri::command]
-pub async fn extract_markdown(app: AppHandle, file_path: String) -> Result<String, String> {
-    let script = resolve_script_path(&app, "extract_text.js")?;
-    let file_path = strip_unc_prefix(PathBuf::from(file_path));
+async fn extract_markdown_node(app: &AppHandle, file_path: &Path) -> Result<String, String> {
+    let script = resolve_script_path(app, "extract_text.js")?;
     let output = new_node_command()
         .arg(&script)
         .arg("--format")
         .arg("markdown")
-        .arg(&file_path)
+        .arg(file_path)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
@@ -217,6 +207,124 @@ pub async fn extract_markdown(app: AppHandle, file_path: String) -> Result<Strin
         return Err(String::from_utf8_lossy(&output.stderr).to_string());
     }
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+async fn inspect_hwpx_rust(bytes: Vec<u8>) -> Result<hopclaw_doc::InspectDocumentResult, String> {
+    tokio::task::spawn_blocking(move || {
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            hopclaw_doc::inspect_hwpx(&bytes, false)
+        }))
+        .map_err(|_| "panic in hopclaw_doc::inspect_hwpx".to_string())?
+        .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("inspect_hwpx task join error: {e}"))?
+}
+
+async fn extract_hwpx_markdown_rust(bytes: Vec<u8>) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            hopclaw_doc::extract_hwpx_markdown(&bytes)
+        }))
+        .map_err(|_| "panic in hopclaw_doc::extract_hwpx_markdown".to_string())?
+        .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("extract_hwpx_markdown task join error: {e}"))?
+}
+
+/// 1) 문서 구조 및 셀 텍스트 전수 검사 (Strangler router: node | rust | shadow)
+#[tauri::command]
+pub async fn inspect_document(app: AppHandle, file_path: String) -> Result<serde_json::Value, String> {
+    let file_path = strip_unc_prefix(PathBuf::from(file_path));
+    let backend = hopclaw_doc::resolve_engine_backend_from_env();
+
+    match backend {
+        EngineBackend::Node => inspect_document_node(&app, &file_path).await,
+        EngineBackend::Rust => {
+            let bytes = tokio::fs::read(&file_path)
+                .await
+                .map_err(|e| format!("Failed to read document {:?}: {}", file_path, e))?;
+            if hopclaw_doc::is_hwpx_bytes(&bytes) {
+                let res = inspect_hwpx_rust(bytes).await?;
+                serde_json::to_value(res).map_err(|e| e.to_string())
+            } else {
+                // HWP 5.0 cell-text inspection falls back to Node until `native-rhwp` is linked.
+                inspect_document_node(&app, &file_path).await
+            }
+        }
+        EngineBackend::Shadow => {
+            let node_res = inspect_document_node(&app, &file_path).await?;
+            if let Ok(bytes) = tokio::fs::read(&file_path).await {
+                if hopclaw_doc::is_hwpx_bytes(&bytes) {
+                    match inspect_hwpx_rust(bytes).await {
+                        Ok(rust_res) => {
+                            if let Err(diff) = hopclaw_doc::inspect_shadow_diff(&node_res, &rust_res)
+                            {
+                                eprintln!(
+                                    "[claw_bridge][shadow] inspect_document mismatch on {:?}: {}",
+                                    file_path, diff
+                                );
+                            }
+                        }
+                        Err(err) => {
+                            eprintln!(
+                                "[claw_bridge][shadow] inspect_document rust error on {:?}: {}",
+                                file_path, err
+                            );
+                        }
+                    }
+                }
+            }
+            Ok(node_res)
+        }
+    }
+}
+
+/// 2) 문서 마크다운 텍스트 추출 (Strangler router: node | rust | shadow)
+#[tauri::command]
+pub async fn extract_markdown(app: AppHandle, file_path: String) -> Result<String, String> {
+    let file_path = strip_unc_prefix(PathBuf::from(file_path));
+    let backend = hopclaw_doc::resolve_engine_backend_from_env();
+
+    match backend {
+        EngineBackend::Node => extract_markdown_node(&app, &file_path).await,
+        EngineBackend::Rust => {
+            let bytes = tokio::fs::read(&file_path)
+                .await
+                .map_err(|e| format!("Failed to read document {:?}: {}", file_path, e))?;
+            if hopclaw_doc::is_hwpx_bytes(&bytes) {
+                extract_hwpx_markdown_rust(bytes).await
+            } else {
+                // HWP 5.0 markdown extraction falls back to Node until `native-rhwp` is linked.
+                extract_markdown_node(&app, &file_path).await
+            }
+        }
+        EngineBackend::Shadow => {
+            let node_md = extract_markdown_node(&app, &file_path).await?;
+            if let Ok(bytes) = tokio::fs::read(&file_path).await {
+                if hopclaw_doc::is_hwpx_bytes(&bytes) {
+                    match extract_hwpx_markdown_rust(bytes).await {
+                        Ok(rust_md) => {
+                            if let Err(diff) = hopclaw_doc::markdown_shadow_diff(&node_md, &rust_md) {
+                                eprintln!(
+                                    "[claw_bridge][shadow] extract_markdown mismatch on {:?}: {}",
+                                    file_path, diff
+                                );
+                            }
+                        }
+                        Err(err) => {
+                            eprintln!(
+                                "[claw_bridge][shadow] extract_markdown rust error on {:?}: {}",
+                                file_path, err
+                            );
+                        }
+                    }
+                }
+            }
+            Ok(node_md)
+        }
+    }
 }
 
 /// 3) .hwp (create.js) 또는 .hwpx (hwpx-edit.js) 배치 패치 실행
