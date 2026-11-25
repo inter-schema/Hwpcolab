@@ -1,0 +1,19 @@
+[package]
+name = "hopclaw-doc"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "Document structure inspection, canonical TableWalker, layout measurement, and optional native rhwp adapter for HOP-Claw"
+
+[features]
+default = []
+native-rhwp = []
+
+[dependencies]
+cfb = "0.14.0"
+flate2 = "1.1.10"
+quick-xml = "0.42.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
