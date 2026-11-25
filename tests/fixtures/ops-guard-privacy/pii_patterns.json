@@ -1,0 +1,804 @@
+{
+  "shaCases": [
+    {
+      "input": "",
+      "sha256_8": "e3b0c442"
+    },
+    {
+      "input": "sample text",
+      "sha256_8": "bc658c64"
+    },
+    {
+      "input": "한글 테스트\n줄바꿈 123",
+      "sha256_8": "2a9b9c04"
+    }
+  ],
+  "scanCases": [
+    {
+      "name": "step1_residual_tokens",
+      "input": "이전 마스크: [[PII_RRN_1]], [[PII_PHONE_2]], [[PII_EMAIL_3]], [[PII_ACCOUNT_4]], [[AI_EXCLUDED_5]]",
+      "expected": {
+        "text": "이전 마스크: <주민번호>, <전화번호>, <이메일>, <계좌번호>, <민감정보>",
+        "hits": [
+          "마스크 토큰 5건 -> <민감정보>"
+        ],
+        "hitDetails": [
+          {
+            "category": "mask_token",
+            "placeholder": "<민감정보>",
+            "count": 5
+          }
+        ],
+        "totalCount": 5
+      }
+    },
+    {
+      "name": "step2_rrn_hyphen",
+      "input": "주민번호 900101-1234567 입니다.",
+      "expected": {
+        "text": "주민번호 <주민번호> 입니다.",
+        "hits": [
+          "주민/외국인등록번호 1건 -> <주민번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "rrn",
+            "placeholder": "<주민번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step2_rrn_nohyphen",
+      "input": "무하이픈 주민번호 9505052345678 입니다.",
+      "expected": {
+        "text": "무하이픈 주민번호 <주민번호> 입니다.",
+        "hits": [
+          "주민/외국인등록번호 1건 -> <주민번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "rrn",
+            "placeholder": "<주민번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step2_rrn_adjacent_digits_ignored",
+      "input": "숫자 1900101-1234567 및 900101-12345678 제외",
+      "expected": {
+        "text": "숫자 1900101-1234567 및 900101-12345678 제외",
+        "hits": [],
+        "hitDetails": [],
+        "totalCount": 0
+      }
+    },
+    {
+      "name": "step2_to_step3_corp_label",
+      "input": "법인등록번호: 900101-1234567 확인",
+      "expected": {
+        "text": "법인등록번호: <법인번호> 확인",
+        "hits": [
+          "법인등록번호 1건 -> <법인번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "corp_reg",
+            "placeholder": "<법인번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step3_corp_reg",
+      "input": "법인번호 110111-1234567 확인",
+      "expected": {
+        "text": "법인번호 <법인번호> 확인",
+        "hits": [
+          "법인등록번호 1건 -> <법인번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "corp_reg",
+            "placeholder": "<법인번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step4_biz_reg",
+      "input": "사업자등록번호 123-45-67890 입니다.",
+      "expected": {
+        "text": "사업자등록번호 <사업자번호> 입니다.",
+        "hits": [
+          "사업자등록번호 1건 -> <사업자번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "biz_reg",
+            "placeholder": "<사업자번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step5_card",
+      "input": "결제 카드: 1234-5678-9012-3456",
+      "expected": {
+        "text": "결제 카드: <카드번호>",
+        "hits": [
+          "카드번호 1건 -> <카드번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "card",
+            "placeholder": "<카드번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step6_email",
+      "input": "문의: user.name+tag@example.co.kr",
+      "expected": {
+        "text": "문의: <이메일>",
+        "hits": [
+          "이메일 1건 -> <이메일>"
+        ],
+        "hitDetails": [
+          {
+            "category": "email",
+            "placeholder": "<이메일>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step7_mobile1",
+      "input": "연락처 010-1234-5678",
+      "expected": {
+        "text": "연락처 <전화번호>",
+        "hits": [
+          "전화번호 1건 -> <전화번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "phone",
+            "placeholder": "<전화번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step7_mobile2",
+      "input": "연락처 010 1234 5678",
+      "expected": {
+        "text": "연락처 <전화번호>",
+        "hits": [
+          "전화번호 1건 -> <전화번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "phone",
+            "placeholder": "<전화번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step7_seoul",
+      "input": "서울 사무소 02-123-4567",
+      "expected": {
+        "text": "서울 사무소 <전화번호>",
+        "hits": [
+          "전화번호 1건 -> <전화번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "phone",
+            "placeholder": "<전화번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step7_gyeonggi",
+      "input": "경기 지사 031-987-6543",
+      "expected": {
+        "text": "경기 지사 <전화번호>",
+        "hits": [
+          "전화번호 1건 -> <전화번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "phone",
+            "placeholder": "<전화번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step7_voip",
+      "input": "고객지원 070-1234-5678",
+      "expected": {
+        "text": "고객지원 <전화번호>",
+        "hits": [
+          "전화번호 1건 -> <전화번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "phone",
+            "placeholder": "<전화번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step7_rep",
+      "input": "대표번호 1588-1234",
+      "expected": {
+        "text": "대표번호 <전화번호>",
+        "hits": [
+          "전화번호 1건 -> <전화번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "phone",
+            "placeholder": "<전화번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step8_dates_preserved",
+      "input": "시행일자: 2026-11-05 및 2025-01-20",
+      "expected": {
+        "text": "시행일자: 2026-11-05 및 2025-01-20",
+        "hits": [],
+        "hitDetails": [],
+        "totalCount": 0
+      }
+    },
+    {
+      "name": "step8_labeled_account",
+      "input": "국민은행: 123-456789-01-012",
+      "expected": {
+        "text": "국민은행: <계좌번호>",
+        "hits": [
+          "계좌번호 1건 -> <계좌번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "account",
+            "placeholder": "<계좌번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step8_hyphen_account",
+      "input": "계좌 123-456-7890123",
+      "expected": {
+        "text": "계좌 <계좌번호>",
+        "hits": [
+          "계좌번호 1건 -> <계좌번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "account",
+            "placeholder": "<계좌번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step8_unhyphen_account",
+      "input": "입금 110123456789",
+      "expected": {
+        "text": "입금 <계좌번호>",
+        "hits": [
+          "계좌번호 1건 -> <계좌번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "account",
+            "placeholder": "<계좌번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step9_driver",
+      "input": "면허: 11-02-123456-78",
+      "expected": {
+        "text": "면허: <여권/면허번호>",
+        "hits": [
+          "여권/운전면허번호 1건 -> <여권/면허번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "passport_driver",
+            "placeholder": "<여권/면허번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step9_passport_label",
+      "input": "여권번호: M12345678",
+      "expected": {
+        "text": "여권번호: <여권/면허번호>",
+        "hits": [
+          "여권/운전면허번호 1건 -> <여권/면허번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "passport_driver",
+            "placeholder": "<여권/면허번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step9_passport_format",
+      "input": "여권 M123A4567 소지",
+      "expected": {
+        "text": "여권 <여권/면허번호> 소지",
+        "hits": [
+          "여권/운전면허번호 1건 -> <여권/면허번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "passport_driver",
+            "placeholder": "<여권/면허번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step10_vehicle",
+      "input": "등록차량 12가 3456 진입",
+      "expected": {
+        "text": "등록차량 <차량번호> 진입",
+        "hits": [
+          "차량번호 1건 -> <차량번호>"
+        ],
+        "hitDetails": [
+          {
+            "category": "vehicle",
+            "placeholder": "<차량번호>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step10_non_vehicle",
+      "input": "계약기간 12개월 3456 번호",
+      "expected": {
+        "text": "계약기간 12개월 3456 번호",
+        "hits": [],
+        "hitDetails": [],
+        "totalCount": 0
+      }
+    },
+    {
+      "name": "step11_road_addr",
+      "input": "서울특별시 종로구 세종대로 209 정부서울청사",
+      "expected": {
+        "text": "<주소>",
+        "hits": [
+          "주소 1건 -> <주소>"
+        ],
+        "hitDetails": [
+          {
+            "category": "address",
+            "placeholder": "<주소>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step11_jibun_addr",
+      "input": "역삼동 123-45 101동 202호",
+      "expected": {
+        "text": "<주소>",
+        "hits": [
+          "주소 1건 -> <주소>"
+        ],
+        "hitDetails": [
+          {
+            "category": "address",
+            "placeholder": "<주소>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step11_apt_addr",
+      "input": "반포자이아파트 102동 1503호",
+      "expected": {
+        "text": "<주소>",
+        "hits": [
+          "주소 1건 -> <주소>"
+        ],
+        "hitDetails": [
+          {
+            "category": "address",
+            "placeholder": "<주소>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step12_label_name",
+      "input": "담당자: 홍길동",
+      "expected": {
+        "text": "담당자: <이름>",
+        "hits": [
+          "성명 1건 -> <이름>"
+        ],
+        "hitDetails": [
+          {
+            "category": "person_name",
+            "placeholder": "<이름>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step12_sign_name",
+      "input": "김철수 (인)",
+      "expected": {
+        "text": "<이름> (인)",
+        "hits": [
+          "성명 1건 -> <이름>"
+        ],
+        "hitDetails": [
+          {
+            "category": "person_name",
+            "placeholder": "<이름>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step12_title_name",
+      "input": "박영희 과장",
+      "expected": {
+        "text": "<이름> 과장",
+        "hits": [
+          "성명 1건 -> <이름>"
+        ],
+        "hitDetails": [
+          {
+            "category": "person_name",
+            "placeholder": "<이름>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "step12_non_name",
+      "input": "업무 과장",
+      "expected": {
+        "text": "업무 과장",
+        "hits": [],
+        "hitDetails": [],
+        "totalCount": 0
+      }
+    },
+    {
+      "name": "step12_hangul_boundary",
+      "input": "김철수과장님 및 박영희씨 그리고 담당자: 홍길동씨",
+      "expected": {
+        "text": "김철수과장님 및 박영희씨 그리고 담당자: <이름>",
+        "hits": [
+          "성명 1건 -> <이름>"
+        ],
+        "hitDetails": [
+          {
+            "category": "person_name",
+            "placeholder": "<이름>",
+            "count": 1
+          }
+        ],
+        "totalCount": 1
+      }
+    },
+    {
+      "name": "adversarial_synthetic_doc",
+      "input": "# 2026년도 학교 안전 관리 지침 및 추진 계획서\n작성일: 2026-11-05\n기안자: 홍길동\n이몽룡 (인)\n성춘향 주무관\n행정 주무관\n12개월 사업 추진 계획\n\n### 1. 비상연락체계 및 담당자 정보\n| 담당자 | 전화번호 | 비상연락망 |\n| :--- | :--- | :--- |\n| | 담당자: 임꺽정 | | 010 9876 5432 | 01098765432 |\n| 청사 대표 | 02-345-6789 | 031-765-4321 / 1588-1234 |\n| 담당 전자우편 | hong.gildong@moe.go.kr | 업무용 포털 |\n\n### 2. 신원 및 사업자 정보\n- 주민등록번호(무하이픈): 9001011234567\n- 주민등록번호(엔대시): 851225 – 2345678\n- 사업자등록번호: 123-45-67890\n- 법인등록번호: 110111-0123456\n- 여권번호: M12345678\n- 운전면허번호: 11-23-456789-10\n- 관용차량번호: 123가 4567\n\n### 3. 계좌 및 결제 정보\n- 국민은행: 123456-04-123456\n- 무라벨 하이픈 계좌: 110-456-789012\n- 무라벨 연속 계좌: 9999990123456\n- 법인카드: 9410-1234-5678-9012\n\n### 4. 소재지 정보\n- 도로명 주소: 서울특별시 종로구 세종대로 209 정부서울청사 1203호\n- 지번 및 아파트: 역삼동 737-11 래미안아파트 102동 1503호\n\n### 5. 기존 마스크 잔존 토큰\n- 토큰 1: [[PII_RRN_1]]\n- 토큰 2: [[PII_PHONE_2]]\n- 제외 토큰: [[AI_EXCLUDED_9]]\n",
+      "expected": {
+        "text": "# 2026년도 학교 안전 관리 지침 및 추진 계획서\n작성일: 2026-11-05\n기안자: <이름>\n<이름> (인)\n<이름> 주무관\n행정 주무관\n12개월 사업 추진 계획\n\n### 1. 비상연락체계 및 담당자 정보\n| 담당자 | 전화번호 | 비상연락망 |\n| :--- | :--- | :--- |\n| | 담당자: <이름> | | <전화번호> | <전화번호> |\n| 청사 대표 | <전화번호> | <전화번호> / <전화번호> |\n| 담당 전자우편 | <이메일> | 업무용 포털 |\n\n### 2. 신원 및 사업자 정보\n- 주민등록번호(무하이픈): <주민번호>\n- 주민등록번호(엔대시): <주민번호>\n- 사업자등록번호: <사업자번호>\n- 법인등록번호: <법인번호>\n- 여권번호: <여권/면허번호>\n- 운전면허번호: <여권/면허번호>\n- 관용차량번호: <차량번호>\n\n### 3. 계좌 및 결제 정보\n- 국민은행: <계좌번호>\n- 무라벨 하이픈 계좌: <계좌번호>\n- 무라벨 연속 계좌: <계좌번호>\n- 법인카드: <카드번호>\n\n### 4. 소재지 정보\n- 도로명 주소: <주소>\n- 지번 및 아파트: <주소> <주소>\n\n### 5. 기존 마스크 잔존 토큰\n- 토큰 1: <주민번호>\n- 토큰 2: <전화번호>\n- 제외 토큰: <민감정보>\n",
+        "hits": [
+          "마스크 토큰 3건 -> <민감정보>",
+          "주민/외국인등록번호 2건 -> <주민번호>",
+          "법인등록번호 1건 -> <법인번호>",
+          "사업자등록번호 1건 -> <사업자번호>",
+          "카드번호 1건 -> <카드번호>",
+          "이메일 1건 -> <이메일>",
+          "전화번호 5건 -> <전화번호>",
+          "계좌번호 3건 -> <계좌번호>",
+          "여권/운전면허번호 2건 -> <여권/면허번호>",
+          "차량번호 1건 -> <차량번호>",
+          "주소 3건 -> <주소>",
+          "성명 4건 -> <이름>"
+        ],
+        "hitDetails": [
+          {
+            "category": "mask_token",
+            "placeholder": "<민감정보>",
+            "count": 3
+          },
+          {
+            "category": "rrn",
+            "placeholder": "<주민번호>",
+            "count": 2
+          },
+          {
+            "category": "corp_reg",
+            "placeholder": "<법인번호>",
+            "count": 1
+          },
+          {
+            "category": "biz_reg",
+            "placeholder": "<사업자번호>",
+            "count": 1
+          },
+          {
+            "category": "card",
+            "placeholder": "<카드번호>",
+            "count": 1
+          },
+          {
+            "category": "email",
+            "placeholder": "<이메일>",
+            "count": 1
+          },
+          {
+            "category": "phone",
+            "placeholder": "<전화번호>",
+            "count": 5
+          },
+          {
+            "category": "account",
+            "placeholder": "<계좌번호>",
+            "count": 3
+          },
+          {
+            "category": "passport_driver",
+            "placeholder": "<여권/면허번호>",
+            "count": 2
+          },
+          {
+            "category": "vehicle",
+            "placeholder": "<차량번호>",
+            "count": 1
+          },
+          {
+            "category": "address",
+            "placeholder": "<주소>",
+            "count": 3
+          },
+          {
+            "category": "person_name",
+            "placeholder": "<이름>",
+            "count": 4
+          }
+        ],
+        "totalCount": 27
+      }
+    },
+    {
+      "name": "adversarial_malicious_llm_response",
+      "input": "담당자: 홍길동, 주민번호 900101-1234567, 연락처 010-2222-3333, 주소 서울특별시 강남구 테헤란로 152, 이메일 leak@test.kr, 계좌 110-222-333444, 토큰 [[PII_RRN_1]]",
+      "expected": {
+        "text": "담당자: <이름>, 주민번호 <주민번호>, 연락처 <전화번호>, 주소 <주소><이메일>, 계좌 <계좌번호>, 토큰 <주민번호>",
+        "hits": [
+          "마스크 토큰 1건 -> <민감정보>",
+          "주민/외국인등록번호 1건 -> <주민번호>",
+          "이메일 1건 -> <이메일>",
+          "전화번호 1건 -> <전화번호>",
+          "계좌번호 1건 -> <계좌번호>",
+          "주소 1건 -> <주소>",
+          "성명 1건 -> <이름>"
+        ],
+        "hitDetails": [
+          {
+            "category": "mask_token",
+            "placeholder": "<민감정보>",
+            "count": 1
+          },
+          {
+            "category": "rrn",
+            "placeholder": "<주민번호>",
+            "count": 1
+          },
+          {
+            "category": "email",
+            "placeholder": "<이메일>",
+            "count": 1
+          },
+          {
+            "category": "phone",
+            "placeholder": "<전화번호>",
+            "count": 1
+          },
+          {
+            "category": "account",
+            "placeholder": "<계좌번호>",
+            "count": 1
+          },
+          {
+            "category": "address",
+            "placeholder": "<주소>",
+            "count": 1
+          },
+          {
+            "category": "person_name",
+            "placeholder": "<이름>",
+            "count": 1
+          }
+        ],
+        "totalCount": 7
+      }
+    }
+  ],
+  "maskMemoryCases": [
+    {
+      "name": "memory_source_basic",
+      "input": "기안자: 홍길동\n주민번호: 880101-1234567\n전화: 010-9999-8888\n2026-11-05 작성",
+      "expected": {
+        "text": "기안자: <이름>\n주민번호: <주민번호>\n전화: <전화번호>\n2026-11-05 작성",
+        "hits": [
+          "마스크 토큰 2건 -> <민감정보>",
+          "성명 1건 -> <이름>"
+        ],
+        "hitDetails": [
+          {
+            "category": "mask_token",
+            "placeholder": "<민감정보>",
+            "count": 2
+          },
+          {
+            "category": "person_name",
+            "placeholder": "<이름>",
+            "count": 1
+          }
+        ],
+        "totalCount": 3
+      }
+    },
+    {
+      "name": "memory_source_adversarial",
+      "input": "# 2026년도 학교 안전 관리 지침 및 추진 계획서\n작성일: 2026-11-05\n기안자: 홍길동\n이몽룡 (인)\n성춘향 주무관\n행정 주무관\n12개월 사업 추진 계획\n\n### 1. 비상연락체계 및 담당자 정보\n| 담당자 | 전화번호 | 비상연락망 |\n| :--- | :--- | :--- |\n| | 담당자: 임꺽정 | | 010 9876 5432 | 01098765432 |\n| 청사 대표 | 02-345-6789 | 031-765-4321 / 1588-1234 |\n| 담당 전자우편 | hong.gildong@moe.go.kr | 업무용 포털 |\n\n### 2. 신원 및 사업자 정보\n- 주민등록번호(무하이픈): 9001011234567\n- 주민등록번호(엔대시): 851225 – 2345678\n- 사업자등록번호: 123-45-67890\n- 법인등록번호: 110111-0123456\n- 여권번호: M12345678\n- 운전면허번호: 11-23-456789-10\n- 관용차량번호: 123가 4567\n\n### 3. 계좌 및 결제 정보\n- 국민은행: 123456-04-123456\n- 무라벨 하이픈 계좌: 110-456-789012\n- 무라벨 연속 계좌: 9999990123456\n- 법인카드: 9410-1234-5678-9012\n\n### 4. 소재지 정보\n- 도로명 주소: 서울특별시 종로구 세종대로 209 정부서울청사 1203호\n- 지번 및 아파트: 역삼동 737-11 래미안아파트 102동 1503호\n\n### 5. 기존 마스크 잔존 토큰\n- 토큰 1: [[PII_RRN_1]]\n- 토큰 2: [[PII_PHONE_2]]\n- 제외 토큰: [[AI_EXCLUDED_9]]\n",
+      "expected": {
+        "text": "# 2026년도 학교 안전 관리 지침 및 추진 계획서\n작성일: 2026-11-05\n기안자: <이름>\n<이름> (인)\n<이름> 주무관\n행정 주무관\n12개월 사업 추진 계획\n\n### 1. 비상연락체계 및 담당자 정보\n| 담당자 | 전화번호 | 비상연락망 |\n| :--- | :--- | :--- |\n| | 담당자: <이름> | | <전화번호> | <전화번호> |\n| 청사 대표 | <전화번호> | <전화번호> / <전화번호> |\n| 담당 전자우편 | <이메일> | 업무용 포털 |\n\n### 2. 신원 및 사업자 정보\n- 주민등록번호(무하이픈): <주민번호>\n- 주민등록번호(엔대시): <주민번호>\n- 사업자등록번호: <사업자번호>\n- 법인등록번호: <법인번호>\n- 여권번호: <여권/면허번호>\n- 운전면허번호: <여권/면허번호>\n- 관용차량번호: <차량번호>\n\n### 3. 계좌 및 결제 정보\n- 국민은행: <계좌번호>\n- 무라벨 하이픈 계좌: <계좌번호>\n- 무라벨 연속 계좌: <계좌번호>\n- 법인카드: <카드번호>\n\n### 4. 소재지 정보\n- 도로명 주소: <주소>\n- 지번 및 아파트: <주소> <주소>\n\n### 5. 기존 마스크 잔존 토큰\n- 토큰 1: <주민번호>\n- 토큰 2: <전화번호>\n- 제외 토큰: <민감정보>\n",
+        "hits": [
+          "마스크 토큰 6건 -> <민감정보>",
+          "주민/외국인등록번호 2건 -> <주민번호>",
+          "법인등록번호 1건 -> <법인번호>",
+          "사업자등록번호 1건 -> <사업자번호>",
+          "카드번호 1건 -> <카드번호>",
+          "전화번호 5건 -> <전화번호>",
+          "계좌번호 1건 -> <계좌번호>",
+          "여권/운전면허번호 2건 -> <여권/면허번호>",
+          "차량번호 1건 -> <차량번호>",
+          "주소 3건 -> <주소>",
+          "성명 4건 -> <이름>"
+        ],
+        "hitDetails": [
+          {
+            "category": "mask_token",
+            "placeholder": "<민감정보>",
+            "count": 6
+          },
+          {
+            "category": "rrn",
+            "placeholder": "<주민번호>",
+            "count": 2
+          },
+          {
+            "category": "corp_reg",
+            "placeholder": "<법인번호>",
+            "count": 1
+          },
+          {
+            "category": "biz_reg",
+            "placeholder": "<사업자번호>",
+            "count": 1
+          },
+          {
+            "category": "card",
+            "placeholder": "<카드번호>",
+            "count": 1
+          },
+          {
+            "category": "phone",
+            "placeholder": "<전화번호>",
+            "count": 5
+          },
+          {
+            "category": "account",
+            "placeholder": "<계좌번호>",
+            "count": 1
+          },
+          {
+            "category": "passport_driver",
+            "placeholder": "<여권/면허번호>",
+            "count": 2
+          },
+          {
+            "category": "vehicle",
+            "placeholder": "<차량번호>",
+            "count": 1
+          },
+          {
+            "category": "address",
+            "placeholder": "<주소>",
+            "count": 3
+          },
+          {
+            "category": "person_name",
+            "placeholder": "<이름>",
+            "count": 4
+          }
+        ],
+        "totalCount": 27
+      }
+    }
+  ]
+}

@@ -1,0 +1,2916 @@
+{
+  "payloadCases": [
+    {
+      "name": "hwp_existing_all_32_ops",
+      "stagingFilePath": "doc.hwp",
+      "isHwpx": false,
+      "ops": [
+        {
+          "type": "replace_body_text",
+          "find": "구문",
+          "replace": "**신규** *문구*"
+        },
+        {
+          "type": "set_paragraph_text",
+          "paraIndex": 1,
+          "text": "**문단** 수정",
+          "oldTextForHwp": "기존 문단"
+        },
+        {
+          "type": "set_paragraph_text",
+          "paraIndex": 2,
+          "text": "신규 문단 추가"
+        },
+        {
+          "type": "append_paragraph",
+          "text": "**추가** 문단",
+          "align": "CENTER"
+        },
+        {
+          "type": "append_heading",
+          "level": 2,
+          "text": "*소제목*"
+        },
+        {
+          "type": "set_cell_text",
+          "tableIndex": 0,
+          "row": 1,
+          "col": 2,
+          "text": "**셀값**",
+          "fit": true
+        },
+        {
+          "type": "insert_table",
+          "afterParaIndex": 3,
+          "headers": [
+            "**구분**",
+            "내용"
+          ],
+          "rows": [
+            [
+              "*1*",
+              "값"
+            ]
+          ]
+        },
+        {
+          "type": "insert_table_row",
+          "tableIndex": 0,
+          "row": 1,
+          "position": "below",
+          "cells": [
+            "**A**",
+            "",
+            "C"
+          ]
+        },
+        {
+          "type": "delete_table_row",
+          "tableIndex": 0,
+          "row": 2
+        },
+        {
+          "type": "insert_table_col",
+          "tableIndex": 0,
+          "col": 1,
+          "position": "left",
+          "cells": [
+            "*열1*",
+            "열2"
+          ]
+        },
+        {
+          "type": "delete_table_col",
+          "tableIndex": 0,
+          "col": 2
+        },
+        {
+          "type": "merge_cells",
+          "tableIndex": 0,
+          "fromRow": 0,
+          "fromCol": 0,
+          "toRow": 1,
+          "toCol": 2
+        },
+        {
+          "type": "merge_cells",
+          "tableIndex": 0,
+          "fromRow": 0,
+          "fromCol": 0,
+          "toRow": 0,
+          "toCol": 2
+        },
+        {
+          "type": "merge_cells",
+          "tableIndex": 0,
+          "fromRow": 0,
+          "fromCol": 0,
+          "toRow": 2,
+          "toCol": 0
+        },
+        {
+          "type": "unmerge_cells",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0
+        },
+        {
+          "type": "split_cell",
+          "tableIndex": 0,
+          "row": 1,
+          "col": 1,
+          "intoRows": 2,
+          "intoCols": 3
+        },
+        {
+          "type": "equalize_table",
+          "tableIndex": 0,
+          "mode": "both"
+        },
+        {
+          "type": "set_cell_background",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "color": "#FFE699"
+        },
+        {
+          "type": "set_cell_align",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "endRow": 1,
+          "endCol": 1,
+          "align": "CENTER",
+          "valign": "MIDDLE"
+        },
+        {
+          "type": "set_cell_border",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "sides": "all",
+          "color": "#112233",
+          "widthMm": 0.5,
+          "lineType": "double"
+        },
+        {
+          "type": "apply_text_style",
+          "targetText": "제목",
+          "fontFamily": "함초롬바탕",
+          "sizePt": 14,
+          "bold": true,
+          "italic": false,
+          "underline": true,
+          "color": "#003366",
+          "highlight": "#FFFF00",
+          "letterSpacing": -5,
+          "charRatio": 95
+        },
+        {
+          "type": "apply_paragraph_style",
+          "paraIndex": "last",
+          "align": "JUSTIFY",
+          "indentHu": 1000,
+          "lineSpacingPercent": 160,
+          "spacingBeforeHu": 200,
+          "spacingAfterHu": 300
+        },
+        {
+          "type": "set_list_style",
+          "paraIndex": 4,
+          "targetText": "항목",
+          "mode": "numbered"
+        },
+        {
+          "type": "insert_image",
+          "path": "logo.png",
+          "anchorText": "로고",
+          "widthMm": 30,
+          "heightMm": 20
+        },
+        {
+          "type": "insert_image",
+          "path": "sign.png",
+          "cell": {
+            "tableIndex": 0,
+            "row": 1,
+            "col": 2
+          },
+          "widthMm": 15
+        },
+        {
+          "type": "place_seal",
+          "anchorText": "(인)",
+          "sealImagePath": "seal.png",
+          "mode": "overlap"
+        },
+        {
+          "type": "set_header_footer",
+          "where": "header",
+          "text": "기관명"
+        },
+        {
+          "type": "insert_page_number",
+          "where": "footer",
+          "align": "right"
+        },
+        {
+          "type": "insert_footnote",
+          "anchorText": "주석대상",
+          "text": "각주 설명",
+          "paraIndex": 2
+        },
+        {
+          "type": "set_columns",
+          "count": 2,
+          "spacingMm": 8
+        },
+        {
+          "type": "set_col_width",
+          "tableIndex": 0,
+          "col": 1,
+          "widthMm": 40,
+          "keepTableWidth": true
+        },
+        {
+          "type": "set_row_height",
+          "tableIndex": 0,
+          "row": 1,
+          "heightMm": 15
+        },
+        {
+          "type": "set_cell_padding",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "leftMm": 2,
+          "rightMm": 2,
+          "topMm": 1,
+          "bottomMm": 1
+        },
+        {
+          "type": "fit_table_to_page",
+          "tableIndex": 0,
+          "targetWidthMm": 170
+        },
+        {
+          "type": "set_page_margin",
+          "leftMm": 20,
+          "rightMm": 20,
+          "topMm": 15,
+          "bottomMm": 15
+        },
+        {
+          "type": "shrink_cell_font",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "sizePt": 9,
+          "minPt": 8
+        }
+      ],
+      "tablesMeta": [
+        {
+          "tableIndex": 0,
+          "sec": 0,
+          "para": 7,
+          "ctrl": 0,
+          "rowCount": 4,
+          "colCount": 3,
+          "cells": [
+            {
+              "idx": 0,
+              "row": 0,
+              "col": 0,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "text": "과제구분"
+            }
+          ]
+        }
+      ],
+      "isNewDocument": false,
+      "expected": {
+        "isHwpx": false,
+        "payload": {
+          "path": "doc.hwp",
+          "operations": [
+            {
+              "type": "replace_text",
+              "query": "구문",
+              "replacement": "신규 문구"
+            },
+            {
+              "type": "replace_text",
+              "query": "기존 문단",
+              "replacement": "문단 수정"
+            },
+            {
+              "type": "append_paragraph",
+              "text": "신규 문단 추가"
+            },
+            {
+              "type": "append_paragraph",
+              "text": "추가 문단",
+              "align": "CENTER"
+            },
+            {
+              "type": "append_heading",
+              "level": 2,
+              "text": "소제목"
+            },
+            {
+              "type": "set_cell_text",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "col": 2,
+              "text": "셀값",
+              "fit": true
+            },
+            {
+              "type": "append_table",
+              "headers": [
+                "구분",
+                "내용"
+              ],
+              "rows": [
+                [
+                  "1",
+                  "값"
+                ]
+              ]
+            },
+            {
+              "type": "insert_table_row",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "position": "below"
+            },
+            {
+              "type": "set_cell_text",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 2,
+              "col": 0,
+              "text": "A"
+            },
+            {
+              "type": "set_cell_text",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 2,
+              "col": 2,
+              "text": "C"
+            },
+            {
+              "type": "delete_table_row",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 2
+            },
+            {
+              "type": "insert_table_col",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "col": 1,
+              "position": "left"
+            },
+            {
+              "type": "delete_table_col",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "col": 2
+            },
+            {
+              "type": "merge_cells",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "from_row": 0,
+              "from_col": 0,
+              "to_row": 1,
+              "to_col": 2
+            },
+            {
+              "type": "merge_cells",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "from_row": 0,
+              "from_col": 0,
+              "to_row": 0,
+              "to_col": 2
+            },
+            {
+              "type": "merge_cells",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "from_row": 0,
+              "from_col": 0,
+              "to_row": 2,
+              "to_col": 0
+            },
+            {
+              "type": "unmerge_cells",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0
+            },
+            {
+              "type": "split_cell",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "col": 1,
+              "into_rows": 2
+            },
+            {
+              "type": "equalize_table_columns",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0
+            },
+            {
+              "type": "equalize_table_rows",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0
+            },
+            {
+              "type": "set_cell_background",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "background_color": "#FFE699"
+            },
+            {
+              "type": "set_cell_align",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "align": "center",
+              "valign": "middle"
+            },
+            {
+              "type": "set_cell_align",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 1,
+              "align": "center",
+              "valign": "middle"
+            },
+            {
+              "type": "set_cell_align",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "col": 0,
+              "align": "center",
+              "valign": "middle"
+            },
+            {
+              "type": "set_cell_align",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "col": 1,
+              "align": "center",
+              "valign": "middle"
+            },
+            {
+              "type": "set_cell_border",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "sides": "all",
+              "color": "#112233",
+              "line_type": "double"
+            },
+            {
+              "type": "apply_text_style",
+              "target": "제목",
+              "font_family": "함초롬바탕",
+              "size": 14,
+              "bold": true,
+              "italic": false,
+              "underline": true,
+              "color": "#003366",
+              "highlight": "#FFFF00",
+              "letter_spacing": -5,
+              "char_ratio": 95
+            },
+            {
+              "type": "apply_paragraph_style",
+              "index": 0,
+              "align": "JUSTIFY",
+              "indent": 1000,
+              "line_spacing": 160,
+              "spacing_before": 200,
+              "spacing_after": 300
+            },
+            {
+              "type": "set_numbered_list",
+              "index": 4,
+              "target": "항목"
+            },
+            {
+              "type": "insert_image",
+              "path": "logo.png",
+              "anchor": "로고",
+              "width_mm": 30,
+              "height_mm": 20
+            },
+            {
+              "type": "insert_image",
+              "path": "sign.png",
+              "cell": {
+                "row": 1,
+                "col": 2,
+                "section": 0,
+                "para": 7,
+                "control": 0,
+                "tableIndex": 0
+              },
+              "width_mm": 15
+            },
+            {
+              "type": "place_seal",
+              "anchor": "(인)",
+              "source": "seal.png",
+              "mode": "overlap"
+            },
+            {
+              "type": "insert_header_text",
+              "text": "기관명"
+            },
+            {
+              "type": "insert_page_number",
+              "where": "footer",
+              "align": "right"
+            },
+            {
+              "type": "insert_footnote",
+              "anchor": "주석대상",
+              "text": "각주 설명"
+            },
+            {
+              "type": "set_columns",
+              "count": 2,
+              "spacing_mm": 8
+            },
+            {
+              "type": "set_col_width",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "col": 1,
+              "width_mm": 40,
+              "keep_table_width": true
+            },
+            {
+              "type": "set_row_height",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "height_mm": 15
+            },
+            {
+              "type": "set_cell_padding",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "left_mm": 2,
+              "right_mm": 2,
+              "top_mm": 1,
+              "bottom_mm": 1
+            },
+            {
+              "type": "fit_table_to_page",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "target_width_mm": 170
+            },
+            {
+              "type": "set_page_margin",
+              "left_mm": 20,
+              "right_mm": 20,
+              "top_mm": 15,
+              "bottom_mm": 15
+            },
+            {
+              "type": "shrink_cell_font",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "size_pt": 9,
+              "min_pt": 8
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "hwp_new_all_32_ops",
+      "stagingFilePath": "doc.hwp",
+      "isHwpx": false,
+      "ops": [
+        {
+          "type": "replace_body_text",
+          "find": "구문",
+          "replace": "**신규** *문구*"
+        },
+        {
+          "type": "set_paragraph_text",
+          "paraIndex": 1,
+          "text": "**문단** 수정",
+          "oldTextForHwp": "기존 문단"
+        },
+        {
+          "type": "set_paragraph_text",
+          "paraIndex": 2,
+          "text": "신규 문단 추가"
+        },
+        {
+          "type": "append_paragraph",
+          "text": "**추가** 문단",
+          "align": "CENTER"
+        },
+        {
+          "type": "append_heading",
+          "level": 2,
+          "text": "*소제목*"
+        },
+        {
+          "type": "set_cell_text",
+          "tableIndex": 0,
+          "row": 1,
+          "col": 2,
+          "text": "**셀값**",
+          "fit": true
+        },
+        {
+          "type": "insert_table",
+          "afterParaIndex": 3,
+          "headers": [
+            "**구분**",
+            "내용"
+          ],
+          "rows": [
+            [
+              "*1*",
+              "값"
+            ]
+          ]
+        },
+        {
+          "type": "insert_table_row",
+          "tableIndex": 0,
+          "row": 1,
+          "position": "below",
+          "cells": [
+            "**A**",
+            "",
+            "C"
+          ]
+        },
+        {
+          "type": "delete_table_row",
+          "tableIndex": 0,
+          "row": 2
+        },
+        {
+          "type": "insert_table_col",
+          "tableIndex": 0,
+          "col": 1,
+          "position": "left",
+          "cells": [
+            "*열1*",
+            "열2"
+          ]
+        },
+        {
+          "type": "delete_table_col",
+          "tableIndex": 0,
+          "col": 2
+        },
+        {
+          "type": "merge_cells",
+          "tableIndex": 0,
+          "fromRow": 0,
+          "fromCol": 0,
+          "toRow": 1,
+          "toCol": 2
+        },
+        {
+          "type": "merge_cells",
+          "tableIndex": 0,
+          "fromRow": 0,
+          "fromCol": 0,
+          "toRow": 0,
+          "toCol": 2
+        },
+        {
+          "type": "merge_cells",
+          "tableIndex": 0,
+          "fromRow": 0,
+          "fromCol": 0,
+          "toRow": 2,
+          "toCol": 0
+        },
+        {
+          "type": "unmerge_cells",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0
+        },
+        {
+          "type": "split_cell",
+          "tableIndex": 0,
+          "row": 1,
+          "col": 1,
+          "intoRows": 2,
+          "intoCols": 3
+        },
+        {
+          "type": "equalize_table",
+          "tableIndex": 0,
+          "mode": "both"
+        },
+        {
+          "type": "set_cell_background",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "color": "#FFE699"
+        },
+        {
+          "type": "set_cell_align",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "endRow": 1,
+          "endCol": 1,
+          "align": "CENTER",
+          "valign": "MIDDLE"
+        },
+        {
+          "type": "set_cell_border",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "sides": "all",
+          "color": "#112233",
+          "widthMm": 0.5,
+          "lineType": "double"
+        },
+        {
+          "type": "apply_text_style",
+          "targetText": "제목",
+          "fontFamily": "함초롬바탕",
+          "sizePt": 14,
+          "bold": true,
+          "italic": false,
+          "underline": true,
+          "color": "#003366",
+          "highlight": "#FFFF00",
+          "letterSpacing": -5,
+          "charRatio": 95
+        },
+        {
+          "type": "apply_paragraph_style",
+          "paraIndex": "last",
+          "align": "JUSTIFY",
+          "indentHu": 1000,
+          "lineSpacingPercent": 160,
+          "spacingBeforeHu": 200,
+          "spacingAfterHu": 300
+        },
+        {
+          "type": "set_list_style",
+          "paraIndex": 4,
+          "targetText": "항목",
+          "mode": "numbered"
+        },
+        {
+          "type": "insert_image",
+          "path": "logo.png",
+          "anchorText": "로고",
+          "widthMm": 30,
+          "heightMm": 20
+        },
+        {
+          "type": "insert_image",
+          "path": "sign.png",
+          "cell": {
+            "tableIndex": 0,
+            "row": 1,
+            "col": 2
+          },
+          "widthMm": 15
+        },
+        {
+          "type": "place_seal",
+          "anchorText": "(인)",
+          "sealImagePath": "seal.png",
+          "mode": "overlap"
+        },
+        {
+          "type": "set_header_footer",
+          "where": "header",
+          "text": "기관명"
+        },
+        {
+          "type": "insert_page_number",
+          "where": "footer",
+          "align": "right"
+        },
+        {
+          "type": "insert_footnote",
+          "anchorText": "주석대상",
+          "text": "각주 설명",
+          "paraIndex": 2
+        },
+        {
+          "type": "set_columns",
+          "count": 2,
+          "spacingMm": 8
+        },
+        {
+          "type": "set_col_width",
+          "tableIndex": 0,
+          "col": 1,
+          "widthMm": 40,
+          "keepTableWidth": true
+        },
+        {
+          "type": "set_row_height",
+          "tableIndex": 0,
+          "row": 1,
+          "heightMm": 15
+        },
+        {
+          "type": "set_cell_padding",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "leftMm": 2,
+          "rightMm": 2,
+          "topMm": 1,
+          "bottomMm": 1
+        },
+        {
+          "type": "fit_table_to_page",
+          "tableIndex": 0,
+          "targetWidthMm": 170
+        },
+        {
+          "type": "set_page_margin",
+          "leftMm": 20,
+          "rightMm": 20,
+          "topMm": 15,
+          "bottomMm": 15
+        },
+        {
+          "type": "shrink_cell_font",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "sizePt": 9,
+          "minPt": 8
+        }
+      ],
+      "tablesMeta": [
+        {
+          "tableIndex": 0,
+          "sec": 0,
+          "para": 7,
+          "ctrl": 0,
+          "rowCount": 4,
+          "colCount": 3,
+          "cells": [
+            {
+              "idx": 0,
+              "row": 0,
+              "col": 0,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "text": "과제구분"
+            }
+          ]
+        }
+      ],
+      "isNewDocument": true,
+      "expected": {
+        "isHwpx": false,
+        "payload": {
+          "path": "doc.hwp",
+          "operations": [
+            {
+              "type": "setup_document",
+              "page_size": "a4",
+              "orientation": "portrait",
+              "margin_mm": 20
+            },
+            {
+              "type": "replace_text",
+              "query": "구문",
+              "replacement": "신규 문구"
+            },
+            {
+              "type": "replace_text",
+              "query": "기존 문단",
+              "replacement": "문단 수정"
+            },
+            {
+              "type": "append_paragraph",
+              "text": "신규 문단 추가"
+            },
+            {
+              "type": "append_paragraph",
+              "text": "추가 문단",
+              "align": "CENTER"
+            },
+            {
+              "type": "append_heading",
+              "level": 2,
+              "text": "소제목"
+            },
+            {
+              "type": "set_cell_text",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "col": 2,
+              "text": "셀값",
+              "fit": true
+            },
+            {
+              "type": "append_table",
+              "headers": [
+                "구분",
+                "내용"
+              ],
+              "rows": [
+                [
+                  "1",
+                  "값"
+                ]
+              ]
+            },
+            {
+              "type": "insert_table_row",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "position": "below"
+            },
+            {
+              "type": "set_cell_text",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 2,
+              "col": 0,
+              "text": "A"
+            },
+            {
+              "type": "set_cell_text",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 2,
+              "col": 2,
+              "text": "C"
+            },
+            {
+              "type": "delete_table_row",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 2
+            },
+            {
+              "type": "insert_table_col",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "col": 1,
+              "position": "left"
+            },
+            {
+              "type": "delete_table_col",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "col": 2
+            },
+            {
+              "type": "merge_cells",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "from_row": 0,
+              "from_col": 0,
+              "to_row": 1,
+              "to_col": 2
+            },
+            {
+              "type": "merge_cells",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "from_row": 0,
+              "from_col": 0,
+              "to_row": 0,
+              "to_col": 2
+            },
+            {
+              "type": "merge_cells",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "from_row": 0,
+              "from_col": 0,
+              "to_row": 2,
+              "to_col": 0
+            },
+            {
+              "type": "unmerge_cells",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0
+            },
+            {
+              "type": "split_cell",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "col": 1,
+              "into_rows": 2
+            },
+            {
+              "type": "equalize_table_columns",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0
+            },
+            {
+              "type": "equalize_table_rows",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0
+            },
+            {
+              "type": "set_cell_background",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "background_color": "#FFE699"
+            },
+            {
+              "type": "set_cell_align",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "align": "center",
+              "valign": "middle"
+            },
+            {
+              "type": "set_cell_align",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 1,
+              "align": "center",
+              "valign": "middle"
+            },
+            {
+              "type": "set_cell_align",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "col": 0,
+              "align": "center",
+              "valign": "middle"
+            },
+            {
+              "type": "set_cell_align",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "col": 1,
+              "align": "center",
+              "valign": "middle"
+            },
+            {
+              "type": "set_cell_border",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "sides": "all",
+              "color": "#112233",
+              "line_type": "double"
+            },
+            {
+              "type": "apply_text_style",
+              "target": "제목",
+              "font_family": "함초롬바탕",
+              "size": 14,
+              "bold": true,
+              "italic": false,
+              "underline": true,
+              "color": "#003366",
+              "highlight": "#FFFF00",
+              "letter_spacing": -5,
+              "char_ratio": 95
+            },
+            {
+              "type": "apply_paragraph_style",
+              "index": 0,
+              "align": "JUSTIFY",
+              "indent": 1000,
+              "line_spacing": 160,
+              "spacing_before": 200,
+              "spacing_after": 300
+            },
+            {
+              "type": "set_numbered_list",
+              "index": 4,
+              "target": "항목"
+            },
+            {
+              "type": "insert_image",
+              "path": "logo.png",
+              "anchor": "로고",
+              "width_mm": 30,
+              "height_mm": 20
+            },
+            {
+              "type": "insert_image",
+              "path": "sign.png",
+              "cell": {
+                "row": 1,
+                "col": 2,
+                "section": 0,
+                "para": 7,
+                "control": 0,
+                "tableIndex": 0
+              },
+              "width_mm": 15
+            },
+            {
+              "type": "place_seal",
+              "anchor": "(인)",
+              "source": "seal.png",
+              "mode": "overlap"
+            },
+            {
+              "type": "insert_header_text",
+              "text": "기관명"
+            },
+            {
+              "type": "insert_page_number",
+              "where": "footer",
+              "align": "right"
+            },
+            {
+              "type": "insert_footnote",
+              "anchor": "주석대상",
+              "text": "각주 설명"
+            },
+            {
+              "type": "set_columns",
+              "count": 2,
+              "spacing_mm": 8
+            },
+            {
+              "type": "set_col_width",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "col": 1,
+              "width_mm": 40,
+              "keep_table_width": true
+            },
+            {
+              "type": "set_row_height",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "height_mm": 15
+            },
+            {
+              "type": "set_cell_padding",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "left_mm": 2,
+              "right_mm": 2,
+              "top_mm": 1,
+              "bottom_mm": 1
+            },
+            {
+              "type": "fit_table_to_page",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "target_width_mm": 170
+            },
+            {
+              "type": "set_page_margin",
+              "left_mm": 20,
+              "right_mm": 20,
+              "top_mm": 15,
+              "bottom_mm": 15
+            },
+            {
+              "type": "shrink_cell_font",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "size_pt": 9,
+              "min_pt": 8
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "hwpx_existing_all_33_ops",
+      "stagingFilePath": "doc.hwpx",
+      "isHwpx": true,
+      "ops": [
+        {
+          "type": "replace_body_text",
+          "find": "구문",
+          "replace": "**신규** *문구*"
+        },
+        {
+          "type": "set_paragraph_text",
+          "paraIndex": 1,
+          "text": "**문단** 수정",
+          "oldTextForHwp": "기존 문단"
+        },
+        {
+          "type": "set_paragraph_text",
+          "paraIndex": 2,
+          "text": "신규 문단 추가"
+        },
+        {
+          "type": "append_paragraph",
+          "text": "**추가** 문단",
+          "align": "CENTER"
+        },
+        {
+          "type": "append_heading",
+          "level": 2,
+          "text": "*소제목*"
+        },
+        {
+          "type": "set_cell_text",
+          "tableIndex": 0,
+          "row": 1,
+          "col": 2,
+          "text": "**셀값**",
+          "fit": true
+        },
+        {
+          "type": "insert_table",
+          "afterParaIndex": 3,
+          "headers": [
+            "**구분**",
+            "내용"
+          ],
+          "rows": [
+            [
+              "*1*",
+              "값"
+            ]
+          ]
+        },
+        {
+          "type": "insert_table_row",
+          "tableIndex": 0,
+          "row": 1,
+          "position": "below",
+          "cells": [
+            "**A**",
+            "",
+            "C"
+          ]
+        },
+        {
+          "type": "delete_table_row",
+          "tableIndex": 0,
+          "row": 2
+        },
+        {
+          "type": "insert_table_col",
+          "tableIndex": 0,
+          "col": 1,
+          "position": "left",
+          "cells": [
+            "*열1*",
+            "열2"
+          ]
+        },
+        {
+          "type": "delete_table_col",
+          "tableIndex": 0,
+          "col": 2
+        },
+        {
+          "type": "merge_cells",
+          "tableIndex": 0,
+          "fromRow": 0,
+          "fromCol": 0,
+          "toRow": 1,
+          "toCol": 2
+        },
+        {
+          "type": "merge_cells",
+          "tableIndex": 0,
+          "fromRow": 0,
+          "fromCol": 0,
+          "toRow": 0,
+          "toCol": 2
+        },
+        {
+          "type": "merge_cells",
+          "tableIndex": 0,
+          "fromRow": 0,
+          "fromCol": 0,
+          "toRow": 2,
+          "toCol": 0
+        },
+        {
+          "type": "unmerge_cells",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0
+        },
+        {
+          "type": "split_cell",
+          "tableIndex": 0,
+          "row": 1,
+          "col": 1,
+          "intoRows": 2,
+          "intoCols": 3
+        },
+        {
+          "type": "equalize_table",
+          "tableIndex": 0,
+          "mode": "both"
+        },
+        {
+          "type": "set_cell_background",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "color": "#FFE699"
+        },
+        {
+          "type": "set_cell_align",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "endRow": 1,
+          "endCol": 1,
+          "align": "CENTER",
+          "valign": "MIDDLE"
+        },
+        {
+          "type": "set_cell_border",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "sides": "all",
+          "color": "#112233",
+          "widthMm": 0.5,
+          "lineType": "double"
+        },
+        {
+          "type": "apply_text_style",
+          "targetText": "제목",
+          "fontFamily": "함초롬바탕",
+          "sizePt": 14,
+          "bold": true,
+          "italic": false,
+          "underline": true,
+          "color": "#003366",
+          "highlight": "#FFFF00",
+          "letterSpacing": -5,
+          "charRatio": 95
+        },
+        {
+          "type": "apply_paragraph_style",
+          "paraIndex": "last",
+          "align": "JUSTIFY",
+          "indentHu": 1000,
+          "lineSpacingPercent": 160,
+          "spacingBeforeHu": 200,
+          "spacingAfterHu": 300
+        },
+        {
+          "type": "set_list_style",
+          "paraIndex": 4,
+          "targetText": "항목",
+          "mode": "numbered"
+        },
+        {
+          "type": "insert_image",
+          "path": "logo.png",
+          "anchorText": "로고",
+          "widthMm": 30,
+          "heightMm": 20
+        },
+        {
+          "type": "insert_image",
+          "path": "sign.png",
+          "cell": {
+            "tableIndex": 0,
+            "row": 1,
+            "col": 2
+          },
+          "widthMm": 15
+        },
+        {
+          "type": "place_seal",
+          "anchorText": "(인)",
+          "sealImagePath": "seal.png",
+          "mode": "overlap"
+        },
+        {
+          "type": "set_header_footer",
+          "where": "header",
+          "text": "기관명"
+        },
+        {
+          "type": "insert_page_number",
+          "where": "footer",
+          "align": "right"
+        },
+        {
+          "type": "insert_footnote",
+          "anchorText": "주석대상",
+          "text": "각주 설명",
+          "paraIndex": 2
+        },
+        {
+          "type": "set_columns",
+          "count": 2,
+          "spacingMm": 8
+        },
+        {
+          "type": "set_col_width",
+          "tableIndex": 0,
+          "col": 1,
+          "widthMm": 40,
+          "keepTableWidth": true
+        },
+        {
+          "type": "set_row_height",
+          "tableIndex": 0,
+          "row": 1,
+          "heightMm": 15
+        },
+        {
+          "type": "set_cell_padding",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "leftMm": 2,
+          "rightMm": 2,
+          "topMm": 1,
+          "bottomMm": 1
+        },
+        {
+          "type": "fit_table_to_page",
+          "tableIndex": 0,
+          "targetWidthMm": 170
+        },
+        {
+          "type": "set_page_margin",
+          "leftMm": 20,
+          "rightMm": 20,
+          "topMm": 15,
+          "bottomMm": 15
+        },
+        {
+          "type": "shrink_cell_font",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "sizePt": 9,
+          "minPt": 8
+        },
+        {
+          "type": "insert_nested_table",
+          "tableIndex": 0,
+          "row": 1,
+          "col": 0,
+          "rows": 2,
+          "cols": 2,
+          "data": [
+            [
+              "**머리글1**",
+              "*머리글2*"
+            ],
+            [
+              "데이터1",
+              "**데이터2**"
+            ]
+          ],
+          "headerRow": true,
+          "widthMode": "fit_cell"
+        }
+      ],
+      "tablesMeta": [
+        {
+          "tableIndex": 0,
+          "sec": 0,
+          "para": 7,
+          "ctrl": 0,
+          "rowCount": 4,
+          "colCount": 3,
+          "cells": [
+            {
+              "idx": 0,
+              "row": 0,
+              "col": 0,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "text": "과제구분"
+            }
+          ]
+        }
+      ],
+      "isNewDocument": false,
+      "expected": {
+        "isHwpx": true,
+        "payload": {
+          "path": "doc.hwpx",
+          "output": "doc.hwpx",
+          "operations": [
+            {
+              "type": "replace_text",
+              "find": "구문",
+              "replace": "신규 문구"
+            },
+            {
+              "type": "set_paragraph_text",
+              "index": 1,
+              "text": "문단 수정"
+            },
+            {
+              "type": "set_paragraph_text",
+              "index": 2,
+              "text": "신규 문단 추가"
+            },
+            {
+              "type": "append_paragraph",
+              "text": "추가 문단"
+            },
+            {
+              "type": "apply_paragraph_style",
+              "index": -1,
+              "target": "추가 문단",
+              "align": "CENTER"
+            },
+            {
+              "type": "append_paragraph",
+              "text": "소제목"
+            },
+            {
+              "type": "apply_text_style",
+              "target": "소제목",
+              "bold": true,
+              "size_pt": 14
+            },
+            {
+              "type": "set_cell_text",
+              "table": 0,
+              "row": 1,
+              "col": 2,
+              "text": "셀값",
+              "fit": true
+            },
+            {
+              "type": "insert_table",
+              "index": 3,
+              "rows": 2,
+              "cols": 2,
+              "cells": [
+                [
+                  "구분",
+                  "내용"
+                ],
+                [
+                  "1",
+                  "값"
+                ]
+              ]
+            },
+            {
+              "type": "insert_table_row",
+              "table": 0,
+              "row": 1,
+              "where": "after",
+              "cells": [
+                "A",
+                "",
+                "C"
+              ]
+            },
+            {
+              "type": "delete_table_row",
+              "table": 0,
+              "row": 2
+            },
+            {
+              "type": "insert_table_column",
+              "table": 0,
+              "col": 1,
+              "where": "before",
+              "cells": [
+                "열1",
+                "열2"
+              ]
+            },
+            {
+              "type": "delete_table_column",
+              "table": 0,
+              "col": 2
+            },
+            {
+              "type": "merge_cells",
+              "table": 0,
+              "mode": "horizontal",
+              "row": 0,
+              "start": 0,
+              "count": 3
+            },
+            {
+              "type": "merge_cells",
+              "table": 0,
+              "mode": "horizontal",
+              "row": 1,
+              "start": 0,
+              "count": 3
+            },
+            {
+              "type": "merge_cells",
+              "table": 0,
+              "mode": "vertical",
+              "col": 0,
+              "start": 0,
+              "count": 2
+            },
+            {
+              "type": "merge_cells",
+              "table": 0,
+              "mode": "horizontal",
+              "row": 0,
+              "start": 0,
+              "count": 3
+            },
+            {
+              "type": "merge_cells",
+              "table": 0,
+              "mode": "vertical",
+              "col": 0,
+              "start": 0,
+              "count": 3
+            },
+            {
+              "type": "unmerge_cells",
+              "table": 0,
+              "row": 0,
+              "col": 0
+            },
+            {
+              "type": "split_cell",
+              "table": 0,
+              "row": 1,
+              "col": 1,
+              "rows": 2,
+              "cols": 3
+            },
+            {
+              "type": "distribute_table",
+              "table": 0,
+              "mode": "both"
+            },
+            {
+              "type": "set_cell_background",
+              "table": 0,
+              "row": 0,
+              "col": 0,
+              "color": "#FFE699",
+              "mode": "both"
+            },
+            {
+              "type": "set_cell_align",
+              "table": 0,
+              "row": 0,
+              "col": 0,
+              "horizontal": "CENTER",
+              "vertical": "MIDDLE"
+            },
+            {
+              "type": "set_cell_align",
+              "table": 0,
+              "row": 0,
+              "col": 1,
+              "horizontal": "CENTER",
+              "vertical": "MIDDLE"
+            },
+            {
+              "type": "set_cell_align",
+              "table": 0,
+              "row": 1,
+              "col": 0,
+              "horizontal": "CENTER",
+              "vertical": "MIDDLE"
+            },
+            {
+              "type": "set_cell_align",
+              "table": 0,
+              "row": 1,
+              "col": 1,
+              "horizontal": "CENTER",
+              "vertical": "MIDDLE"
+            },
+            {
+              "type": "set_cell_border",
+              "table": 0,
+              "row": 0,
+              "col": 0,
+              "color": "#112233",
+              "width": "0.5 mm",
+              "sides": [
+                "LEFT",
+                "RIGHT",
+                "TOP",
+                "BOTTOM"
+              ]
+            },
+            {
+              "type": "apply_text_style",
+              "target": "제목",
+              "fontFace": "함초롬바탕",
+              "size_pt": 14,
+              "bold": true,
+              "italic": false,
+              "underline": true,
+              "color": "003366",
+              "highlight": "#FFFF00",
+              "letter_spacing": -5,
+              "char_ratio": 95
+            },
+            {
+              "type": "apply_paragraph_style",
+              "index": -1,
+              "align": "JUSTIFY",
+              "indent": 1000,
+              "lineSpacing": 160,
+              "spacing_before": 200,
+              "spacing_after": 300
+            },
+            {
+              "type": "set_number_list",
+              "index": 4,
+              "target": "항목"
+            },
+            {
+              "type": "insert_image",
+              "source": "logo.png",
+              "width_mm": 30,
+              "height_mm": 20
+            },
+            {
+              "type": "set_cell_image",
+              "table": 0,
+              "row": 1,
+              "col": 2,
+              "source": "sign.png",
+              "width_mm": 15
+            },
+            {
+              "type": "place_seal",
+              "anchor": "(인)",
+              "source": "seal.png",
+              "mode": "overlap"
+            },
+            {
+              "type": "set_header",
+              "text": "기관명"
+            },
+            {
+              "type": "set_page_number",
+              "where": "footer",
+              "align": "RIGHT"
+            },
+            {
+              "type": "insert_footnote",
+              "index": 2,
+              "anchor": "주석대상",
+              "text": "각주 설명"
+            },
+            {
+              "type": "set_columns",
+              "count": 2,
+              "gap_mm": 8
+            },
+            {
+              "type": "set_col_width",
+              "table": 0,
+              "col": 1,
+              "width_mm": 40,
+              "keep_table_width": true
+            },
+            {
+              "type": "set_row_height",
+              "table": 0,
+              "row": 1,
+              "height_mm": 15
+            },
+            {
+              "type": "set_cell_padding",
+              "table": 0,
+              "row": 0,
+              "col": 0,
+              "left_mm": 2,
+              "right_mm": 2,
+              "top_mm": 1,
+              "bottom_mm": 1
+            },
+            {
+              "type": "fit_table_to_page",
+              "table": 0,
+              "target_width_mm": 170
+            },
+            {
+              "type": "set_page_margin",
+              "left_mm": 20,
+              "right_mm": 20,
+              "top_mm": 15,
+              "bottom_mm": 15
+            },
+            {
+              "type": "shrink_cell_font",
+              "table": 0,
+              "row": 0,
+              "col": 0,
+              "size_pt": 9,
+              "min_pt": 8
+            },
+            {
+              "type": "insert_nested_table",
+              "table": 0,
+              "row": 1,
+              "col": 0,
+              "rows": 2,
+              "cols": 2,
+              "cells": [
+                [
+                  "머리글1",
+                  "머리글2"
+                ],
+                [
+                  "데이터1",
+                  "데이터2"
+                ]
+              ],
+              "data": [
+                [
+                  "머리글1",
+                  "머리글2"
+                ],
+                [
+                  "데이터1",
+                  "데이터2"
+                ]
+              ],
+              "headerRow": true,
+              "widthMode": "fit_cell"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "hwpx_new_all_32_ops",
+      "stagingFilePath": "doc.hwpx",
+      "isHwpx": true,
+      "ops": [
+        {
+          "type": "replace_body_text",
+          "find": "구문",
+          "replace": "**신규** *문구*"
+        },
+        {
+          "type": "set_paragraph_text",
+          "paraIndex": 1,
+          "text": "**문단** 수정",
+          "oldTextForHwp": "기존 문단"
+        },
+        {
+          "type": "set_paragraph_text",
+          "paraIndex": 2,
+          "text": "신규 문단 추가"
+        },
+        {
+          "type": "append_paragraph",
+          "text": "**추가** 문단",
+          "align": "CENTER"
+        },
+        {
+          "type": "append_heading",
+          "level": 2,
+          "text": "*소제목*"
+        },
+        {
+          "type": "set_cell_text",
+          "tableIndex": 0,
+          "row": 1,
+          "col": 2,
+          "text": "**셀값**",
+          "fit": true
+        },
+        {
+          "type": "insert_table",
+          "afterParaIndex": 3,
+          "headers": [
+            "**구분**",
+            "내용"
+          ],
+          "rows": [
+            [
+              "*1*",
+              "값"
+            ]
+          ]
+        },
+        {
+          "type": "insert_table_row",
+          "tableIndex": 0,
+          "row": 1,
+          "position": "below",
+          "cells": [
+            "**A**",
+            "",
+            "C"
+          ]
+        },
+        {
+          "type": "delete_table_row",
+          "tableIndex": 0,
+          "row": 2
+        },
+        {
+          "type": "insert_table_col",
+          "tableIndex": 0,
+          "col": 1,
+          "position": "left",
+          "cells": [
+            "*열1*",
+            "열2"
+          ]
+        },
+        {
+          "type": "delete_table_col",
+          "tableIndex": 0,
+          "col": 2
+        },
+        {
+          "type": "merge_cells",
+          "tableIndex": 0,
+          "fromRow": 0,
+          "fromCol": 0,
+          "toRow": 1,
+          "toCol": 2
+        },
+        {
+          "type": "merge_cells",
+          "tableIndex": 0,
+          "fromRow": 0,
+          "fromCol": 0,
+          "toRow": 0,
+          "toCol": 2
+        },
+        {
+          "type": "merge_cells",
+          "tableIndex": 0,
+          "fromRow": 0,
+          "fromCol": 0,
+          "toRow": 2,
+          "toCol": 0
+        },
+        {
+          "type": "unmerge_cells",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0
+        },
+        {
+          "type": "split_cell",
+          "tableIndex": 0,
+          "row": 1,
+          "col": 1,
+          "intoRows": 2,
+          "intoCols": 3
+        },
+        {
+          "type": "equalize_table",
+          "tableIndex": 0,
+          "mode": "both"
+        },
+        {
+          "type": "set_cell_background",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "color": "#FFE699"
+        },
+        {
+          "type": "set_cell_align",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "endRow": 1,
+          "endCol": 1,
+          "align": "CENTER",
+          "valign": "MIDDLE"
+        },
+        {
+          "type": "set_cell_border",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "sides": "all",
+          "color": "#112233",
+          "widthMm": 0.5,
+          "lineType": "double"
+        },
+        {
+          "type": "apply_text_style",
+          "targetText": "제목",
+          "fontFamily": "함초롬바탕",
+          "sizePt": 14,
+          "bold": true,
+          "italic": false,
+          "underline": true,
+          "color": "#003366",
+          "highlight": "#FFFF00",
+          "letterSpacing": -5,
+          "charRatio": 95
+        },
+        {
+          "type": "apply_paragraph_style",
+          "paraIndex": "last",
+          "align": "JUSTIFY",
+          "indentHu": 1000,
+          "lineSpacingPercent": 160,
+          "spacingBeforeHu": 200,
+          "spacingAfterHu": 300
+        },
+        {
+          "type": "set_list_style",
+          "paraIndex": 4,
+          "targetText": "항목",
+          "mode": "numbered"
+        },
+        {
+          "type": "insert_image",
+          "path": "logo.png",
+          "anchorText": "로고",
+          "widthMm": 30,
+          "heightMm": 20
+        },
+        {
+          "type": "insert_image",
+          "path": "sign.png",
+          "cell": {
+            "tableIndex": 0,
+            "row": 1,
+            "col": 2
+          },
+          "widthMm": 15
+        },
+        {
+          "type": "place_seal",
+          "anchorText": "(인)",
+          "sealImagePath": "seal.png",
+          "mode": "overlap"
+        },
+        {
+          "type": "set_header_footer",
+          "where": "header",
+          "text": "기관명"
+        },
+        {
+          "type": "insert_page_number",
+          "where": "footer",
+          "align": "right"
+        },
+        {
+          "type": "insert_footnote",
+          "anchorText": "주석대상",
+          "text": "각주 설명",
+          "paraIndex": 2
+        },
+        {
+          "type": "set_columns",
+          "count": 2,
+          "spacingMm": 8
+        },
+        {
+          "type": "set_col_width",
+          "tableIndex": 0,
+          "col": 1,
+          "widthMm": 40,
+          "keepTableWidth": true
+        },
+        {
+          "type": "set_row_height",
+          "tableIndex": 0,
+          "row": 1,
+          "heightMm": 15
+        },
+        {
+          "type": "set_cell_padding",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "leftMm": 2,
+          "rightMm": 2,
+          "topMm": 1,
+          "bottomMm": 1
+        },
+        {
+          "type": "fit_table_to_page",
+          "tableIndex": 0,
+          "targetWidthMm": 170
+        },
+        {
+          "type": "set_page_margin",
+          "leftMm": 20,
+          "rightMm": 20,
+          "topMm": 15,
+          "bottomMm": 15
+        },
+        {
+          "type": "shrink_cell_font",
+          "tableIndex": 0,
+          "row": 0,
+          "col": 0,
+          "sizePt": 9,
+          "minPt": 8
+        }
+      ],
+      "tablesMeta": [
+        {
+          "tableIndex": 0,
+          "sec": 0,
+          "para": 7,
+          "ctrl": 0,
+          "rowCount": 4,
+          "colCount": 3,
+          "cells": [
+            {
+              "idx": 0,
+              "row": 0,
+              "col": 0,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "text": "과제구분"
+            }
+          ]
+        }
+      ],
+      "isNewDocument": true,
+      "expected": {
+        "isHwpx": false,
+        "payload": {
+          "path": "doc.hwpx",
+          "operations": [
+            {
+              "type": "setup_document",
+              "page_size": "a4",
+              "orientation": "portrait",
+              "margin_mm": 20
+            },
+            {
+              "type": "replace_text",
+              "query": "구문",
+              "replacement": "신규 문구"
+            },
+            {
+              "type": "replace_text",
+              "query": "기존 문단",
+              "replacement": "문단 수정"
+            },
+            {
+              "type": "append_paragraph",
+              "text": "신규 문단 추가"
+            },
+            {
+              "type": "append_paragraph",
+              "text": "추가 문단",
+              "align": "CENTER"
+            },
+            {
+              "type": "append_heading",
+              "level": 2,
+              "text": "소제목"
+            },
+            {
+              "type": "set_cell_text",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "col": 2,
+              "text": "셀값",
+              "fit": true
+            },
+            {
+              "type": "append_table",
+              "headers": [
+                "구분",
+                "내용"
+              ],
+              "rows": [
+                [
+                  "1",
+                  "값"
+                ]
+              ]
+            },
+            {
+              "type": "insert_table_row",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "position": "below"
+            },
+            {
+              "type": "set_cell_text",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 2,
+              "col": 0,
+              "text": "A"
+            },
+            {
+              "type": "set_cell_text",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 2,
+              "col": 2,
+              "text": "C"
+            },
+            {
+              "type": "delete_table_row",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 2
+            },
+            {
+              "type": "insert_table_col",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "col": 1,
+              "position": "left"
+            },
+            {
+              "type": "delete_table_col",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "col": 2
+            },
+            {
+              "type": "merge_cells",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "from_row": 0,
+              "from_col": 0,
+              "to_row": 1,
+              "to_col": 2
+            },
+            {
+              "type": "merge_cells",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "from_row": 0,
+              "from_col": 0,
+              "to_row": 0,
+              "to_col": 2
+            },
+            {
+              "type": "merge_cells",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "from_row": 0,
+              "from_col": 0,
+              "to_row": 2,
+              "to_col": 0
+            },
+            {
+              "type": "unmerge_cells",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0
+            },
+            {
+              "type": "split_cell",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "col": 1,
+              "into_rows": 2
+            },
+            {
+              "type": "equalize_table_columns",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0
+            },
+            {
+              "type": "equalize_table_rows",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0
+            },
+            {
+              "type": "set_cell_background",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "background_color": "#FFE699"
+            },
+            {
+              "type": "set_cell_align",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "align": "center",
+              "valign": "middle"
+            },
+            {
+              "type": "set_cell_align",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 1,
+              "align": "center",
+              "valign": "middle"
+            },
+            {
+              "type": "set_cell_align",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "col": 0,
+              "align": "center",
+              "valign": "middle"
+            },
+            {
+              "type": "set_cell_align",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "col": 1,
+              "align": "center",
+              "valign": "middle"
+            },
+            {
+              "type": "set_cell_border",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "sides": "all",
+              "color": "#112233",
+              "line_type": "double"
+            },
+            {
+              "type": "apply_text_style",
+              "target": "제목",
+              "font_family": "함초롬바탕",
+              "size": 14,
+              "bold": true,
+              "italic": false,
+              "underline": true,
+              "color": "#003366",
+              "highlight": "#FFFF00",
+              "letter_spacing": -5,
+              "char_ratio": 95
+            },
+            {
+              "type": "apply_paragraph_style",
+              "index": 0,
+              "align": "JUSTIFY",
+              "indent": 1000,
+              "line_spacing": 160,
+              "spacing_before": 200,
+              "spacing_after": 300
+            },
+            {
+              "type": "set_numbered_list",
+              "index": 4,
+              "target": "항목"
+            },
+            {
+              "type": "insert_image",
+              "path": "logo.png",
+              "anchor": "로고",
+              "width_mm": 30,
+              "height_mm": 20
+            },
+            {
+              "type": "insert_image",
+              "path": "sign.png",
+              "cell": {
+                "row": 1,
+                "col": 2,
+                "section": 0,
+                "para": 7,
+                "control": 0,
+                "tableIndex": 0
+              },
+              "width_mm": 15
+            },
+            {
+              "type": "place_seal",
+              "anchor": "(인)",
+              "source": "seal.png",
+              "mode": "overlap"
+            },
+            {
+              "type": "insert_header_text",
+              "text": "기관명"
+            },
+            {
+              "type": "insert_page_number",
+              "where": "footer",
+              "align": "right"
+            },
+            {
+              "type": "insert_footnote",
+              "anchor": "주석대상",
+              "text": "각주 설명"
+            },
+            {
+              "type": "set_columns",
+              "count": 2,
+              "spacing_mm": 8
+            },
+            {
+              "type": "set_col_width",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "col": 1,
+              "width_mm": 40,
+              "keep_table_width": true
+            },
+            {
+              "type": "set_row_height",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 1,
+              "height_mm": 15
+            },
+            {
+              "type": "set_cell_padding",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "left_mm": 2,
+              "right_mm": 2,
+              "top_mm": 1,
+              "bottom_mm": 1
+            },
+            {
+              "type": "fit_table_to_page",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "target_width_mm": 170
+            },
+            {
+              "type": "set_page_margin",
+              "left_mm": 20,
+              "right_mm": 20,
+              "top_mm": 15,
+              "bottom_mm": 15
+            },
+            {
+              "type": "shrink_cell_font",
+              "section": 0,
+              "para": 7,
+              "control": 0,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "size_pt": 9,
+              "min_pt": 8
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "table_coords_out_of_bounds",
+      "stagingFilePath": "doc.hwp",
+      "isHwpx": false,
+      "ops": [
+        {
+          "type": "set_cell_text",
+          "tableIndex": 1,
+          "row": 0,
+          "col": 0,
+          "text": "X"
+        },
+        {
+          "type": "set_col_width",
+          "tableIndex": 1,
+          "col": 1,
+          "widthMm": 35
+        },
+        {
+          "type": "set_cell_padding",
+          "tableIndex": 3,
+          "row": 0,
+          "col": 0,
+          "leftMm": 3
+        },
+        {
+          "type": "fit_table_to_page",
+          "tableIndex": 2,
+          "targetWidthMm": 160
+        },
+        {
+          "type": "shrink_cell_font",
+          "tableIndex": 1,
+          "row": 1,
+          "col": 1,
+          "sizePt": 8
+        },
+        {
+          "type": "insert_table_row",
+          "tableIndex": 2,
+          "row": 1,
+          "position": "below"
+        },
+        {
+          "type": "insert_image",
+          "path": "img.png",
+          "cell": {
+            "tableIndex": 4,
+            "row": 1,
+            "col": 2
+          }
+        }
+      ],
+      "tablesMeta": [
+        {
+          "tableIndex": 0,
+          "sec": 0,
+          "para": 7,
+          "ctrl": 0,
+          "rowCount": 4,
+          "colCount": 3,
+          "cells": [
+            {
+              "idx": 0,
+              "row": 0,
+              "col": 0,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "text": "과제구분"
+            }
+          ]
+        }
+      ],
+      "isNewDocument": false,
+      "expected": {
+        "isHwpx": false,
+        "payload": {
+          "path": "doc.hwp",
+          "operations": [
+            {
+              "type": "set_cell_text",
+              "section": 0,
+              "tableIndex": 1,
+              "row": 0,
+              "col": 0,
+              "text": "X"
+            },
+            {
+              "type": "set_col_width",
+              "section": 0,
+              "tableIndex": 1,
+              "col": 1,
+              "width_mm": 35
+            },
+            {
+              "type": "set_cell_padding",
+              "section": 0,
+              "tableIndex": 3,
+              "row": 0,
+              "col": 0,
+              "left_mm": 3
+            },
+            {
+              "type": "fit_table_to_page",
+              "section": 0,
+              "tableIndex": 2,
+              "target_width_mm": 160
+            },
+            {
+              "type": "shrink_cell_font",
+              "section": 0,
+              "tableIndex": 1,
+              "row": 1,
+              "col": 1,
+              "size_pt": 8
+            },
+            {
+              "type": "insert_table_row",
+              "section": 0,
+              "tableIndex": 2,
+              "row": 1,
+              "position": "below"
+            },
+            {
+              "type": "insert_image",
+              "path": "img.png",
+              "cell": {
+                "row": 1,
+                "col": 2,
+                "section": 0,
+                "tableIndex": 4
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "table_coords_explicit_override",
+      "stagingFilePath": "doc.hwp",
+      "isHwpx": false,
+      "ops": [
+        {
+          "type": "set_cell_text",
+          "tableIndex": 0,
+          "sec": 0,
+          "para": 3,
+          "ctrl": 2,
+          "row": 0,
+          "col": 0,
+          "text": "X"
+        }
+      ],
+      "tablesMeta": [
+        {
+          "tableIndex": 0,
+          "sec": 0,
+          "para": 7,
+          "ctrl": 0,
+          "rowCount": 4,
+          "colCount": 3,
+          "cells": [
+            {
+              "idx": 0,
+              "row": 0,
+              "col": 0,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "text": "과제구분"
+            }
+          ]
+        }
+      ],
+      "isNewDocument": false,
+      "expected": {
+        "isHwpx": false,
+        "payload": {
+          "path": "doc.hwp",
+          "operations": [
+            {
+              "type": "set_cell_text",
+              "section": 0,
+              "para": 3,
+              "control": 2,
+              "tableIndex": 0,
+              "row": 0,
+              "col": 0,
+              "text": "X"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "errorCases": [
+    {
+      "name": "hwp_insert_nested_table_rejected",
+      "stagingFilePath": "doc.hwp",
+      "isHwpx": false,
+      "ops": [
+        {
+          "type": "insert_nested_table",
+          "tableIndex": 0,
+          "row": 1,
+          "col": 0,
+          "rows": 2,
+          "cols": 2,
+          "data": [
+            [
+              "**머리글1**",
+              "*머리글2*"
+            ],
+            [
+              "데이터1",
+              "**데이터2**"
+            ]
+          ],
+          "headerRow": true,
+          "widthMode": "fit_cell"
+        }
+      ],
+      "tablesMeta": [
+        {
+          "tableIndex": 0,
+          "sec": 0,
+          "para": 7,
+          "ctrl": 0,
+          "rowCount": 4,
+          "colCount": 3,
+          "cells": [
+            {
+              "idx": 0,
+              "row": 0,
+              "col": 0,
+              "rowSpan": 1,
+              "colSpan": 1,
+              "text": "과제구분"
+            }
+          ]
+        }
+      ],
+      "isNewDocument": false,
+      "expectedError": "HWP 바이너리는 중첩 표 미지원 — HWPX로 저장 후 시도"
+    }
+  ]
+}
