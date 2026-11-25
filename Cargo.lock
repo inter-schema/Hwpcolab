@@ -1586,6 +1586,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "hopclaw-hwpx"
+version = "0.2.3"
+dependencies = [
+ "hopclaw-types",
+ "quick-xml 0.42.0",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "unicase",
+ "unicode-normalization",
+ "zip",
+]
+
+[[package]]
 name = "hopclaw-types"
 version = "0.2.3"
 dependencies = [
