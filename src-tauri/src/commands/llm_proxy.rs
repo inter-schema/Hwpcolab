@@ -1,8 +1,14 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
+
+// Core proxy logic lives in `crates/hopclaw-ai/src/proxy.rs`.
+// Until `hopclaw-ai = { path = "../crates/hopclaw-ai" }` is added to `src-tauri/Cargo.toml`
+// during workspace integration, this thin adapter keeps the exact Tauri IPC signatures
+// while enforcing the post-DNS-resolution 169.254.0.0/16 guard.
 
 pub struct CancelEntry {
     token: u64,
@@ -69,6 +75,67 @@ const MIN_TIMEOUT_MS: u64 = 1_000;
 const MAX_TIMEOUT_MS: u64 = 600_000;
 const MAX_REQUEST_BODY_BYTES: usize = 20 * 1024 * 1024;
 const MAX_RESPONSE_BODY_BYTES: usize = 32 * 1024 * 1024;
+
+fn is_forbidden_link_local_ip(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(v4) => v4.octets()[0] == 169 && v4.octets()[1] == 254,
+        IpAddr::V6(v6) => {
+            if let Some(mapped) = v6.to_ipv4_mapped() {
+                return mapped.octets()[0] == 169 && mapped.octets()[1] == 254;
+            }
+            if let Some(compat) = v6.to_ipv4() {
+                if v6.segments()[..6] == [0, 0, 0, 0, 0, 0] {
+                    return compat.octets()[0] == 169 && compat.octets()[1] == 254;
+                }
+            }
+            false
+        }
+    }
+}
+
+fn validate_resolved_addrs(host: &str, addrs: &[SocketAddr]) -> Result<(), String> {
+    if addrs.is_empty() {
+        return Err(format!("DNS 조회 결과가 비어 있습니다: {host}"));
+    }
+    for addr in addrs {
+        if is_forbidden_link_local_ip(addr.ip()) {
+            return Err(format!(
+                "DNS 조회 결과({host} -> {})가 169.254.0.0/16 링크로컬/메타데이터 대역에 해당하여 차단되었습니다.",
+                addr.ip()
+            ));
+        }
+    }
+    Ok(())
+}
+
+async fn resolve_and_guard_endpoint(url: &reqwest::Url) -> Result<Vec<SocketAddr>, String> {
+    let port = url
+        .port_or_known_default()
+        .ok_or_else(|| "LLM endpoint 포트를 확인할 수 없습니다.".to_string())?;
+    let host_str = url
+        .host_str()
+        .ok_or_else(|| "LLM endpoint 호스트가 비어 있습니다.".to_string())?;
+
+    if let Ok(v4) = host_str.parse::<Ipv4Addr>() {
+        let addrs = vec![SocketAddr::new(IpAddr::V4(v4), port)];
+        validate_resolved_addrs(host_str, &addrs)?;
+        return Ok(addrs);
+    }
+
+    let clean_v6 = host_str.trim_start_matches('[').trim_end_matches(']');
+    if let Ok(v6) = clean_v6.parse::<std::net::Ipv6Addr>() {
+        let addrs = vec![SocketAddr::new(IpAddr::V6(v6), port)];
+        validate_resolved_addrs(host_str, &addrs)?;
+        return Ok(addrs);
+    }
+
+    let addrs: Vec<SocketAddr> = tokio::net::lookup_host((host_str, port))
+        .await
+        .map_err(|e| format!("DNS 조회 실패 ({host_str}:{port}): {e}"))?
+        .collect();
+    validate_resolved_addrs(host_str, &addrs)?;
+    Ok(addrs)
+}
 
 fn parse_llm_endpoint(raw_url: &str) -> Result<reqwest::Url, String> {
     let url = reqwest::Url::parse(raw_url)
@@ -139,13 +206,24 @@ async fn read_bounded_response_text(mut response: reqwest::Response) -> Result<S
 #[tauri::command]
 pub async fn call_llm_http(req: LlmProxyRequest) -> Result<LlmProxyResponse, String> {
     let endpoint = parse_llm_endpoint(&req.url)?;
+    let resolved_addrs = resolve_and_guard_endpoint(&endpoint).await?;
     let request_body = serialize_bounded_request_body(&req.body_json)?;
     let timeout_ms = normalize_timeout_ms(req.timeout_ms);
 
-    let client = reqwest::Client::builder()
+    let mut client_builder = reqwest::Client::builder()
         .timeout(Duration::from_millis(timeout_ms))
         // Do not forward provider credentials to a redirect target.
-        .redirect(reqwest::redirect::Policy::none())
+        .redirect(reqwest::redirect::Policy::none());
+
+    if resolved_addrs.iter().all(|addr| addr.ip().is_loopback()) {
+        client_builder = client_builder.no_proxy();
+    }
+
+    if let Some(domain) = endpoint.domain() {
+        client_builder = client_builder.resolve_to_addrs(domain, &resolved_addrs);
+    }
+
+    let client = client_builder
         .build()
         .map_err(|error| format!("Reqwest 클라이언트 생성 실패: {}", error))?;
 
@@ -228,6 +306,29 @@ mod tests {
         assert!(parse_llm_endpoint("file:///etc/passwd").is_err());
         assert!(parse_llm_endpoint("ftp://example.test/model").is_err());
         assert!(parse_llm_endpoint("https://user:secret@example.test/v1/chat").is_err());
+    }
+
+    #[test]
+    fn post_dns_guard_blocks_169_254_metadata_ips() {
+        let err = validate_resolved_addrs(
+            "rebind.example.test",
+            &["169.254.169.254:443".parse().unwrap()],
+        )
+        .unwrap_err();
+        assert!(err.contains("169.254.0.0/16"));
+
+        let err_v6 = validate_resolved_addrs(
+            "rebind.example.test",
+            &["[::ffff:169.254.169.254]:443".parse().unwrap()],
+        )
+        .unwrap_err();
+        assert!(err_v6.contains("169.254.0.0/16"));
+
+        assert!(validate_resolved_addrs(
+            "api.example.test",
+            &["93.184.216.34:443".parse().unwrap()],
+        )
+        .is_ok());
     }
 
     #[test]
@@ -416,8 +517,6 @@ mod tests {
 
         assert!(cancel_llm_request(request_id.clone()).await.unwrap());
 
-        // Poll the replacement request through registration and into its pending
-        // network future without yielding to the cancelled request's cleanup.
         let mut second = Box::pin(call_llm_http(request(
             format!("http://{address}/second"),
             Some(request_id.clone()),
